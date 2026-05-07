@@ -1,0 +1,136 @@
+# =========================
+# Build
+# =========================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+build/
+artifacts/
+
+# =========================
+# Visual Studio
+# =========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =========================
+# Rider / JetBrains
+# =========================
+.idea/
+*.sln.iml
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Logs
+# =========================
+*.log
+logs/
+
+# =========================
+# Test Results
+# =========================
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+# =========================
+# NuGet
+# =========================
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+# Keep lock files if desired
+#!packages.lock.json
+
+# =========================
+# Publish
+# =========================
+publish/
+out/
+
+# =========================
+# ASP.NET
+# =========================
+appsettings.Development.json
+secrets.json
+
+# User secrets
+**/secrets.json
+
+# =========================
+# Entity Framework
+# =========================
+*.db
+*.mdf
+*.ldf
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Docker
+# =========================
+docker-compose.override.yml
+
+# =========================
+# Azure / Deployment
+# =========================
+.publishsettings
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.cache
+
+# =========================
+# Resharper
+# =========================
+_ReSharper*/
+*.DotSettings.user
+
+# =========================
+# Generated files
+# =========================
+Generated/
+*.generated.cs
+
+# =========================
+# AI / Agent / Semantic Kernel temp
+# =========================
+memory/
+vector-db/
+embeddings/
+.local-ai/
+.cache/
+
+# =========================
+# Node (frontend if exists)
+# =========================
+node_modules/
+dist/
+coverage/
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+!.env.example
