@@ -1,3 +1,30 @@
 <Solution>
-  <Project Path="intelligent-incident-management.csproj" />
+  <Folder Name="/src/" />
+  <Folder Name="/src/BuildingBlocks/" />
+  <Folder Name="/src/BuildingBlocks/Contracts/">
+    <Project Path="src/BuildingBlocks/Contracts/BuildingBlocks.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/EventBus/">
+    <Project Path="src/BuildingBlocks/EventBus/BuildingBlocks.EventBus.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Observability/">
+    <Project Path="src/BuildingBlocks/Observability/BuildingBlocks.Observability.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/SharedKernel/">
+    <Project Path="src/BuildingBlocks/SharedKernel/BuildingBlocks.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/" />
+  <Folder Name="/src/Services/AgentOrchestrator/">
+    <Project Path="src/Services/AgentOrchestrator/Services.AgentOrchestrator.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/IncidentService/">
+    <Project Path="src/Services/IncidentService/Services.IncidentService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/NotificationService/">
+    <Project Path="src/Services/NotificationService/Services.NotificationService.csproj" />
+  </Folder>
+  <Folder Name="/src/Services/TelemetryIngestionService/">
+    <Project Path="src/Services/TelemetryIngestionService/Services.TelemetryIngestionService.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
 </Solution>
