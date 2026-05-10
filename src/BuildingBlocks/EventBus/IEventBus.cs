@@ -1,12 +1,28 @@
 ﻿namespace BuildingBlocks.EventBus;
 
-internal interface IEventBus
+public interface IIntegrationEvent
 {
-    Task PublishAsync<T>(T @event, CancellationToken cancellationToken = default);
-    Task SubscribeAsync<T, THandler>() where THandler : IEventHandler<T>;
+    Guid Id { get; }
+    DateTime OccurredAt { get; }
+    string EventType { get; }
 }
 
-public interface IEventHandler<in T>
+public abstract record IntegrationEvent : IIntegrationEvent
 {
-    Task Handler(T @evet, CancellationToken cancellationToken = default);
+    public Guid Id { get; init; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+    public string EventType => GetType().Name;
+}
+
+internal interface IEventBus
+{
+    Task PublishAsync<T>(T integrationEvent, CancellationToken cancellationToken = default) where T : IntegrationEvent;
+    void Subscribe<T, THandler>()
+        where T : IntegrationEvent
+        where THandler : IIntegrationEventHandler<T>;
+}
+
+public interface IIntegrationEventHandler<in TEvent> where TEvent : IntegrationEvent
+{
+    Task Handler(TEvent integrationEvent, CancellationToken cancellationToken = default);
 }
