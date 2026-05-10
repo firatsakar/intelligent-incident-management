@@ -14,7 +14,7 @@ public abstract record IntegrationEvent : IIntegrationEvent
     public string EventType => GetType().Name;
 }
 
-internal interface IEventBus
+public interface IEventBus
 {
     Task PublishAsync<T>(T integrationEvent, CancellationToken cancellationToken = default) where T : IntegrationEvent;
     void Subscribe<T, THandler>()
@@ -24,5 +24,5 @@ internal interface IEventBus
 
 public interface IIntegrationEventHandler<in TEvent> where TEvent : IntegrationEvent
 {
-    Task Handler(TEvent integrationEvent, CancellationToken cancellationToken = default);
+    Task HandlerAsync(TEvent integrationEvent, CancellationToken cancellationToken = default);
 }

@@ -34,10 +34,10 @@ public abstract class AggregateRoot : Entity
 {
 }
 
-public abstract class  DomainEvent 
+public abstract record  DomainEvent 
 {
     public Guid Id { get; init;  } = Guid.NewGuid();
-    public DateTime OccuredAt { get; init;  } = DateTime.UtcNow;
+    public DateTime OccurredAt { get; init;  } = DateTime.UtcNow;
 }
 
 public abstract record ValueObject;
