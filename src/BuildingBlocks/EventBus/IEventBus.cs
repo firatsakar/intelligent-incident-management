@@ -24,5 +24,5 @@ public interface IEventBus
 
 public interface IIntegrationEventHandler<in TEvent> where TEvent : IntegrationEvent
 {
-    Task HandlerAsync(TEvent integrationEvent, CancellationToken cancellationToken = default);
+    Task HandleAsync(TEvent integrationEvent, CancellationToken cancellationToken = default);
 }

@@ -113,7 +113,7 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
                 .GetRequiredService(handlerType)
                 as IIntegrationEventHandler<T>;
 
-            await handler!.HandlerAsync(integrationEvent);
+            await handler!.HandleAsync(integrationEvent);
 
             await _consumerChannel!.BasicAckAsync(deliveryTag, false);
 
