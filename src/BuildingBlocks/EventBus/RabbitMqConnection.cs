@@ -42,7 +42,7 @@ public sealed class RabbitMqConnection : IAsyncDisposable
             attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
             (ex, time) =>
             {
-                _logger.LogWarning($"Failed RabbitMQ connection. Try after {time.TotalSeconds:n1} second time ...");
+                _logger.LogWarning("RabbitMQ connection failed. Retrying in {Timeout}s...", time.TotalSeconds);
             });
 
         await policy.ExecuteAsync(async () =>
@@ -50,7 +50,7 @@ public sealed class RabbitMqConnection : IAsyncDisposable
             _connection = await _connectionFactory.CreateConnectionAsync();
             if (IsConnected)
             {
-                _logger.LogInformation($"RabbitMQ connection established successfully: {_connectionFactory.Uri}");
+                _logger.LogInformation("RabbitMQ connection established: {Host}", _connectionFactory.Uri);
             }
         });
 
