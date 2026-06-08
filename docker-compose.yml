@@ -4,9 +4,6 @@ services:
     image: rabbitmq:3-management
     container_name: incident-management-rabbitmq
     hostname: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
@@ -92,11 +89,9 @@ services:
   seq:
     image: datalust/seq:latest
     container_name: incident-management-seq
-    ports:
-      - "5341:5341"
-      - "8081:80"
     environment:
       ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_FIRSTRUN_ADMINPASSWORD}
     volumes:
       - incident-management-seq_data:/data
     networks:
@@ -109,8 +104,6 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
-    ports:
-      - "5050:80"
     volumes:
       - incident-management-pgadmin_data:/var/lib/pgadmin
     networks:
