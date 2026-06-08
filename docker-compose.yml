@@ -1,0 +1,135 @@
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: incident-management-rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - incident-management-rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_incident:
+    image: postgres:16
+    container_name: postgres_incident
+    environment:
+      POSTGRES_USER: ${INCIDENT_DB_USER}
+      POSTGRES_PASSWORD: ${INCIDENT_DB_PASS}
+      POSTGRES_DB: ${INCIDENT_DB_NAME}
+    volumes:
+      - postgres_incident_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INCIDENT_DB_USER} -d ${INCIDENT_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_notification:
+    image: postgres:16
+    container_name: postgres_notification
+    environment:
+      POSTGRES_USER: ${NOTIFICATION_DB_USER}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASS}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME}
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d ${NOTIFICATION_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_telemetry:
+    image: postgres:16
+    container_name: postgres_telemetry
+    environment:
+      POSTGRES_USER: ${TELEMETRY_DB_USER}
+      POSTGRES_PASSWORD: ${TELEMETRY_DB_PASS}
+      POSTGRES_DB: ${TELEMETRY_DB_NAME}
+    volumes:
+      - postgres_telemetry_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TELEMETRY_DB_USER} -d ${TELEMETRY_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+  postgres_agent:
+    image: postgres:16
+    container_name: postgres_agent
+    environment:
+      POSTGRES_USER: ${AGENT_DB_USER}
+      POSTGRES_PASSWORD: ${AGENT_DB_PASS}
+      POSTGRES_DB: ${AGENT_DB_NAME}
+    volumes:
+      - postgres_agent_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AGENT_DB_USER} -d ${AGENT_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  seq:
+    image: datalust/seq:latest
+    container_name: incident-management-seq
+    ports:
+      - "5341:5341"
+      - "8081:80"
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - incident-management-seq_data:/data
+    networks:
+      - incident_network
+
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: incident-management-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    ports:
+      - "5050:80"
+    volumes:
+      - incident-management-pgadmin_data:/var/lib/pgadmin
+    networks:
+      - incident_network
+    depends_on:
+      - postgres_incident
+      - postgres_notification
+      - postgres_telemetry
+      - postgres_agent
+
+networks:
+  incident_network:
+    driver: bridge
+
+volumes:
+  incident-management-rabbitmq_data:
+  postgres_incident_data:
+  postgres_notification_data:
+  postgres_telemetry_data:
+  postgres_agent_data:
+  incident-management-seq_data:
+  incident-management-pgadmin_data:
