@@ -12,6 +12,8 @@ public static class ServiceCollectionExtensions
             .GetSection(EventBusOptions.SectionName)
             .Get<EventBusOptions>() ?? new EventBusOptions();
 
+        services.AddSingleton(options);
+
         services.AddSingleton<IConnectionFactory>( _ => 
            new ConnectionFactory
             {
