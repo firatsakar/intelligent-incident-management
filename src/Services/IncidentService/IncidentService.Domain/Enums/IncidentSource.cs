@@ -1,8 +1,11 @@
-﻿namespace IncidentService.Domain.Enums;
+﻿using System.Text.Json.Serialization;
 
+namespace IncidentService.Domain.Enums;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum IncidentSource
 {
-    Manuel,
+    Manual,
     Telemetry,
     Alert
 }

@@ -1,5 +1,8 @@
-﻿namespace IncidentService.Domain.Enums;
+﻿using System.Text.Json.Serialization;
 
+namespace IncidentService.Domain.Enums;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum IncidentStatus
 {
     Open,
