@@ -20,7 +20,10 @@
   </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/AgentOrchestrator/">
-    <Project Path="src/Services/AgentOrchestrator/Services.AgentOrchestrator.csproj" />
+    <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.API/AgentOrchestrator.API.csproj" Id="fd70be3f-5762-40af-b17a-7cc4cb6f1a37" />
+    <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.Application/AgentOrchestrator.Application.csproj" Id="2487646d-bf50-493b-8971-0157092e4906" />
+    <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.Domain/AgentOrchestrator.Domain.csproj" Id="7896ea44-b685-402e-832e-54ef0d1934ae" />
+    <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.Infrastructure/AgentOrchestrator.Infrastructure.csproj" Id="44c1b631-5bf7-4f78-8595-35db98af1400" />
   </Folder>
   <Folder Name="/src/Services/IncidentService/">
     <Project Path="src/Services/IncidentService/IncidentService.API/IncidentService.API.csproj" Id="dcc8fdc3-ef8f-43b5-87b8-c4679c45d746" />

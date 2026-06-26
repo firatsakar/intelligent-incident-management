@@ -1,0 +1,12 @@
+@host = https://localhost:7143
+
+# @timeout 3600
+### İlk AI analizi
+POST {{host}}/api/analyses
+Content-Type: application/json
+
+{
+  "incidentId": "11111111-1111-1111-1111-111111111111",
+  "title": "Payment service returning 500 errors",
+  "description": "Users cannot complete checkout. Database connection pool appears exhausted. Error rate spiked to 80% after the latest deployment."
+}
