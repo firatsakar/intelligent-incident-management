@@ -42,13 +42,27 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
             Messages = [new Message(RoleType.User, userPrompt)],
         };
 
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
         var response = await _client.Messages.GetClaudeMessageAsync(parameters, cancellationToken);
+        stopwatch.Stop();
 
         var rawText = response.Content.OfType<TextContent>().Last().Text;
 
-        _logger.LogInformation("AI raw response received ({Length} chars)", rawText.Length);
+        _logger.LogInformation(
+            "AI raw response received ({Length} chars) in {DurationMs}ms end-to-end",
+            rawText.Length,
+            stopwatch.ElapsedMilliseconds
+        );
 
-        return ParseResponse(rawText);
+        var metadata = new AnalysisMetadata
+        {
+            ModelName = _options.Model,
+            InputTokens = response.Usage?.InputTokens ?? 0,
+            OutputTokens = response.Usage?.OutputTokens ?? 0,
+            EndToEndDurationMs = stopwatch.ElapsedMilliseconds,
+        };
+
+        return ParseResponse(rawText, metadata);
     }
 
     private static string BuildSystemPrompt()
@@ -79,11 +93,10 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
             """;
     }
 
-    private AnalysisResult ParseResponse(string rawText)
+    private AnalysisResult ParseResponse(string rawText, AnalysisMetadata metadata)
     {
         try
         {
-            // be sure to remove any code fences or markdown that might be present in the AI response
             var cleaned = rawText.Replace("```json", "").Replace("```", "").Trim();
 
             var parsed = JsonSerializer.Deserialize<AiResponseModel>(
@@ -99,6 +112,7 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
                 SuggestedPriority = parsed.SuggestedPriority,
                 SuggestedCategory = parsed.SuggestedCategory,
                 Reasoning = parsed.Reasoning,
+                Metadata = metadata,
             };
         }
         catch (JsonException ex)

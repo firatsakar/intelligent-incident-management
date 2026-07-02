@@ -1,9 +1,12 @@
 using System.Text.Json.Serialization;
+using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using FluentValidation;
+using IncidentService.API.BackgroundServices;
 using IncidentService.API.Middleware;
 using IncidentService.Application.Behaviors;
 using IncidentService.Application.Commands.CreateIncident;
+using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -19,6 +22,13 @@ builder.Services.AddValidatorsFromAssembly(typeof(CreateIncidentCommand).Assembl
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddRabbitMqEventBus(builder.Configuration);
+
+builder.Services.AddScoped<
+    IIntegrationEventHandler<IncidentAnalyzedEvent>,
+    IncidentAnalyzedEventHandler
+>();
+
+builder.Services.AddHostedService<EventBusSubscriber>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

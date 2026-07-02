@@ -9,4 +9,5 @@ public sealed record AnalysisResult : ValueObject
     public required string Reasoning { get; init; }
     public IReadOnlyList<string> SuggestedSteps { get; init; } = [];
     public double? Confidence { get; init; }
+    public AnalysisMetadata? Metadata { get; init; }
 }
