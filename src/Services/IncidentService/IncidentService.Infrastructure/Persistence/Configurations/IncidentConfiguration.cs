@@ -31,6 +31,15 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
         builder.Property(x => x.CreatedAt).IsRequired();
 
         builder.Property(x => x.UpdatedAt);
+
+        builder
+            .Property(x => x.AiSuggestedCategory)
+            .HasMaxLength(IncidentConstants.AiCategoryMaxLength);
+
+        builder.Property(x => x.AiReasoning).HasMaxLength(IncidentConstants.AiReasoningMaxLength);
+
+        builder.Property(x => x.IsAiAnalyzed).IsRequired().HasDefaultValue(false);
+
         builder.Ignore(x => x.DomainEvents);
     }
 }

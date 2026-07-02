@@ -14,16 +14,18 @@ public sealed class Incident : AggregateRoot
     public IncidentPriority Priority { get; private set; }
     public IncidentSource Source { get; private set; }
     public string? AssignedTeam { get; private set; }
+    public string? AiSuggestedCategory { get; private set; }
+    public string? AiReasoning { get; private set; }
+    public bool IsAiAnalyzed { get; private set; }
 
-    public static Incident Create (
-        string title, 
-        string description, 
-        IncidentPriority priority, 
-        IncidentSource source, 
+    public static Incident Create(
+        string title,
+        string description,
+        IncidentPriority priority,
+        IncidentSource source,
         string assignedTeam = null
-        )
+    )
     {
-        
         var incident = new Incident
         {
             Id = Guid.NewGuid(),
@@ -32,14 +34,12 @@ public sealed class Incident : AggregateRoot
             Status = IncidentStatus.Open,
             Priority = priority,
             Source = source,
-            AssignedTeam = assignedTeam
+            AssignedTeam = assignedTeam,
         };
 
-        incident.AddDomainEvent(new IncidentCreatedDomainEvent
-        {
-            IncidentId = incident.Id,
-            Title = incident.Title
-        });
+        incident.AddDomainEvent(
+            new IncidentCreatedDomainEvent { IncidentId = incident.Id, Title = incident.Title }
+        );
 
         return incident;
     }
@@ -53,6 +53,19 @@ public sealed class Incident : AggregateRoot
     public void AssignTeam(string team)
     {
         AssignedTeam = team;
+        SetUpdatedAt();
+    }
+
+    public void ApplyAiAnalysis(
+        IncidentPriority suggestedPriority,
+        string suggestedCategory,
+        string reasoning
+    )
+    {
+        Priority = suggestedPriority;
+        AiSuggestedCategory = suggestedCategory;
+        AiReasoning = reasoning;
+        IsAiAnalyzed = true;
         SetUpdatedAt();
     }
 }
