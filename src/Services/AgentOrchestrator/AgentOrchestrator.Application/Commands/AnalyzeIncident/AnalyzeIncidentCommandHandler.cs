@@ -1,5 +1,7 @@
 ﻿using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.Aggregates;
+using BuildingBlocks.Contracts;
+using BuildingBlocks.EventBus;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -10,16 +12,19 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
     private readonly IAiAnalyzer _aiAnalyzer;
     private readonly IIncidentAnalysisRepository _repository;
     private readonly ILogger<AnalyzeIncidentCommandHandler> _logger;
+    private readonly IEventBus _eventBus;
 
     public AnalyzeIncidentCommandHandler(
         IAiAnalyzer aiAnalyzer,
         IIncidentAnalysisRepository repository,
-        ILogger<AnalyzeIncidentCommandHandler> logger
+        ILogger<AnalyzeIncidentCommandHandler> logger,
+        IEventBus eventBus
     )
     {
         _aiAnalyzer = aiAnalyzer;
         _repository = repository;
         _logger = logger;
+        _eventBus = eventBus;
     }
 
     public async Task<Guid> Handle(
@@ -46,11 +51,30 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
 
             analysis.MarkAsCompleted(result);
 
+            _repository.Update(analysis);
+            await _repository.SaveChangesAsync(cancellationToken);
+
             _logger.LogInformation(
                 "Incident {IncidentId} analyzed: Priority={Priority}, Category={Category}",
                 request.IncidentId,
                 result.SuggestedPriority,
                 result.SuggestedCategory
+            );
+
+            await _eventBus.PublishAsync(
+                new IncidentAnalyzedEvent
+                {
+                    IncidentId = request.IncidentId,
+                    SuggestedPriority = result.SuggestedPriority,
+                    SuggestedCategory = result.SuggestedCategory,
+                    Reasoning = result.Reasoning,
+                },
+                cancellationToken
+            );
+
+            _logger.LogInformation(
+                "IncidentAnalyzedEvent published for incident {IncidentId}.",
+                request.IncidentId
             );
         }
         catch (Exception ex)
@@ -63,9 +87,6 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
                 request.IncidentId
             );
         }
-
-        _repository.Update(analysis);
-        await _repository.SaveChangesAsync(cancellationToken);
 
         return analysis.Id;
     }
