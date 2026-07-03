@@ -17,13 +17,15 @@
 
 When something goes wrong in production (a service degrades, an error rate spikes, a database connection pool drains), this platform captures the incident, uses AI to automatically assess its priority and probable root cause, routes it to the right team, and keeps everyone notified — all through a decoupled, event-driven architecture.
 
+> **Status:** The core AI feedback loop is live — an incident created via the API is automatically picked up by the AI agent, analyzed by Claude, and the incident is updated with the suggested priority, category, and reasoning, with zero manual intervention. See the [Roadmap](#️-roadmap) below for what's done and what's next.
+
 This project is built as a deep, hands-on exploration of **production-grade distributed systems design** with modern .NET.
 
 ---
 
 ## ✨ Key Features
 
-- **AI-Powered Triage** — Automatic incident prioritization, categorization, and root cause analysis powered by Anthropic's Claude, orchestrated through the Microsoft Agent Framework.
+- **AI-Powered Triage** — Incidents are automatically prioritized and categorized by Anthropic's Claude the moment they're created, with the result written back through a live, event-driven feedback loop. Root cause analysis and Microsoft Agent Framework orchestration are next.
 - **Event-Driven Architecture** — Services communicate asynchronously via RabbitMQ, fully decoupled from one another.
 - **Per-Service Database Isolation** — Each microservice owns its data, following true microservice principles.
 - **Clean Architecture** — Every service follows a strict layered design (Domain → Application → Infrastructure → API).
@@ -35,7 +37,7 @@ This project is built as a deep, hands-on exploration of **production-grade dist
 
 ## 🏛️ Architecture
 
-The platform is composed of independent microservices coordinated through an event bus.
+The platform is composed of independent microservices coordinated through an event bus, following a **choreography pattern** — services react to events without knowing who published them.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -47,25 +49,30 @@ The platform is composed of independent microservices coordinated through an eve
 │   Incident   │ │ Notification │ │  Telemetry   │ │    Agent     │
 │   Service    │ │   Service    │ │  Ingestion   │ │ Orchestrator │
 │              │ │              │ │   Service    │ │    (AI) 🤖   │
-└──────┬───────┘ └──────▲───────┘ └──────┬───────┘ └──────▲───────┘
-       │                │                │                │
-       │  ┌─────────────┴────────────────┴────────────────┘
+└──────┬───▲───┘ └──────▲───────┘ └──────┬───────┘ └──────▲───┬───┘
+       │   │            │                │                │   │
+       │   └────────────┼────────────────┼────────────────┘   │
+       │                │                │                    │
+       │  ┌─────────────┴────────────────┴────────────────────┘
        │  │
        ▼  ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    RabbitMQ Event Bus                        │
-│         (Integration Events: IncidentDetected, etc.)         │
+│   IncidentDetectedEvent ──▶  IncidentAnalyzedEvent ──▶       │
+│         (live, bidirectional AI feedback loop ✅)             │
 └─────────────────────────────────────────────────────────────┘
 
   Each service has its own isolated PostgreSQL database.
 ```
+
+**The AI loop, live today:** `IncidentService` publishes `IncidentDetectedEvent` → `AgentOrchestrator` consumes it, calls Claude, and persists the analysis → `AgentOrchestrator` publishes `IncidentAnalyzedEvent` → `IncidentService` consumes it and updates the incident with the AI's suggested priority, category, and reasoning. No manual trigger, no orchestrator service telling anyone what to do — just two services reacting to events.
 
 ### Services
 
 | Service | Responsibility |
 |---------|----------------|
 | **IncidentService** | Core incident lifecycle — create, track, update status, assign teams. |
-| **AgentOrchestrator** | The AI brain — analyzes incidents, suggests priority, and performs root cause analysis using the Microsoft Agent Framework with Anthropic Claude. |
+| **AgentOrchestrator** | The AI brain — analyzes incidents and suggests priority, category, and reasoning using Anthropic Claude. Publishes results back as events for `IncidentService` to consume. Root cause analysis and a Microsoft Agent Framework–based orchestration layer are in progress. |
 | **NotificationService** | Sends notifications (email, webhook) as incidents are created and updated. |
 | **TelemetryIngestionService** | Ingests metrics/alerts and automatically raises incidents on anomalies. |
 
@@ -127,8 +134,11 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 
 - [x] Core infrastructure (Event Bus, Docker, Shared Kernel)
 - [x] IncidentService — full CRUD with validation & error handling
-- [ ] AgentOrchestrator — AI-powered triage & root cause analysis (Microsoft Agent Framework)
-- [ ] End-to-end event flow (incident → AI → notification)
+- [x] AgentOrchestrator — AI-powered priority & category suggestion (Anthropic Claude)
+- [x] End-to-end bidirectional event flow (incident created → AI analyzed → incident updated, fully autonomous)
+- [ ] AgentOrchestrator refactor onto the Microsoft Agent Framework
+- [ ] Root cause analysis (RCA) with suggested remediation steps
+- [ ] NotificationService — email/webhook alerts on incident lifecycle events
 - [ ] TelemetryIngestionService — anomaly-based incident detection
 - [ ] API Gateway & JWT authentication
 - [ ] Distributed tracing with OpenTelemetry
@@ -145,6 +155,7 @@ This project deliberately favors **clarity and correctness** over shortcuts:
 - **Publishers don't know their subscribers.** Services emit events; whoever cares, listens.
 - **The domain is protected.** Business rules live in the domain layer, shielded from infrastructure concerns.
 - **Cross-cutting concerns are centralized.** Validation and error handling are handled via pipelines and middleware, not scattered across handlers.
+- **AI output is structured but schema-flexible.** AI-generated analysis is stored as `jsonb`, so richer output (reasoning, remediation steps, confidence scores, model metadata) can be added without a database migration.
 
 ---
 
