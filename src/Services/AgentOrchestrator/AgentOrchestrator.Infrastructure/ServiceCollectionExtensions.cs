@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
             configuration.GetSection(AiAnalyzerOptions.SectionName)
         );
 
-        services.AddSingleton<IAiAnalyzer, AnthropicAiAnalyzer>();
+        services.AddSingleton<IAiAnalyzer, MafAiAnalyzer>();
 
         return services;
     }
