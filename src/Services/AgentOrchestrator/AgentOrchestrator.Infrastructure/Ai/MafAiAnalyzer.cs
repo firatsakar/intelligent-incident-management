@@ -2,6 +2,7 @@
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.ValueObjects;
 using Anthropic;
+using Anthropic.Core;
 using Microsoft.Agents.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -51,8 +52,8 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         var metadata = new AnalysisMetadata
         {
             ModelName = _options.Model,
-            InputTokens = 0,
-            OutputTokens = 0,
+            InputTokens = (int)(response.Usage?.InputTokenCount ?? 0),
+            OutputTokens = (int)(response.Usage?.OutputTokenCount ?? 0),
             EndToEndDurationMs = stopwatch.ElapsedMilliseconds,
         };
 
