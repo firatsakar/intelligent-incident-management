@@ -33,4 +33,12 @@ public sealed class AnalysesController : ControllerBase
 
         return Ok(new { analysisId });
     }
+
+    [HttpGet("similar")]
+    public async Task<IActionResult> FindSimilar(
+        [FromServices] ISimilarAnalysisSearcher searcher,
+        [FromQuery] string title,
+        [FromQuery] string description,
+        CancellationToken ct
+    ) => Ok(await searcher.SearchAsync(title, description, cancellationToken: ct));
 }
