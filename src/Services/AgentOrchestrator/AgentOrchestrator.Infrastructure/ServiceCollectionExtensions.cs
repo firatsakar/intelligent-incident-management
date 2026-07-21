@@ -1,5 +1,6 @@
 ﻿using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Infrastructure.Ai;
+using AgentOrchestrator.Infrastructure.Outbox;
 using AgentOrchestrator.Infrastructure.Persistence;
 using AgentOrchestrator.Infrastructure.Persistence.Repositories;
 using AgentOrchestrator.Infrastructure.Search;
@@ -48,6 +49,18 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<ElasticsearchConnectionCheck>();
         services.AddHostedService<ElasticsearchIndexInitializer>();
         services.AddSingleton<IAnalysisIndexer, ElasticsearchAnalysisIndexer>();
+
+        services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
+
+        services.AddDbContext<AgentDbContext>(
+            (sp, options) =>
+            {
+                options.UseNpgsql();
+                options.AddInterceptors(
+                    sp.GetRequiredService<ConvertDomainEventsToOutboxInterceptor>()
+                );
+            }
+        );
 
         return services;
     }
