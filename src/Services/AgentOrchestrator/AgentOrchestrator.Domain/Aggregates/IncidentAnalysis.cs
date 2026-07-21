@@ -15,6 +15,7 @@ public sealed class IncidentAnalysis : AggregateRoot
     public AnalysisResult? Result { get; private set; }
 
     public string? ErrorMessage { get; private set; }
+    public DateTimeOffset? CompletedAt { get; private set; }
 
     private IncidentAnalysis() { }
 
@@ -37,6 +38,7 @@ public sealed class IncidentAnalysis : AggregateRoot
     {
         Result = result;
         Status = AnalysisStatus.Completed;
+        CompletedAt = DateTimeOffset.UtcNow;
         SetUpdatedAt();
     }
 
