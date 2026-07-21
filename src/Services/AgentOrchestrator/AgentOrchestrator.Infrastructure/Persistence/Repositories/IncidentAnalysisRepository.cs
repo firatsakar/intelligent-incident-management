@@ -1,5 +1,6 @@
 ﻿using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.Aggregates;
+using AgentOrchestrator.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace AgentOrchestrator.Infrastructure.Persistence.Repositories;
@@ -49,4 +50,12 @@ public sealed class IncidentAnalysisRepository : IIncidentAnalysisRepository
     {
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyCollection<IncidentAnalysis>> GetCompletedAsync(
+        CancellationToken cancellationToken = default
+    ) =>
+        await _context
+            .Analyses.AsNoTracking()
+            .Where(a => a.Status == AnalysisStatus.Completed)
+            .ToListAsync(cancellationToken);
 }
