@@ -47,6 +47,7 @@ public static class ServiceCollectionExtensions
 
         services.AddHostedService<ElasticsearchConnectionCheck>();
         services.AddHostedService<ElasticsearchIndexInitializer>();
+        services.AddSingleton<IAnalysisIndexer, ElasticsearchAnalysisIndexer>();
 
         return services;
     }
