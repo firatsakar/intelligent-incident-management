@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.Domain.Enums;
+using AgentOrchestrator.Domain.Events;
 using AgentOrchestrator.Domain.ValueObjects;
 using BuildingBlocks.SharedKernel;
 
@@ -39,6 +40,19 @@ public sealed class IncidentAnalysis : AggregateRoot
         Result = result;
         Status = AnalysisStatus.Completed;
         CompletedAt = DateTimeOffset.UtcNow;
+
+        AddDomainEvent(
+            new IncidentAnalysisCompletedDomainEvent(
+                IncidentId,
+                IncidentTitle,
+                IncidentDescription,
+                result.SuggestedCategory,
+                result.SuggestedPriority,
+                result.Reasoning,
+                result.Confidence
+            )
+        );
+
         SetUpdatedAt();
     }
 
