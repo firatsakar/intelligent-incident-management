@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.API.Contracts;
+using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -41,4 +42,16 @@ public sealed class AnalysesController : ControllerBase
         [FromQuery] string description,
         CancellationToken ct
     ) => Ok(await searcher.SearchAsync(title, description, cancellationToken: ct));
+
+    [HttpPost("reindex")]
+    public async Task<IActionResult> Reindex(
+        [FromServices] IIncidentAnalysisRepository repository,
+        [FromServices] IAnalysisIndexer indexer,
+        CancellationToken cancellationToken
+    )
+    {
+        var analyses = await repository.GetCompletedAsync(cancellationToken);
+        await indexer.IndexManyAsync(analyses, cancellationToken);
+        return Ok(new { Reindexed = analyses.Count });
+    }
 }
