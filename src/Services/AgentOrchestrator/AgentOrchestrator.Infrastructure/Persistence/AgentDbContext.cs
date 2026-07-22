@@ -10,7 +10,7 @@ public sealed class AgentDbContext : DbContext
         : base(options) { }
 
     public DbSet<IncidentAnalysis> Analyses => Set<IncidentAnalysis>();
-    public DbSet<OutboxMessage> outboxMessages => Set<OutboxMessage>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
