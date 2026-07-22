@@ -37,11 +37,21 @@ public sealed class AnalysesController : ControllerBase
 
     [HttpGet("similar")]
     public async Task<IActionResult> FindSimilar(
+        [FromQuery] string query,
+        [FromQuery] int maxResults,
         [FromServices] ISimilarAnalysisSearcher searcher,
-        [FromQuery] string title,
-        [FromQuery] string description,
-        CancellationToken ct
-    ) => Ok(await searcher.SearchAsync(title, description, cancellationToken: ct));
+        CancellationToken cancellationToken
+    )
+    {
+        var results = await searcher.SearchAsync(
+            query,
+            excludeIncidentId: null,
+            maxResults <= 0 ? 3 : maxResults,
+            cancellationToken
+        );
+
+        return Ok(results);
+    }
 
     [HttpPost("reindex")]
     public async Task<IActionResult> Reindex(
