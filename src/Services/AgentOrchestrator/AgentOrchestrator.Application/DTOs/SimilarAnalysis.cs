@@ -8,5 +8,7 @@ public sealed record SimilarAnalysis
     public required string SuggestedPriority { get; init; }
     public required string Reasoning { get; init; }
     public IReadOnlyList<string> SuggestedSteps { get; init; } = [];
-    public int MatchScore { get; init; }
+    public required double MatchScore { get; init; }
+    public required double Confidence { get; init; }
+    public required DateTimeOffset AnalyzedAt { get; init; }
 }
