@@ -29,8 +29,7 @@ public static class ServiceCollectionExtensions
         );
 
         services.AddSingleton<IAiAnalyzer, MafAiAnalyzer>();
-        services.AddScoped<ISimilarAnalysisSearcher, SimilarAnalysisSearcher>();
-
+        services.AddSingleton<ISimilarAnalysisSearcher, ElasticsearchSimilarAnalysisSearcher>();
         services.Configure<ElasticsearchOptions>(
             configuration.GetSection(ElasticsearchOptions.SectionName)
         );
@@ -62,6 +61,7 @@ public static class ServiceCollectionExtensions
             }
         );
 
+        services.AddHostedService<OutboxDispatcher>();
         return services;
     }
 }
