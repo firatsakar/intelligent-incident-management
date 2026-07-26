@@ -38,7 +38,8 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
 
         try
         {
-            var result = await _aiAnalyzer.AnalyzeIncidentAsync(
+            var result = await _aiAnalyzer.AnalyzeAsync(
+                request.IncidentId,
                 request.Title,
                 request.Description,
                 cancellationToken
