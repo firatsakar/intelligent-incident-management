@@ -35,25 +35,8 @@ public sealed class AnalysesController : ControllerBase
         return Ok(new { analysisId });
     }
 
-    [HttpGet("similar")]
-    public async Task<IActionResult> FindSimilar(
-        [FromQuery] string query,
-        [FromQuery] int maxResults,
-        [FromServices] ISimilarAnalysisSearcher searcher,
-        CancellationToken cancellationToken
-    )
-    {
-        var results = await searcher.SearchAsync(
-            query,
-            excludeIncidentId: null,
-            maxResults <= 0 ? 3 : maxResults,
-            cancellationToken
-        );
-
-        return Ok(results);
-    }
-
     [HttpPost("reindex")]
+    [ApiExplorerSettings(IgnoreApi = true)]
     public async Task<IActionResult> Reindex(
         [FromServices] IIncidentAnalysisRepository repository,
         [FromServices] IAnalysisIndexer indexer,
