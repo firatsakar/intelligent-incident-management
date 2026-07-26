@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.API.Contracts;
+using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -32,5 +33,35 @@ public sealed class AnalysesController : ControllerBase
         var analysisId = await _sender.Send(command, cancellationToken);
 
         return Ok(new { analysisId });
+    }
+
+    [HttpGet("similar")]
+    public async Task<IActionResult> FindSimilar(
+        [FromQuery] string query,
+        [FromQuery] int maxResults,
+        [FromServices] ISimilarAnalysisSearcher searcher,
+        CancellationToken cancellationToken
+    )
+    {
+        var results = await searcher.SearchAsync(
+            query,
+            excludeIncidentId: null,
+            maxResults <= 0 ? 3 : maxResults,
+            cancellationToken
+        );
+
+        return Ok(results);
+    }
+
+    [HttpPost("reindex")]
+    public async Task<IActionResult> Reindex(
+        [FromServices] IIncidentAnalysisRepository repository,
+        [FromServices] IAnalysisIndexer indexer,
+        CancellationToken cancellationToken
+    )
+    {
+        var analyses = await repository.GetCompletedAsync(cancellationToken);
+        await indexer.IndexManyAsync(analyses, cancellationToken);
+        return Ok(new { Reindexed = analyses.Count });
     }
 }

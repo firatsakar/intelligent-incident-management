@@ -24,7 +24,8 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
         _logger = logger;
     }
 
-    public async Task<AnalysisResult> AnalyzeIncidentAsync(
+    public async Task<AnalysisResult> AnalyzeAsync(
+        Guid incidentId,
         string title,
         string description,
         CancellationToken cancellationToken = default

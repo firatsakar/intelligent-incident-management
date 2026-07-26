@@ -3,6 +3,7 @@ using System;
 using AgentOrchestrator.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AgentOrchestrator.Infrastructure.Migrations
 {
     [DbContext(typeof(AgentDbContext))]
-    partial class AgentDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260721131142_AddCompletedAtToAnalysis")]
+    partial class AddCompletedAtToAnalysis
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,39 +67,6 @@ namespace AgentOrchestrator.Infrastructure.Migrations
                     b.HasIndex("IncidentId");
 
                     b.ToTable("incident_analyses", (string)null);
-                });
-
-            modelBuilder.Entity("AgentOrchestrator.Infrastructure.Outbox.OutboxMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Error")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("OccurredOn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<DateTimeOffset?>("ProcessedOn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("RetryCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProcessedOn");
-
-                    b.ToTable("outbox_messages", (string)null);
                 });
 
             modelBuilder.Entity("AgentOrchestrator.Domain.Aggregates.IncidentAnalysis", b =>
