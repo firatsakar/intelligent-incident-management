@@ -114,6 +114,42 @@ services:
       - postgres_telemetry
       - postgres_agent
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    container_name: incident-management-elasticsearch
+    environment:
+     - discovery.type=single-node
+     - ES_JAVA_OPTS=-Xms512m -Xmx512m
+     - xpack.security.enabled=false
+     - cluster.name=incident-management-es
+    volumes:
+     - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - incident_network
+
+  kibana:
+   image: docker.elastic.co/kibana/kibana:9.4.3
+   container_name: incident-management-kibana
+   environment:
+    - ELASTICSEARCH_HOSTS=http://incident-management-elasticsearch:9200
+   depends_on:
+    elasticsearch:
+     condition: service_healthy
+   healthcheck:
+     test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+     interval: 10s
+     timeout: 10s
+     retries: 12
+     start_period: 60s
+   networks:
+    - incident_network
+
 networks:
   incident_network:
     driver: bridge
@@ -126,3 +162,4 @@ volumes:
   postgres_agent_data:
   incident-management-seq_data:
   incident-management-pgadmin_data:
+  elasticsearch_data:

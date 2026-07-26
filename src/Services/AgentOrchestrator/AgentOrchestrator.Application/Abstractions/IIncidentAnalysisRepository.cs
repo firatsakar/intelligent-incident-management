@@ -12,4 +12,7 @@ public interface IIncidentAnalysisRepository
     Task AddAsync(IncidentAnalysis analysis, CancellationToken cancellationToken = default);
     void Update(IncidentAnalysis analysis);
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<IncidentAnalysis>> GetCompletedAsync(
+        CancellationToken cancellationToken = default
+    );
 }

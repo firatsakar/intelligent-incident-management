@@ -4,7 +4,8 @@ namespace AgentOrchestrator.Application.Abstractions;
 
 public interface IAiAnalyzer
 {
-    Task<AnalysisResult> AnalyzeIncidentAsync(
+    Task<AnalysisResult> AnalyzeAsync(
+        Guid incidentId,
         string title,
         string description,
         CancellationToken cancellationToken = default
