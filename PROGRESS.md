@@ -48,7 +48,7 @@
 - [~] **Adım 13** — TelemetryIngestionService (`IIM-14`) — dış log kaynağından çekme → imza → sinyal → **deterministik skorla** otomatik incident. Telemetri bir *entegrasyon*: kaynak müşteri tarafından konfigüre edilir (Adım 12'deki `Integration` deseni), ilk connector Seq. Skorlamada AI yok; AI'a giden tek şey incident açıklamasına gömülen kompakt kanıt özeti.
   - **Signal ≠ Incident:** `≥0.90` incident · `0.60–0.89` zayıf sinyal (incident yok) · `<0.60` sadece kayıt (baseline + emsal beslenir)
   - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
-  - [~] **Parça 1** (`IIM-15`) — İskelet + şema (`telemetry_sources`, `source_cursors`, `log_records`, `error_signatures`, `signals`, `detection_rules`)
+  - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
   - [ ] **Parça 2** (`IIM-16`) — `TelemetrySource` CRUD + `ITelemetrySourceConnector` + Seq connector (cursor'lı)
   - [ ] **Parça 3** (`IIM-17`) — 4 servise Serilog → Seq (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır)
   - [ ] **Parça 4** (`IIM-18`) — Poller + normalizasyon + fingerprint + `ErrorSignature` upsert
