@@ -1,7 +1,12 @@
 using System.Text.Json.Serialization;
+using NotificationService.Application.Commands.SendTestNotification;
 using NotificationService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(SendTestNotificationCommand).Assembly)
+);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 

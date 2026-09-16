@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NotificationService.Application.Abstractions;
+using NotificationService.Domain.Enums;
+using NotificationService.Infrastructure.Channels;
 using NotificationService.Infrastructure.Persistence;
 using NotificationService.Infrastructure.Persistence.Repositories;
 
@@ -20,6 +22,14 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIntegrationRepository, IntegrationRepository>();
         services.AddScoped<INotificationDeliveryRepository, NotificationDeliveryRepository>();
+
+        // Keyed by channel type so the dispatcher can resolve the right channel straight from
+        // the integration row.
+        services.AddKeyedScoped<INotificationChannel, EmailNotificationChannel>(
+            NotificationChannelType.Email
+        );
+
+        services.AddScoped<INotificationChannelResolver, NotificationChannelResolver>();
 
         return services;
     }
