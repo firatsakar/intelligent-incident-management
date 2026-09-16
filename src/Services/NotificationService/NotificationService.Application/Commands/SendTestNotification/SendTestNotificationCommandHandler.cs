@@ -2,11 +2,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.Abstractions;
 using NotificationService.Application.DTOs;
+using NotificationService.Domain.Exceptions;
 
 namespace NotificationService.Application.Commands.SendTestNotification;
 
 public sealed class SendTestNotificationCommandHandler
-    : IRequestHandler<SendTestNotificationCommand, DeliveryResult?>
+    : IRequestHandler<SendTestNotificationCommand, DeliveryResult>
 {
     private readonly IIntegrationRepository _integrations;
     private readonly INotificationChannelResolver _channels;
@@ -23,15 +24,14 @@ public sealed class SendTestNotificationCommandHandler
         _logger = logger;
     }
 
-    public async Task<DeliveryResult?> Handle(
+    public async Task<DeliveryResult> Handle(
         SendTestNotificationCommand request,
         CancellationToken cancellationToken
     )
     {
-        var integration = await _integrations.GetByIdAsync(request.IntegrationId, cancellationToken);
-
-        if (integration is null)
-            return null;
+        var integration =
+            await _integrations.GetByIdAsync(request.IntegrationId, cancellationToken)
+            ?? throw new IntegrationNotFoundException(request.IntegrationId);
 
         _logger.LogInformation(
             "Sending a test notification through integration {IntegrationName} ({Channel}).",

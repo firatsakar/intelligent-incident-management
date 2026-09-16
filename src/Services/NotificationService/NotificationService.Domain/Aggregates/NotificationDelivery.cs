@@ -7,6 +7,9 @@ namespace NotificationService.Domain.Aggregates;
 // idempotent: delivery is at-least-once, so a redelivered event must not send a second copy.
 public sealed class NotificationDelivery : AggregateRoot
 {
+    // Matches the column width configured for LastError.
+    private const int MaxErrorLength = 2048;
+
     private NotificationDelivery() { }
 
     public Guid IntegrationId { get; private set; }
@@ -45,7 +48,9 @@ public sealed class NotificationDelivery : AggregateRoot
     {
         Status = DeliveryStatus.Failed;
         AttemptCount++;
-        LastError = error;
+        // Provider errors can be far longer than the column; a truncated reason beats a write
+        // that fails and loses the record of the failure entirely.
+        LastError = error.Length <= MaxErrorLength ? error : error[..MaxErrorLength];
         SetUpdatedAt();
     }
 }

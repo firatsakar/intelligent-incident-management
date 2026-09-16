@@ -71,9 +71,12 @@ public sealed class Integration : AggregateRoot
     }
 
     // Severity runs Critical(0) to Low(3), so "at least as severe as MinPriority" is a <= test.
-    public bool Matches(IncidentPriority priority, string category)
+    // A null priority means the analysis produced something unrecognisable; the priority filter is
+    // then skipped rather than applied, because silently dropping an incident notification is
+    // worse than sending one the filter might have excluded.
+    public bool Matches(IncidentPriority? priority, string category)
     {
-        if (MinPriority.HasValue && priority > MinPriority.Value)
+        if (MinPriority.HasValue && priority.HasValue && priority.Value > MinPriority.Value)
             return false;
 
         if (
