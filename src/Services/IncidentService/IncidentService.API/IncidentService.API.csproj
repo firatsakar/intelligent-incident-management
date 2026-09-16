@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\EventBus\BuildingBlocks.EventBus.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Observability\BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
     <ProjectReference Include="..\IncidentService.Application\IncidentService.Application.csproj" />
     <ProjectReference Include="..\IncidentService.Infrastructure\IncidentService.Infrastructure.csproj" />
   </ItemGroup>
