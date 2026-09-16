@@ -35,7 +35,7 @@
 ## Sıradaki / kalan yol haritası (AI öne çekilmiş)
 
 - [~] **Adım 12** — NotificationService (`IIM-1`) — AI analizi bitince email/webhook/Jira bildirimi, müşteri konfigüre edilebilir `Integration` tablosuyla. Kanallar: email + webhook + Jira; lokal SMTP = Mailpit; config REST CRUD ile yönetilir.
-  - [~] **Parça 1** (`IIM-2`) — EventBus: queue-per-service + DLQ (queue-per-event-type olduğu için NotificationService IncidentService'e competing consumer olurdu; blocker)
+  - [x] **Parça 1** (`IIM-2`, 2026-09-16) — EventBus: queue-per-service + DLQ. Kuyruk adı `SubscriptionClientName`, event başına routing-key binding; tek consumer channel (SemaphoreSlim); hata halinde `requeue:false` + servis başına DLQ (eskiden sonsuz requeue). Broker topolojisi + iki yönlü mesaj akışı runtime doğrulandı.
   - [ ] **Parça 2** (`IIM-3`) — `IncidentAnalyzedEvent` zenginleştirme (IncidentTitle, Confidence) + stabil event Id
   - [ ] **Parça 3** (`IIM-4`) — NotificationService Clean Architecture iskeleti + DB bağlantısı
   - [ ] **Parça 4** (`IIM-5`) — `Integration` + `NotificationDelivery` aggregate'leri + EF migration
@@ -67,6 +67,7 @@
 - [ ] Production secret migration (API key, DB/RabbitMQ/ES credentials) — User Secrets/.env'den Key Vault/Secrets Manager'a; Adım 16 ile
 - [ ] ES production sertleştirme (xpack.security, TLS, auth; multi-node/replica) — Adım 16 / ölçek ile
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
+- [ ] Seq'e log gönderimi yok — container Adım 4'ten beri ayakta ama hiçbir serviste Serilog/Seq sink'i yok, loglar sadece console. (2026-09-16, Adım 12 Parça 1 sırasında fark edildi)
 - [ ] UML diyagramları (class / sequence / component) — çekirdek bitince
 - [ ] pgvector / hybrid search (BM25 eş anlamlı kaçırınca) — ertelendi (YAGNI)
 
