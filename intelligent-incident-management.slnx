@@ -32,7 +32,10 @@
     <Project Path="src/Services/IncidentService/IncidentService.Infrastructure/IncidentService.Infrastructure.csproj" Id="ed1a8d24-4016-40ed-9c00-16994e939556" />
   </Folder>
   <Folder Name="/src/Services/NotificationService/">
-    <Project Path="src/Services/NotificationService/Services.NotificationService.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.API/NotificationService.API.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Application/NotificationService.Application.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Domain/NotificationService.Domain.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Infrastructure/NotificationService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/Services/TelemetryIngestionService/">
     <Project Path="src/Services/TelemetryIngestionService/Services.TelemetryIngestionService.csproj" />
