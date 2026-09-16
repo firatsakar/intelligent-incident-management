@@ -18,8 +18,11 @@ public sealed class DevController : ControllerBase
         _logger = logger;
     }
 
+    // The catch-all suffix lets the echo stand in for an API that appends its own path, so a
+    // channel's request can be inspected before it is ever pointed at the real service.
     [HttpPost("webhook-echo")]
-    public async Task<IActionResult> WebhookEcho(CancellationToken cancellationToken)
+    [HttpPost("webhook-echo/{**path}")]
+    public async Task<IActionResult> WebhookEcho(string? path, CancellationToken cancellationToken)
     {
         if (!_environment.IsDevelopment())
             return NotFound();
@@ -27,7 +30,13 @@ public sealed class DevController : ControllerBase
         using var reader = new StreamReader(Request.Body);
         var body = await reader.ReadToEndAsync(cancellationToken);
 
-        _logger.LogInformation("Webhook echo received payload: {Payload}", body);
+        // Header names only — values can carry credentials.
+        _logger.LogInformation(
+            "Webhook echo received POST /{Path} with headers [{HeaderNames}] and payload: {Payload}",
+            path ?? string.Empty,
+            string.Join(", ", Request.Headers.Select(header => header.Key)),
+            body
+        );
 
         return Ok(new { receivedAt = DateTime.UtcNow, payload = JsonDocument.Parse(body).RootElement });
     }

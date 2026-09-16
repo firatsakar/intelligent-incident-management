@@ -35,6 +35,12 @@ public static class ServiceCollectionExtensions
             NotificationChannelType.Webhook
         );
 
+        services.AddHttpClient(JiraNotificationChannel.HttpClientName);
+
+        services.AddKeyedScoped<INotificationChannel, JiraNotificationChannel>(
+            NotificationChannelType.Jira
+        );
+
         services.AddScoped<INotificationChannelResolver, NotificationChannelResolver>();
 
         return services;
