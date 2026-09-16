@@ -41,7 +41,7 @@
   - [x] **Parça 4** (`IIM-5`, 2026-09-16) — `Integration` (channel + IsEnabled + jsonb config + MinPriority/CategoryFilter + `Matches()`) ve `NotificationDelivery` (unique `(IntegrationId, IncidentId)` = idempotency anahtarı) eklendi, `InitialCreate` migration uygulandı. `Skipped` statüsü düşürüldü (idempotency anahtarını işgal ediyordu); `IncidentPriority` yerel kopya (cross-domain referans yasak)
   - [x] **Parça 5** (`IIM-6`, 2026-09-16) — `INotificationChannel` (keyed DI, `NotificationChannelType` anahtarı) + `EmailNotificationChannel` (MailKit 4.18.0, ayarlar `Integration.Config`'ten), Mailpit compose'a eklendi (SMTP 1025 / UI 8025). Mailpit'e gerçek mail düştü. **Kapsam notu:** `POST /api/integrations/{id}/test` ve MediatR wiring Parça 8'den öne çekildi — her kanalı tek tek doğrulayabilmek için
   - [x] **Parça 6** (`IIM-7`, 2026-09-16) — `WebhookNotificationChannel` (named HttpClient + Polly retry; sadece 5xx/408/429/transport retry'lanır, 4xx final). Ayarlar: `Url`, `TimeoutSeconds`, `Header:<ad>` önekli serbest header'lar. Dev-only `POST /api/dev/webhook-echo` doğrulama hedefi. Başarı ve hata yolu ayrı ayrı doğrulandı
-  - [ ] **Parça 7** (`IIM-8`) — Jira kanalı
+  - [~] **Parça 7** (`IIM-8`) — `JiraNotificationChannel` yazıldı (v3 `POST /rest/api/3/issue`, Basic auth, ADF description). İstek şekli dev echo'ya yönlendirilerek doğrulandı (path + Authorization + geçerli ADF). **Gerçek Jira'ya karşı doğrulama bekliyor** — API token gerekiyor, Parça 8'deki CRUD sonrası yapılacak
   - [ ] **Parça 8** (`IIM-9`) — Fan-out handler + Integration CRUD API
   - [ ] **Parça 9** (`IIM-10`) — Uçtan uca doğrulama + kapanış
 - [ ] **Adım 13** — TelemetryIngestionService (anomali → otomatik incident tetikleme; MCP motivasyonunun doğduğu yer). — **SIRADA**
@@ -64,6 +64,7 @@
 - [x] `GET /api/analyses/similar` silindi (saf test amaçlıydı)
 - [ ] `POST /api/analyses/reindex` — **bilinçli bırakıldı** (operasyonel: mapping değişimi / ES rebuild). Ürünleşmede gözden geçir.
 - [ ] Outbox → BuildingBlocks'a çıkarma — **Adım 13'e ertelendi** (Adım 12 kararı: NotificationService terminal consumer, integration event publish etmiyor → gerçek ikinci kullanım yok, YAGNI. İkinci kullanım TelemetryIngestionService ile doğacak; processed-satır temizlik job'ı da o aşamada)
+- [ ] `Integration.config` (jsonb) içindeki müşteri credential'ları (SMTP parolası, Jira API token'ı) düz metin — at-rest şifreleme gerekiyor; Adım 16 secret migration ile
 - [ ] Production secret migration (API key, DB/RabbitMQ/ES credentials) — User Secrets/.env'den Key Vault/Secrets Manager'a; Adım 16 ile
 - [ ] ES production sertleştirme (xpack.security, TLS, auth; multi-node/replica) — Adım 16 / ölçek ile
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
