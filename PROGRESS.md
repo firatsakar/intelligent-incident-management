@@ -50,13 +50,16 @@
   - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
   - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
   - [x] **Parça 2** (`IIM-16`, 2026-09-17) — `TelemetrySource` CRUD (jsonb config + kind başına zorunlu ayar validasyonu + credential maskeleme + `POST {id}/test`), `ITelemetrySourceConnector` keyed DI, Seq connector: `clef=true` ile NDJSON CLEF parse, `afterId` cursor'ı, boş batch'te pozisyon korunur. `ApiKey` opsiyonel (kimliksiz Seq'e de bağlanır); eksikse test ucu net hata veriyor
-  - [ ] **Parça 3** (`IIM-17`) — 4 servise Serilog → Seq (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır)
+  - [ ] **Parça 3a** (`IIM-24`) — Sentetik *izlenen* uygulama + `seq-demo` (8082, şifresiz → anonim okuma). Tespit verisi buradan gelir. **Kapsam düzeltmesi:** platform kendini değil, müşterinin sistemini izler — kendi Seq'imizi okumak ürünü yanlış temsil ediyordu
+  - [ ] **Parça 3b** (`IIM-17`) — 4 servise Serilog → `seq` (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır). Artık *tespit kaynağı değil*, sadece bizim gözlemlenebilirliğimiz; Adım 17'nin zemini. İki log akışı asla karışmaz
   - [ ] **Parça 4** (`IIM-18`) — Poller + normalizasyon + fingerprint + `ErrorSignature` upsert
   - [ ] **Parça 5** (`IIM-19`) — Burst tespiti + hata oranı z-score baseline → `Signal`
   - [ ] **Parça 6** (`IIM-20`) — Outbox → `BuildingBlocks.Outbox` (gerçek ikinci kullanım burada doğdu) + temizlik job'ı
   - [ ] **Parça 7** (`IIM-21`) — Deterministik skorlama + TTL'li dedup + terfi + kanıt özeti → `SignalPromotedEvent`
   - [ ] **Parça 8** (`IIM-22`) — IncidentService: event tüketimi + `Incident.DetectedAt` (sorunun başlangıcı, kayıt anı değil)
   - [ ] **Parça 9** (`IIM-23`) — Evidence API + uçtan uca doğrulama + kapanış
+- [ ] **Adım 13.5** — OTLP log ingest (müşteri log entegrasyonunun **genel çözümü**). Vendor başına connector yazmak yerine tek bir standart tel formatı kabul edilir; uzun kuyruğu müşterinin zaten kullandığı shipper (OTel Collector / Fluent Bit / Vector) çözer. Adım 17 ile aynı bağımlılık → birlikte ele alınabilir. Karar notu: her log satırı saklanmaz, imza başına sayım + örnek satırlar saklanır; filtreleme kaynağa (Collector) itilir
+- [ ] **Adım 13.6** — Generic alert webhook ingest (Datadog monitor, Grafana alert, CloudWatch alarm). En düşük hacim, en yüksek sinyal; ham log çekmek istemeyen müşteriler için. Provider başına küçük bir payload mapper yeter
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [ ] **Adım 15** — YARP API Gateway (tek giriş noktası)
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
