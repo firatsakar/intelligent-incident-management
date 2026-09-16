@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -13,7 +13,12 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
     private readonly ILogger<RabbitMqEventBus> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly EventBusOptions _options;
-    private readonly Dictionary<string, Type> _handlers = new();
+
+    // Event name (= routing key) -> deserialize + handle. Registered by Subscribe<T, THandler>(),
+    // which captures T and THandler so dispatch needs no reflection.
+    private readonly Dictionary<string, Func<string, IServiceProvider, CancellationToken, Task>> _handlers = new();
+
+    private readonly SemaphoreSlim _consumerLock = new(1, 1);
     private IChannel? _consumerChannel;
 
     public RabbitMqEventBus(RabbitMqConnection connection, ILogger<RabbitMqEventBus> logger, IServiceScopeFactory scopeFactory, EventBusOptions options)
@@ -23,6 +28,14 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
         _scopeFactory = scopeFactory;
         _options = options;
     }
+
+    // One durable queue per service. Two services subscribed to the same event each get their own
+    // copy; a queue per event type would make them competing consumers instead.
+    private string QueueName => _options.SubscriptionClientName;
+
+    private string DeadLetterExchangeName => $"{_options.ExchangeName}.dlx";
+
+    private string DeadLetterQueueName => $"{QueueName}.dlq";
 
     public async Task PublishAsync<T>(T integrationEvent, CancellationToken cancellationToken = default) where T : IntegrationEvent
     {
@@ -49,8 +62,7 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
             mandatory: true,
             cancellationToken: cancellationToken);
 
-        _logger.LogInformation($"Published integration event: {eventName} with Id: {integrationEvent.Id}");
-
+        _logger.LogInformation("Published integration event: {EventName} with Id: {EventId}", eventName, integrationEvent.Id);
     }
 
     public void Subscribe<T, THandler>()
@@ -58,83 +70,156 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
         where THandler : IIntegrationEventHandler<T>
     {
         var eventName = typeof(T).Name;
-        _handlers[eventName] = typeof(THandler);
-        _ = StartConsumeAsync<T>();
+
+        _handlers[eventName] = async (message, serviceProvider, cancellationToken) =>
+        {
+            var integrationEvent =
+                JsonSerializer.Deserialize<T>(message)
+                ?? throw new InvalidOperationException($"Deserialization returned null for event {eventName}.");
+
+            var handler = serviceProvider.GetRequiredService<THandler>();
+
+            await handler.HandleAsync(integrationEvent, cancellationToken);
+        };
+
+        _ = BindAsync(eventName);
     }
 
-    private async Task StartConsumeAsync<T>() where T : IntegrationEvent
+    // Binds the service queue to one more routing key, opening the shared consumer channel on the
+    // first subscription. The lock keeps concurrent Subscribe calls from opening two channels.
+    private async Task BindAsync(string eventName)
     {
-        var eventName = typeof(T).Name;
-        _consumerChannel = await _connection.CreateChannelAsync();
+        try
+        {
+            await _consumerLock.WaitAsync();
+            try
+            {
+                _consumerChannel ??= await CreateConsumerChannelAsync();
 
-        await _consumerChannel.ExchangeDeclareAsync(
+                await _consumerChannel.QueueBindAsync(
+                    queue: QueueName,
+                    exchange: _options.ExchangeName,
+                    routingKey: eventName);
+            }
+            finally
+            {
+                _consumerLock.Release();
+            }
+
+            _logger.LogInformation(
+                "Bound queue {QueueName} to routing key {EventName}.", QueueName, eventName);
+        }
+        catch (Exception ex)
+        {
+            // Subscribe() is fire-and-forget, so an unlogged failure here would leave the service
+            // running with no consumer and no visible reason why.
+            _logger.LogError(ex, "Failed to subscribe to integration event: {EventName}", eventName);
+        }
+    }
+
+    private async Task<IChannel> CreateConsumerChannelAsync()
+    {
+        if (string.IsNullOrWhiteSpace(QueueName))
+        {
+            throw new InvalidOperationException(
+                $"{EventBusOptions.SectionName}:{nameof(EventBusOptions.SubscriptionClientName)} must be set — it is the service's queue name.");
+        }
+
+        var channel = await _connection.CreateChannelAsync();
+
+        await channel.ExchangeDeclareAsync(
             exchange: _options.ExchangeName,
             type: ExchangeType.Direct,
             durable: true);
 
-        await _consumerChannel.QueueDeclareAsync(
-            queue: eventName,
+        // Rejected messages land here instead of being redelivered forever.
+        await channel.ExchangeDeclareAsync(
+            exchange: DeadLetterExchangeName,
+            type: ExchangeType.Direct,
+            durable: true);
+
+        await channel.QueueDeclareAsync(
+            queue: DeadLetterQueueName,
             durable: true,
             exclusive: false,
             autoDelete: false);
 
-        await _consumerChannel.QueueBindAsync(
-            queue: eventName,
-            exchange: _options.ExchangeName,
-            routingKey: eventName);
+        await channel.QueueBindAsync(
+            queue: DeadLetterQueueName,
+            exchange: DeadLetterExchangeName,
+            routingKey: QueueName);
 
-        var consumer = new AsyncEventingBasicConsumer(_consumerChannel);
-        consumer.ReceivedAsync += async (_, ea) =>
-        {
-            var message = Encoding.UTF8.GetString(ea.Body.Span);
-            await ProcessMessageAsync<T>(message, ea.DeliveryTag);
-        };
+        await channel.QueueDeclareAsync(
+            queue: QueueName,
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: new Dictionary<string, object?>
+            {
+                ["x-dead-letter-exchange"] = DeadLetterExchangeName,
+                ["x-dead-letter-routing-key"] = QueueName
+            });
 
-        await _consumerChannel.BasicConsumeAsync(
-            queue: eventName,
+        var consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (_, ea) => await ProcessMessageAsync(channel, ea);
+
+        await channel.BasicConsumeAsync(
+            queue: QueueName,
             autoAck: false,
             consumer: consumer);
+
+        _logger.LogInformation(
+            "Consuming integration events from queue {QueueName} (dead-letter queue {DeadLetterQueueName}).",
+            QueueName,
+            DeadLetterQueueName);
+
+        return channel;
     }
 
-    private async Task ProcessMessageAsync<T>(
-        string message, ulong deliveryTag)
-        where T : IntegrationEvent
+    private async Task ProcessMessageAsync(IChannel channel, BasicDeliverEventArgs ea)
     {
-        var eventName = typeof(T).Name;
+        // The queue carries every event this service subscribed to, so the routing key decides
+        // which handler runs.
+        var eventName = ea.RoutingKey;
+
+        if (!_handlers.TryGetValue(eventName, out var handler))
+        {
+            _logger.LogWarning(
+                "No handler registered for integration event: {EventName}. Dead-lettering the message.", eventName);
+
+            await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
+            return;
+        }
+
+        var message = Encoding.UTF8.GetString(ea.Body.Span);
 
         try
         {
-            var integrationEvent = JsonSerializer
-                .Deserialize<T>(message)!;
-
             using var scope = _scopeFactory.CreateScope();
-            var handlerType = _handlers[eventName];
-            var handler = scope.ServiceProvider
-                .GetRequiredService(handlerType)
-                as IIntegrationEventHandler<T>;
 
-            await handler!.HandleAsync(integrationEvent);
+            await handler(message, scope.ServiceProvider, CancellationToken.None);
 
-            await _consumerChannel!.BasicAckAsync(deliveryTag, false);
+            await channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
 
-            _logger.LogInformation(
-                "Handled integration event: {EventName}", eventName);
+            _logger.LogInformation("Handled integration event: {EventName}", eventName);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Error when handle integration event: {EventName}", eventName);
+            _logger.LogError(ex, "Error when handling integration event: {EventName}", eventName);
 
-            await _consumerChannel!.BasicNackAsync(
-                deliveryTag, false, requeue: true);
+            // requeue: false — the broker dead-letters the message rather than looping it back to
+            // this consumer, which would spin forever on a poison message.
+            await channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
         }
     }
+
     public async ValueTask DisposeAsync()
     {
         if (_consumerChannel is not null)
             await _consumerChannel.DisposeAsync();
+
+        _consumerLock.Dispose();
+
         await _connection.DisposeAsync();
     }
-
-
 }
