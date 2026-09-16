@@ -1,10 +1,15 @@
-﻿using FluentValidation;
-using IncidentService.Domain.Exceptions;
+using BuildingBlocks.SharedKernel.Exceptions;
+using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
-namespace IncidentService.API.Middleware;
+namespace BuildingBlocks.Web;
 
+// Maps unhandled exceptions to RFC 9457 problem details. Services opt in with
+// AddExceptionHandler<GlobalExceptionHandler>() and derive their not-found exceptions from
+// NotFoundException.
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
@@ -23,7 +28,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         var problemDetails = exception switch
         {
             ValidationException validationEx => CreateValidationProblem(validationEx),
-            IncidentNotFoundException notFoundEx => new ProblemDetails
+            NotFoundException notFoundEx => new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
                 Title = "Resource not found",

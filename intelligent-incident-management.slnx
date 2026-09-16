@@ -6,6 +6,9 @@
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />
+  <Folder Name="/src/BuildingBlocks/Application/">
+    <Project Path="src/BuildingBlocks/Application/BuildingBlocks.Application.csproj" />
+  </Folder>
   <Folder Name="/src/BuildingBlocks/Contracts/">
     <Project Path="src/BuildingBlocks/Contracts/BuildingBlocks.Contracts.csproj" />
   </Folder>
@@ -17,6 +20,9 @@
   </Folder>
   <Folder Name="/src/BuildingBlocks/SharedKernel/">
     <Project Path="src/BuildingBlocks/SharedKernel/BuildingBlocks.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Web/">
+    <Project Path="src/BuildingBlocks/Web/BuildingBlocks.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/AgentOrchestrator/">

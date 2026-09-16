@@ -1,10 +1,10 @@
 using System.Text.Json.Serialization;
+using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.Web;
 using FluentValidation;
 using IncidentService.API.BackgroundServices;
-using IncidentService.API.Middleware;
-using IncidentService.Application.Behaviors;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
