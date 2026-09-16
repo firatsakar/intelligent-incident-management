@@ -1,8 +1,19 @@
 using System.Text.Json.Serialization;
+using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Web;
+using FluentValidation;
+using TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 using TelemetryIngestionService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly)
+);
+
+builder.Services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+builder.Services.AddValidatorsFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly);
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
