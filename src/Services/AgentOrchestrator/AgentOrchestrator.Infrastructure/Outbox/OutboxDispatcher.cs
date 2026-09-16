@@ -107,10 +107,15 @@ public sealed class OutboxDispatcher : BackgroundService
 
                 var integrationEvent = new IncidentAnalyzedEvent
                 {
+                    // Reuse the outbox row's Id so the event Id stays stable across retries —
+                    // a fresh Guid per attempt cannot serve as a consumer's idempotency key.
+                    Id = message.Id,
                     IncidentId = domainEvent.IncidentId,
+                    IncidentTitle = domainEvent.IncidentTitle,
                     SuggestedCategory = domainEvent.SuggestedCategory,
                     SuggestedPriority = domainEvent.SuggestedPriority,
                     Reasoning = domainEvent.Reasoning,
+                    Confidence = domainEvent.Confidence,
                 };
 
                 await eventBus.PublishAsync(integrationEvent, cancellationToken);
