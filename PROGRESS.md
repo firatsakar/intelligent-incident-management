@@ -49,7 +49,7 @@
   - **Signal ≠ Incident:** `≥0.90` incident · `0.60–0.89` zayıf sinyal (incident yok) · `<0.60` sadece kayıt (baseline + emsal beslenir)
   - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
   - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
-  - [ ] **Parça 2** (`IIM-16`) — `TelemetrySource` CRUD + `ITelemetrySourceConnector` + Seq connector (cursor'lı)
+  - [x] **Parça 2** (`IIM-16`, 2026-09-17) — `TelemetrySource` CRUD (jsonb config + kind başına zorunlu ayar validasyonu + credential maskeleme + `POST {id}/test`), `ITelemetrySourceConnector` keyed DI, Seq connector: `clef=true` ile NDJSON CLEF parse, `afterId` cursor'ı, boş batch'te pozisyon korunur. `ApiKey` opsiyonel (kimliksiz Seq'e de bağlanır); eksikse test ucu net hata veriyor
   - [ ] **Parça 3** (`IIM-17`) — 4 servise Serilog → Seq (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır)
   - [ ] **Parça 4** (`IIM-18`) — Poller + normalizasyon + fingerprint + `ErrorSignature` upsert
   - [ ] **Parça 5** (`IIM-19`) — Burst tespiti + hata oranı z-score baseline → `Signal`
