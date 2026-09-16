@@ -12,7 +12,8 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 10 — Root Cause Analysis (RCA)
-- **Sıradaki:** Adım 12 (opsiyon A) *veya* Adım 13 (opsiyon B) — karar bekliyor
+- **Devam eden:** Adım 12 — NotificationService (`IIM-1`, 2026-09-16)
+- **Sıradaki:** Adım 13 — TelemetryIngestionService
 
 ---
 
@@ -33,8 +34,17 @@
 
 ## Sıradaki / kalan yol haritası (AI öne çekilmiş)
 
-- [ ] **Adım 12** — NotificationService (AI analizi bitince email/webhook bildirim). Outbox burada BuildingBlocks'a çıkarılabilir (ikinci kullanım = YAGNI tetikleyicisi). — **SIRADA (opsiyon A)**
-- [ ] **Adım 13** — TelemetryIngestionService (anomali → otomatik incident tetikleme; MCP motivasyonunun doğduğu yer). — **SIRADA (opsiyon B)**
+- [~] **Adım 12** — NotificationService (`IIM-1`) — AI analizi bitince email/webhook/Jira bildirimi, müşteri konfigüre edilebilir `Integration` tablosuyla. Kanallar: email + webhook + Jira; lokal SMTP = Mailpit; config REST CRUD ile yönetilir.
+  - [~] **Parça 1** (`IIM-2`) — EventBus: queue-per-service + DLQ (queue-per-event-type olduğu için NotificationService IncidentService'e competing consumer olurdu; blocker)
+  - [ ] **Parça 2** (`IIM-3`) — `IncidentAnalyzedEvent` zenginleştirme (IncidentTitle, Confidence) + stabil event Id
+  - [ ] **Parça 3** (`IIM-4`) — NotificationService Clean Architecture iskeleti + DB bağlantısı
+  - [ ] **Parça 4** (`IIM-5`) — `Integration` + `NotificationDelivery` aggregate'leri + EF migration
+  - [ ] **Parça 5** (`IIM-6`) — Kanal soyutlaması + Email kanalı (MailKit + Mailpit)
+  - [ ] **Parça 6** (`IIM-7`) — Webhook kanalı
+  - [ ] **Parça 7** (`IIM-8`) — Jira kanalı
+  - [ ] **Parça 8** (`IIM-9`) — Fan-out handler + Integration CRUD API
+  - [ ] **Parça 9** (`IIM-10`) — Uçtan uca doğrulama + kapanış
+- [ ] **Adım 13** — TelemetryIngestionService (anomali → otomatik incident tetikleme; MCP motivasyonunun doğduğu yer). — **SIRADA**
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [ ] **Adım 15** — YARP API Gateway (tek giriş noktası)
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
@@ -53,7 +63,7 @@
 - [x] `MafAiAnalyzer` debug `LogWarning("RAW AI RESPONSE")` kaldırıldı
 - [x] `GET /api/analyses/similar` silindi (saf test amaçlıydı)
 - [ ] `POST /api/analyses/reindex` — **bilinçli bırakıldı** (operasyonel: mapping değişimi / ES rebuild). Ürünleşmede gözden geçir.
-- [ ] Outbox → BuildingBlocks'a çıkarma (Adım 12/13 ikinci kullanımıyla; processed-satır temizlik job'ı da o aşamada)
+- [ ] Outbox → BuildingBlocks'a çıkarma — **Adım 13'e ertelendi** (Adım 12 kararı: NotificationService terminal consumer, integration event publish etmiyor → gerçek ikinci kullanım yok, YAGNI. İkinci kullanım TelemetryIngestionService ile doğacak; processed-satır temizlik job'ı da o aşamada)
 - [ ] Production secret migration (API key, DB/RabbitMQ/ES credentials) — User Secrets/.env'den Key Vault/Secrets Manager'a; Adım 16 ile
 - [ ] ES production sertleştirme (xpack.security, TLS, auth; multi-node/replica) — Adım 16 / ölçek ile
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
