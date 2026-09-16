@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-TelemetryIngestionService.API-2c7f9b41-8e5d-4a63-b2f1-9d4c6e8a7b53</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\EventBus\BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Observability\BuildingBlocks.Observability.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
+    <ProjectReference Include="..\TelemetryIngestionService.Application\TelemetryIngestionService.Application.csproj" />
+    <ProjectReference Include="..\TelemetryIngestionService.Infrastructure\TelemetryIngestionService.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
