@@ -29,6 +29,12 @@ public static class ServiceCollectionExtensions
             NotificationChannelType.Email
         );
 
+        services.AddHttpClient(WebhookNotificationChannel.HttpClientName);
+
+        services.AddKeyedScoped<INotificationChannel, WebhookNotificationChannel>(
+            NotificationChannelType.Webhook
+        );
+
         services.AddScoped<INotificationChannelResolver, NotificationChannelResolver>();
 
         return services;
