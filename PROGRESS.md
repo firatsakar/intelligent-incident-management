@@ -12,7 +12,8 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 12 — NotificationService (`IIM-1`, 2026-09-16)
-- **Sıradaki:** Adım 13 — TelemetryIngestionService (Outbox → BuildingBlocks çıkarımı da burada)
+- **Devam eden:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-16)
+- **Sıradaki:** Adım 14 — Comment & Timeline
 
 ---
 
@@ -44,7 +45,18 @@
 
 ## Sıradaki / kalan yol haritası (AI öne çekilmiş)
 
-- [ ] **Adım 13** — TelemetryIngestionService (anomali → otomatik incident tetikleme; MCP motivasyonunun doğduğu yer). — **SIRADA**
+- [~] **Adım 13** — TelemetryIngestionService (`IIM-14`) — dış log kaynağından çekme → imza → sinyal → **deterministik skorla** otomatik incident. Telemetri bir *entegrasyon*: kaynak müşteri tarafından konfigüre edilir (Adım 12'deki `Integration` deseni), ilk connector Seq. Skorlamada AI yok; AI'a giden tek şey incident açıklamasına gömülen kompakt kanıt özeti.
+  - **Signal ≠ Incident:** `≥0.90` incident · `0.60–0.89` zayıf sinyal (incident yok) · `<0.60` sadece kayıt (baseline + emsal beslenir)
+  - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
+  - [~] **Parça 1** (`IIM-15`) — İskelet + şema (`telemetry_sources`, `source_cursors`, `log_records`, `error_signatures`, `signals`, `detection_rules`)
+  - [ ] **Parça 2** (`IIM-16`) — `TelemetrySource` CRUD + `ITelemetrySourceConnector` + Seq connector (cursor'lı)
+  - [ ] **Parça 3** (`IIM-17`) — 4 servise Serilog → Seq (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır)
+  - [ ] **Parça 4** (`IIM-18`) — Poller + normalizasyon + fingerprint + `ErrorSignature` upsert
+  - [ ] **Parça 5** (`IIM-19`) — Burst tespiti + hata oranı z-score baseline → `Signal`
+  - [ ] **Parça 6** (`IIM-20`) — Outbox → `BuildingBlocks.Outbox` (gerçek ikinci kullanım burada doğdu) + temizlik job'ı
+  - [ ] **Parça 7** (`IIM-21`) — Deterministik skorlama + TTL'li dedup + terfi + kanıt özeti → `SignalPromotedEvent`
+  - [ ] **Parça 8** (`IIM-22`) — IncidentService: event tüketimi + `Incident.DetectedAt` (sorunun başlangıcı, kayıt anı değil)
+  - [ ] **Parça 9** (`IIM-23`) — Evidence API + uçtan uca doğrulama + kapanış
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [ ] **Adım 15** — YARP API Gateway (tek giriş noktası)
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
