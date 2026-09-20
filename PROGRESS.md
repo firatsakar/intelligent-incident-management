@@ -51,7 +51,7 @@
   - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
   - [x] **Parça 2** (`IIM-16`, 2026-09-17) — `TelemetrySource` CRUD (jsonb config + kind başına zorunlu ayar validasyonu + credential maskeleme + `POST {id}/test`), `ITelemetrySourceConnector` keyed DI, Seq connector: `clef=true` ile NDJSON CLEF parse, `afterId` cursor'ı, boş batch'te pozisyon korunur. `ApiKey` opsiyonel (kimliksiz Seq'e de bağlanır); eksikse test ucu net hata veriyor
   - [x] **Parça 3a** (`IIM-24`, 2026-09-21) — `demo/MonitoredShop` (checkout servisi taklidi: sürekli trafik + `error-storm` / `timeout-storm` / `fatal` tetikleyicileri) + `seq-demo` (8082, `SEQ_FIRSTRUN_NOAUTHENTICATION` ile anonim okuma). Tespit verisi buradan gelir. **Kapsam düzeltmesi:** platform kendini değil, müşterinin sistemini izler. Canlı Seq'e karşı doğrulama Parça 2'de **iki gerçek bug** ortaya çıkardı: CLEF `@i` benzersiz id değil *event tipi hash'i* (bir fırtına tek satıra çökerdi), ve `afterId` ileri değil **geriye** sayfalıyor (tail cursor `fromDateUtc` olmalı)
-  - [ ] **Parça 3b** (`IIM-17`) — 4 servise Serilog → `seq` (Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapanır). Artık *tespit kaynağı değil*, sadece bizim gözlemlenebilirliğimiz; Adım 17'nin zemini. İki log akışı asla karışmaz
+  - [x] **Parça 3b** (`IIM-17`, 2026-09-21) — `BuildingBlocks.Observability.UsePlatformLogging()` ile 4 servis Serilog → `seq` (8081). `Service` damgası `TelemetryConstants.ServiceNames`'ten. Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapandı; *tespit kaynağı değil*, sadece bizim gözlemlenebilirliğimiz. Ayrım korunuyor: servisler `seq`'e yazar, dedektör `seq-demo`'yu okur
   - [ ] **Parça 4** (`IIM-18`) — Poller + normalizasyon + fingerprint + `ErrorSignature` upsert
   - [ ] **Parça 5** (`IIM-19`) — Burst tespiti + hata oranı z-score baseline → `Signal`
   - [ ] **Parça 6** (`IIM-20`) — Outbox → `BuildingBlocks.Outbox` (gerçek ikinci kullanım burada doğdu) + temizlik job'ı
@@ -86,7 +86,7 @@
 - [ ] ES production sertleştirme (xpack.security, TLS, auth; multi-node/replica) — Adım 16 / ölçek ile
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
 - [ ] `Microsoft.OpenApi` 2.0.0 yüksek önem dereceli güvenlik açığı (GHSA-v5pm-xwqc-g5wc) — `Microsoft.AspNetCore.OpenApi` 10.0.7 transitif olarak çekiyor; IncidentService.API + NotificationService.API etkileniyor. Yamalı sürüme çıkılmalı
-- [ ] Seq'e log gönderimi yok — container Adım 4'ten beri ayakta ama hiçbir serviste Serilog/Seq sink'i yok, loglar sadece console. (2026-09-16, Adım 12 Parça 1 sırasında fark edildi)
+- [x] Seq'e log gönderimi yok — **kapandı** (Adım 13 Parça 3b, `IIM-17`, 2026-09-21)
 - [ ] UML diyagramları (class / sequence / component) — çekirdek bitince
 - [ ] pgvector / hybrid search (BM25 eş anlamlı kaçırınca) — ertelendi (YAGNI)
 
