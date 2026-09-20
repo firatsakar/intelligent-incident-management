@@ -133,6 +133,19 @@ services:
     networks:
       - incident_network
 
+  # Stands in for a customer's log system — the system IIM monitors, not IIM's own logs.
+  # Deliberately left without an admin password so reads are anonymous: a customer's Seq would
+  # hand us an API key, but requiring one here would only get in the way of the demo.
+  seq-demo:
+    image: datalust/seq:latest
+    container_name: incident-management-seq-demo
+    environment:
+      ACCEPT_EULA: "Y"
+    volumes:
+      - incident-management-seq-demo_data:/data
+    networks:
+      - incident_network
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: incident-management-mailpit
@@ -176,5 +189,6 @@ volumes:
   postgres_telemetry_data:
   postgres_agent_data:
   incident-management-seq_data:
+  incident-management-seq-demo_data:
   incident-management-pgadmin_data:
   elasticsearch_data:

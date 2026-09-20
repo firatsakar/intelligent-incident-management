@@ -4,6 +4,9 @@
     <File Path="docker-compose.override.yml" />
     <File Path="docker-compose.yml" />
   </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/MonitoredShop/MonitoredShop.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />
   <Folder Name="/src/BuildingBlocks/Application/">
