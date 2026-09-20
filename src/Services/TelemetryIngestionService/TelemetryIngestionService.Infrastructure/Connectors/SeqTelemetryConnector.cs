@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
@@ -9,12 +11,19 @@ using TelemetryIngestionService.Domain.Enums;
 namespace TelemetryIngestionService.Infrastructure.Connectors;
 
 // Reads events from Seq's query API.
-// Required settings: Url, ApiKey. Optional: Filter, ServiceProperty.
+// Required settings: Url. Optional: ApiKey, Filter, ServiceProperty, InitialLookbackMinutes.
 //
-// Seq's events endpoint is `GET /api/events{?filter,count,afterId,clef,...}`. Asking for
-// `clef=true` returns newline-delimited CLEF, which is a stable documented format and far less
-// brittle than Seq's rendered JSON shape. `afterId` is the cursor: Seq's own event id, which is
-// exactly the opaque token SourceCursor.Position is meant to hold.
+// Three things about Seq's API shaped this implementation, all established by querying a live
+// instance rather than assumed:
+//
+// 1. CLEF output (clef=true) is tempting but unusable as a cursor source: its `@i` field is the
+//    *event type hash*, identical for every event sharing a message template, not a unique id.
+//    The rendered shape is the one that carries a real per-event `Id`.
+// 2. Results come back newest first, so `afterId` pages backwards in time. It is a pagination
+//    token, not a tail cursor. Tailing is done with `fromDateUtc`, which is inclusive.
+// 3. Because `fromDateUtc` is inclusive, the boundary event is re-fetched on every poll. That is
+//    deliberate: it guarantees no gap, and the unique index on (source, event id) discards the
+//    duplicate.
 public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
 {
     public const string HttpClientName = "seq-telemetry";
@@ -23,6 +32,11 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
     private const string ApiKeyHeader = "X-Seq-ApiKey";
     private const string DefaultFilter = "@Level in ['Error','Fatal']";
     private const string DefaultServiceProperty = "Service";
+    private const int DefaultInitialLookbackMinutes = 15;
+
+    // Bounds one poll. A window holding more than this is a firehose; the warning says so rather
+    // than the connector quietly spinning.
+    private const int MaxPagesPerPoll = 10;
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<SeqTelemetryConnector> _logger;
@@ -45,28 +59,59 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
         CancellationToken cancellationToken = default
     )
     {
-        using var response = await SendAsync(source, cursor.Position, maxEvents, cancellationToken);
+        // On a source's first poll, start from a short lookback rather than the beginning of the
+        // store. Ingesting a year of history would open incidents for errors nobody is acting on.
+        var from = cursor.LastEventTimestamp ?? DateTime.UtcNow.AddMinutes(-ResolveLookback(source));
 
-        response.EnsureSuccessStatusCode();
+        var collected = new List<RawLogEvent>();
+        string? afterId = null;
 
-        var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+        for (var page = 0; page < MaxPagesPerPoll; page++)
+        {
+            using var response = await SendAsync(source, from, afterId, maxEvents, cancellationToken);
 
-        var events = ParseClef(payload, source, out var lastEventId, out var lastTimestamp);
+            response.EnsureSuccessStatusCode();
+
+            var payload = await response.Content.ReadAsStringAsync(cancellationToken);
+            var events = Parse(payload, source, out var oldestId);
+
+            collected.AddRange(events);
+
+            // A short page means the window is exhausted. A full one means there may be older
+            // events still inside it, reachable by paging backwards from the oldest we just saw.
+            if (events.Count < maxEvents || oldestId is null)
+                break;
+
+            afterId = oldestId;
+
+            if (page == MaxPagesPerPoll - 1)
+            {
+                _logger.LogWarning(
+                    "Telemetry source {SourceName} still had events after {PageCount} pages; the rest will be picked up on the next poll.",
+                    source.Name,
+                    MaxPagesPerPoll
+                );
+            }
+        }
+
+        // Seq hands them back newest first; downstream wants oldest first so occurrences are
+        // recorded in the order they happened.
+        var ordered = collected.OrderBy(x => x.Timestamp).ToList();
 
         _logger.LogInformation(
-            "Fetched {Count} event(s) from telemetry source {SourceName} (after id {AfterId}).",
-            events.Count,
+            "Fetched {Count} event(s) from telemetry source {SourceName} (from {From:O}).",
+            ordered.Count,
             source.Name,
-            cursor.Position ?? "<start>"
+            from
         );
 
         return new ConnectorFetchResult
         {
-            Events = events,
-            // Holding the previous position when a batch is empty keeps the cursor from rewinding
-            // to the beginning of the source.
-            NextPosition = lastEventId ?? cursor.Position,
-            LastEventTimestamp = lastTimestamp,
+            Events = ordered,
+            // Holding the previous position when nothing new arrived keeps the cursor from
+            // rewinding to the start of the source.
+            NextPosition = ordered.Count > 0 ? ordered[^1].SourceEventId : cursor.Position,
+            LastEventTimestamp = ordered.Count > 0 ? ordered[^1].Timestamp : cursor.LastEventTimestamp,
         };
     }
 
@@ -77,7 +122,13 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
     {
         try
         {
-            using var response = await SendAsync(source, afterId: null, maxEvents: 1, cancellationToken);
+            using var response = await SendAsync(
+                source,
+                from: DateTime.UtcNow.AddMinutes(-ResolveLookback(source)),
+                afterId: null,
+                maxEvents: 1,
+                cancellationToken
+            );
 
             if (response.StatusCode == HttpStatusCode.Unauthorized)
                 return ConnectorTestResult.Failure(
@@ -86,17 +137,16 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
 
             if (!response.IsSuccessStatusCode)
             {
-                var body = await response.Content.ReadAsStringAsync(cancellationToken);
+                var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
 
                 return ConnectorTestResult.Failure(
-                    $"Seq returned {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(body)}"
+                    $"Seq returned {(int)response.StatusCode} {response.ReasonPhrase}. {Truncate(errorBody)}"
                 );
             }
 
             var payload = await response.Content.ReadAsStringAsync(cancellationToken);
-            var events = ParseClef(payload, source, out _, out _);
 
-            return ConnectorTestResult.Success(events.Count);
+            return ConnectorTestResult.Success(Parse(payload, source, out _).Count);
         }
         catch (Exception ex)
         {
@@ -108,6 +158,7 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
 
     private Task<HttpResponseMessage> SendAsync(
         TelemetrySource source,
+        DateTime from,
         string? afterId,
         int maxEvents,
         CancellationToken cancellationToken
@@ -119,8 +170,9 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
         var query = new List<string>
         {
             $"count={maxEvents}",
-            "clef=true",
+            "render=true",
             $"filter={Uri.EscapeDataString(filter)}",
+            $"fromDateUtc={Uri.EscapeDataString(from.ToString("O", CultureInfo.InvariantCulture))}",
         };
 
         if (!string.IsNullOrWhiteSpace(afterId))
@@ -136,92 +188,106 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
         if (apiKey is not null)
             request.Headers.TryAddWithoutValidation(ApiKeyHeader, apiKey);
 
-        var client = _httpClientFactory.CreateClient(HttpClientName);
-
-        return client.SendAsync(request, cancellationToken);
+        return _httpClientFactory.CreateClient(HttpClientName).SendAsync(request, cancellationToken);
     }
 
-    // CLEF is newline-delimited JSON: @t timestamp, @l level, @m rendered message, @mt template,
-    // @x exception, @i event id, everything else a property.
-    private IReadOnlyList<RawLogEvent> ParseClef(
+    private IReadOnlyList<RawLogEvent> Parse(
         string payload,
         TelemetrySource source,
-        out string? lastEventId,
-        out DateTime? lastTimestamp
+        out string? oldestId
     )
     {
         var serviceProperty = source.SettingOrDefault("ServiceProperty", DefaultServiceProperty);
         var events = new List<RawLogEvent>();
 
-        lastEventId = null;
-        lastTimestamp = null;
+        oldestId = null;
 
-        foreach (var line in payload.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+        using var document = JsonDocument.Parse(payload);
+
+        foreach (var element in document.RootElement.EnumerateArray())
         {
-            var trimmed = line.Trim();
+            var exception = ReadString(element, "Exception");
+            var id = ReadString(element, "Id");
 
-            if (trimmed.Length == 0)
-                continue;
+            events.Add(
+                new RawLogEvent
+                {
+                    SourceEventId = id,
+                    Timestamp = ReadTimestamp(element),
+                    Severity = ParseSeverity(ReadString(element, "Level")),
+                    Service = ReadProperty(element, serviceProperty) ?? source.Name,
+                    Message = ReadString(element, "RenderedMessage") ?? string.Empty,
+                    MessageTemplate = ReadTemplate(element),
+                    ExceptionType = ExtractExceptionType(exception),
+                    StackTrace = exception,
+                }
+            );
 
-            try
-            {
-                using var document = JsonDocument.Parse(trimmed);
-                var root = document.RootElement;
-
-                var timestamp = ReadTimestamp(root);
-
-                events.Add(
-                    new RawLogEvent
-                    {
-                        SourceEventId = ReadString(root, "@i"),
-                        Timestamp = timestamp,
-                        Severity = ParseSeverity(ReadString(root, "@l")),
-                        Service = ReadString(root, serviceProperty) ?? source.Name,
-                        Message = ReadString(root, "@m") ?? ReadString(root, "@mt") ?? string.Empty,
-                        ExceptionType = ExtractExceptionType(ReadString(root, "@x")),
-                        StackTrace = ReadString(root, "@x"),
-                    }
-                );
-
-                lastEventId = ReadString(root, "@i") ?? lastEventId;
-
-                if (!lastTimestamp.HasValue || timestamp > lastTimestamp)
-                    lastTimestamp = timestamp;
-            }
-            catch (JsonException ex)
-            {
-                // One malformed line must not discard the rest of the batch.
-                _logger.LogWarning(
-                    ex,
-                    "Skipped an unparsable event from telemetry source {SourceName}.",
-                    source.Name
-                );
-            }
+            // Results are newest first, so the last one seen is the oldest of the page.
+            oldestId = id ?? oldestId;
         }
 
         return events;
     }
 
-    private static DateTime ReadTimestamp(JsonElement root)
+    // Rebuilds "Checkout failed for order {OrderId}" from Seq's tokenised template.
+    private static string? ReadTemplate(JsonElement element)
     {
-        var raw = ReadString(root, "@t");
+        if (!element.TryGetProperty("MessageTemplateTokens", out var tokens)
+            || tokens.ValueKind != JsonValueKind.Array)
+            return null;
 
+        var builder = new StringBuilder();
+
+        foreach (var token in tokens.EnumerateArray())
+        {
+            if (token.TryGetProperty("Text", out var text))
+                builder.Append(text.GetString());
+            else if (token.TryGetProperty("PropertyName", out var name))
+                builder.Append('{').Append(name.GetString()).Append('}');
+        }
+
+        return builder.Length > 0 ? builder.ToString() : null;
+    }
+
+    // Properties arrive as an array of {Name, Value} rather than an object.
+    private static string? ReadProperty(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty("Properties", out var properties)
+            || properties.ValueKind != JsonValueKind.Array)
+            return null;
+
+        foreach (var property in properties.EnumerateArray())
+        {
+            if (!property.TryGetProperty("Name", out var name)
+                || !string.Equals(name.GetString(), propertyName, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            return property.TryGetProperty("Value", out var value) ? ValueToString(value) : null;
+        }
+
+        return null;
+    }
+
+    private static DateTime ReadTimestamp(JsonElement element)
+    {
         return DateTime.TryParse(
-            raw,
-            null,
-            System.Globalization.DateTimeStyles.AdjustToUniversal
-                | System.Globalization.DateTimeStyles.AssumeUniversal,
+            ReadString(element, "Timestamp"),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal,
             out var parsed
         )
             ? parsed
             : DateTime.UtcNow;
     }
 
-    private static string? ReadString(JsonElement root, string propertyName)
+    private static string? ReadString(JsonElement element, string propertyName)
     {
-        if (!root.TryGetProperty(propertyName, out var value))
-            return null;
+        return element.TryGetProperty(propertyName, out var value) ? ValueToString(value) : null;
+    }
 
+    private static string? ValueToString(JsonElement value)
+    {
         return value.ValueKind switch
         {
             JsonValueKind.String => value.GetString(),
@@ -230,7 +296,6 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
         };
     }
 
-    // CLEF omits @l for Information — that is the documented default, not a missing value.
     private static LogSeverity ParseSeverity(string? level)
     {
         return Enum.TryParse<LogSeverity>(level, ignoreCase: true, out var parsed)
@@ -250,6 +315,15 @@ public sealed class SeqTelemetryConnector : ITelemetrySourceConnector
         var candidate = colon > 0 ? firstLine[..colon] : firstLine;
 
         return candidate.Length is > 0 and <= 512 ? candidate : null;
+    }
+
+    private static int ResolveLookback(TelemetrySource source)
+    {
+        var configured = source.OptionalSetting("InitialLookbackMinutes");
+
+        return configured is not null && int.TryParse(configured, out var minutes) && minutes > 0
+            ? minutes
+            : DefaultInitialLookbackMinutes;
     }
 
     private static string Truncate(string body)
