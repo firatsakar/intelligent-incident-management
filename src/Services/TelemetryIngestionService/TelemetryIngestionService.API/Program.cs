@@ -1,11 +1,14 @@
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
+using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
 using TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 using TelemetryIngestionService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.TelemetryIngestionService);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly)
