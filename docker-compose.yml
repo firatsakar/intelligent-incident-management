@@ -134,13 +134,15 @@ services:
       - incident_network
 
   # Stands in for a customer's log system — the system IIM monitors, not IIM's own logs.
-  # Deliberately left without an admin password so reads are anonymous: a customer's Seq would
-  # hand us an API key, but requiring one here would only get in the way of the demo.
+  # Authentication is explicitly opted out of, so reads are anonymous: a customer's Seq would hand
+  # us an API key, but requiring one here would only get in the way of the demo. Seq refuses to
+  # start on just an absent password — the opt-out has to be stated.
   seq-demo:
     image: datalust/seq:latest
     container_name: incident-management-seq-demo
     environment:
       ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
     volumes:
       - incident-management-seq-demo_data:/data
     networks:
