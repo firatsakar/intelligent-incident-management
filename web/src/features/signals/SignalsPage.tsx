@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils'
 import { defaultWindow, resolveWindow, windowLabel, windowPresets } from '@/lib/window'
 import type { Signal } from '@/types/api'
 
-import { buildHeatMap, errorKeyOf, otherColumn } from './heatmap'
+import { buildHeatMap, errorKeyOf, otherKey } from './heatmap'
 import { SignalHeatMap } from './SignalHeatMap'
 
 export function SignalsPage() {
@@ -60,9 +60,9 @@ export function SignalsPage() {
     setParams(next)
   }
 
-  // Built once and shared, so the list filters by exactly the columns the map drew.
+  // Built once and shared, so the list filters by exactly the tiles the map drew.
   const map = buildHeatMap(signals)
-  const named = new Set(map.columns.filter((column) => column !== otherColumn))
+  const named = new Set(map.signatures.filter((signature) => signature !== otherKey))
 
   const visible = selected
     ? signals.filter((signal) => {
@@ -70,9 +70,9 @@ export function SignalsPage() {
 
         const key = errorKeyOf(signal)
 
-        // "other" is defined by exclusion — it holds everything that did not earn a column of
+        // "other" is defined by exclusion — it holds everything that did not earn a tile of
         // its own, so it cannot be matched by name.
-        return selected.errorKey === otherColumn ? !named.has(key) : key === selected.errorKey
+        return selected.errorKey === otherKey ? !named.has(key) : key === selected.errorKey
       })
     : signals
 
