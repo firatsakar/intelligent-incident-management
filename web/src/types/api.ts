@@ -180,6 +180,9 @@ export interface NotificationDelivery {
 export interface TestResult {
   isSuccess: boolean
   error: string | null
+  /** Telemetry sources only: how many events the probe could see. A source that connects but
+      matches nothing is a different problem from one that cannot connect. */
+  matchedEvents?: number | null
 }
 
 /** The value the API substitutes for anything that looks like a credential. */
