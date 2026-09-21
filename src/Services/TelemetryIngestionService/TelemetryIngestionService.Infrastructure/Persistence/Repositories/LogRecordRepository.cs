@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Infrastructure.Persistence.Repositories;
 
@@ -85,6 +86,45 @@ public sealed class LogRecordRepository : ILogRecordRepository
             .Select(x => x.Service)
             .Distinct()
             .CountAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasFatalAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .AnyAsync(
+                x =>
+                    x.Fingerprint == fingerprint
+                    && x.Timestamp >= from
+                    && x.Timestamp <= to
+                    && x.Severity == LogSeverity.Fatal,
+                cancellationToken
+            );
+    }
+
+    public async Task<string?> GetSampleStackTraceAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .Where(x =>
+                x.Fingerprint == fingerprint
+                && x.Timestamp >= from
+                && x.Timestamp <= to
+                && x.StackTrace != null
+            )
+            .OrderByDescending(x => x.Timestamp)
+            .Select(x => x.StackTrace)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)

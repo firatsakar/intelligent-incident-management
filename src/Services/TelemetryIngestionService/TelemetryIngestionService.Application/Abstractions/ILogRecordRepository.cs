@@ -42,5 +42,21 @@ public interface ILogRecordRepository
         CancellationToken cancellationToken = default
     );
 
+    // A crash is not a judgement call, so it bypasses scoring entirely.
+    Task<bool> HasFatalAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
+    // One stack trace to stand for the burst, for the evidence summary.
+    Task<string?> GetSampleStackTraceAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

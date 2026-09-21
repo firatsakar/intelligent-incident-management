@@ -1,3 +1,4 @@
+using BuildingBlocks.Outbox;
 using Microsoft.EntityFrameworkCore;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -20,9 +21,14 @@ public sealed class TelemetryDbContext : DbContext
 
     public DbSet<DetectionRule> DetectionRules => Set<DetectionRule>();
 
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TelemetryDbContext).Assembly);
+
+        // The outbox mapping lives in BuildingBlocks, so the assembly scan above does not see it.
+        modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
 
         base.OnModelCreating(modelBuilder);
     }

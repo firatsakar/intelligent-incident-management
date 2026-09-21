@@ -62,6 +62,9 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
                 detected++;
         }
 
+        // One SaveChanges for the batch: the interceptor harvests any promotion events into the
+        // outbox in the same transaction, so a promotion and its message commit together or not
+        // at all.
         if (detected > 0)
             await _signals.SaveChangesAsync(cancellationToken);
 
@@ -89,7 +92,16 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
             cancellationToken
         );
 
-        if (occurrences < rule.Threshold)
+        // A crash has to bypass the threshold, not merely the scoring: waiting for three of them
+        // before looking would defeat the point of treating one as conclusive.
+        var hasFatal = await _logRecords.HasFatalAsync(
+            signature.Fingerprint,
+            windowStart,
+            now,
+            cancellationToken
+        );
+
+        if (!hasFatal && occurrences < rule.Threshold)
             return false;
 
         // A signature that keeps firing must not raise a fresh signal every poll. One signal per
@@ -120,29 +132,118 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
 
         var zScore = await ComputeZScoreAsync(signature, rule, windowStart, cancellationToken);
 
+        var distinctServices = await _logRecords.CountDistinctServicesAsync(
+            signature.Fingerprint,
+            windowStart,
+            now,
+            cancellationToken
+        );
+
+        var inputs = new SignalScoring.Inputs
+        {
+            Occurrences = occurrences,
+            Threshold = rule.Threshold,
+            ZScore = zScore,
+            DistinctServices = distinctServices,
+            IsMuted = signature.IsMuted,
+            ConfirmedRealCount = signature.ConfirmedRealCount,
+            FalsePositiveCount = signature.FalsePositiveCount,
+            IsFatal = hasFatal,
+        };
+
+        var score = SignalScoring.Score(inputs);
+
+        signal.Score(score.Confidence, score.Breakdown);
+
         _logger.LogInformation(
-            "Burst detected for {Service} / {ExceptionType}: {Occurrences} occurrence(s) in {WindowSeconds}s (threshold {Threshold}, z-score {ZScore}).",
+            "Burst detected for {Service} / {ExceptionType}: {Occurrences} occurrence(s) in {WindowSeconds}s (threshold {Threshold}, z-score {ZScore}, confidence {Confidence:F2}).",
             signature.Service,
             signature.ExceptionType ?? "none",
             occurrences,
             rule.WindowSeconds,
             rule.Threshold,
-            zScore?.ToString("F2") ?? "n/a"
+            zScore?.ToString("F2") ?? "n/a",
+            score.Confidence
         );
 
-        // Scoring and promotion are IIM-21's job; the z-score is computed here because this is
-        // where the window is known, and carried on the signal for it to use.
-        signal.Score(
-            confidence: 0d,
-            breakdown: new Dictionary<string, double>
-            {
-                ["occurrences"] = occurrences,
-                ["threshold"] = rule.Threshold,
-                ["zScore"] = zScore ?? double.NaN,
-            }
-        );
+        await ResolveAsync(signal, signature, rule, inputs, distinctServices, cancellationToken);
 
         return true;
+    }
+
+    // What happens to a scored signal: promote, absorb into the incident already open for this
+    // signature, hold as a weak signal, or just record it.
+    private async Task ResolveAsync(
+        Signal signal,
+        ErrorSignature signature,
+        DetectionRule rule,
+        SignalScoring.Inputs inputs,
+        int distinctServices,
+        CancellationToken cancellationToken
+    )
+    {
+        if (signature.IsMuted)
+        {
+            signal.MarkSuppressed("The signature is muted.");
+            return;
+        }
+
+        if (!SignalScoring.ShouldPromote(signal.Confidence, rule))
+        {
+            if (SignalScoring.IsWeak(signal.Confidence, rule))
+                signal.MarkWeak(
+                    $"Confidence {signal.Confidence:F2} is below the promotion threshold of {rule.PromoteThreshold:F2}."
+                );
+
+            return;
+        }
+
+        // The ageing rule. An open incident absorbs a new burst only while the signature is still
+        // active; once it has been quiet longer than the dedup window, the next burst deserves an
+        // incident of its own rather than bumping a stale counter.
+        if (signature.CanAbsorbInto(DateTime.UtcNow, rule.DedupWindow))
+        {
+            signal.MarkDeduplicated(
+                signature.CurrentIncidentId!.Value,
+                $"Incident {signature.CurrentIncidentId} is already open for this signature."
+            );
+
+            _logger.LogInformation(
+                "Signature {Fingerprint} already has incident {IncidentId} open; counting into it instead of opening another.",
+                signature.Fingerprint,
+                signature.CurrentIncidentId
+            );
+
+            return;
+        }
+
+        var sampleStackTrace = await _logRecords.GetSampleStackTraceAsync(
+            signature.Fingerprint,
+            signal.WindowStart,
+            signal.WindowEnd,
+            cancellationToken
+        );
+
+        var incidentId = Guid.NewGuid();
+
+        signal.Promote(
+            incidentId,
+            EvidenceSummary.BuildTitle(signature),
+            EvidenceSummary.Build(signature, signal, distinctServices, sampleStackTrace),
+            SignalScoring.SuggestSeverity(inputs),
+            signature.Service,
+            signature.Fingerprint,
+            $"Confidence {signal.Confidence:F2} met the promotion threshold of {rule.PromoteThreshold:F2}."
+        );
+
+        signature.AttachIncident(incidentId, DateTime.UtcNow);
+
+        _logger.LogInformation(
+            "Promoted signature {Fingerprint} to incident {IncidentId} at confidence {Confidence:F2}.",
+            signature.Fingerprint,
+            incidentId,
+            signal.Confidence
+        );
     }
 
     private async Task<double?> ComputeZScoreAsync(

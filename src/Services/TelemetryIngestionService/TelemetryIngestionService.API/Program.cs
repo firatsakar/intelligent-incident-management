@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
+using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
@@ -19,6 +20,9 @@ builder.Services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(Valid
 builder.Services.AddValidatorsFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly);
 
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// The outbox publishes promotions onto the bus; nothing is consumed here yet.
+builder.Services.AddRabbitMqEventBus(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

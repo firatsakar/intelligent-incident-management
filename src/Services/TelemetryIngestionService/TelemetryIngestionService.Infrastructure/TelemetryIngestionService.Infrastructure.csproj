@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
     <ProjectReference Include="..\TelemetryIngestionService.Application\TelemetryIngestionService.Application.csproj" />
   </ItemGroup>
 

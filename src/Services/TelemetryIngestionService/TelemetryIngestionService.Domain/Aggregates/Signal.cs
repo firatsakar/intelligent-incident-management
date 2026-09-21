@@ -1,5 +1,6 @@
 using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
+using TelemetryIngestionService.Domain.Events;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
 
@@ -60,12 +61,38 @@ public sealed class Signal : AggregateRoot
         SetUpdatedAt();
     }
 
-    public void MarkPromoted(Guid incidentId, string reason)
+    // The incident's id is chosen here rather than by IncidentService. At-least-once delivery
+    // means the promotion event can arrive twice, and a caller-assigned key turns the second
+    // arrival into a duplicate key rather than a second incident.
+    public void Promote(
+        Guid incidentId,
+        string title,
+        string description,
+        string severity,
+        string service,
+        string fingerprint,
+        string reason
+    )
     {
         Status = SignalStatus.Promoted;
         IncidentId = incidentId;
         Reason = reason;
         SetUpdatedAt();
+
+        AddDomainEvent(
+            new SignalPromotedDomainEvent(
+                Id,
+                incidentId,
+                title,
+                description,
+                severity,
+                service,
+                fingerprint,
+                DetectedAt,
+                OccurrenceCount,
+                Confidence
+            )
+        );
     }
 
     public void MarkDeduplicated(Guid incidentId, string reason)
