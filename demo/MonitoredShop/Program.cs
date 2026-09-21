@@ -25,6 +25,30 @@ var app = builder.Build();
 
 app.MapGet("/", () => Results.Ok(new { service = ShopOptions.ServiceName, status = "running" }));
 
+// A target for exercising webhook notification integrations. It lives here rather than inside
+// NotificationService because it is demo scaffolding, and a product service should not ship
+// endpoints that exist only to be pointed at during testing. Accepts any trailing path, so it can
+// also stand in for an API that appends its own — which is how the Jira channel's request shape
+// was verified before a real token existed.
+app.MapPost(
+    "/echo/{**path}",
+    async (string? path, HttpRequest request, ILogger<Program> logger) =>
+    {
+        using var reader = new StreamReader(request.Body);
+        var body = await reader.ReadToEndAsync();
+
+        // Header names only — values can carry credentials.
+        logger.LogInformation(
+            "Echo received POST /{Path} with headers [{HeaderNames}] and payload: {Payload}",
+            path ?? string.Empty,
+            string.Join(", ", request.Headers.Select(header => header.Key)),
+            body
+        );
+
+        return Results.Ok(new { receivedAt = DateTime.UtcNow, path, body });
+    }
+);
+
 // Emits a burst of failures that all share one signature: same exception type, same message
 // template, only the ids vary. That is exactly the case fingerprinting has to collapse.
 app.MapPost(
