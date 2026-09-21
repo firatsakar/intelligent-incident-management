@@ -127,6 +127,31 @@ public sealed class LogRecordRepository : ILogRecordRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<(IReadOnlyList<LogRecord> Records, int TotalCount)> GetWindowAsync(
+        string? service,
+        DateTime from,
+        DateTime to,
+        int limit,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _context.LogRecords.AsNoTracking().Where(x => x.Timestamp >= from && x.Timestamp <= to);
+
+        if (!string.IsNullOrWhiteSpace(service))
+            query = query.Where(x => x.Service == service);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        // The count is reported in full even though the rows are capped, so a truncated view is
+        // obviously truncated rather than quietly misleading.
+        var records = await query
+            .OrderByDescending(x => x.Timestamp)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return (records, total);
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);

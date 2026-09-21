@@ -58,5 +58,14 @@ public interface ILogRecordRepository
         CancellationToken cancellationToken = default
     );
 
+    // Everything in a window, capped — what the evidence endpoint shows a human.
+    Task<(IReadOnlyList<LogRecord> Records, int TotalCount)> GetWindowAsync(
+        string? service,
+        DateTime from,
+        DateTime to,
+        int limit,
+        CancellationToken cancellationToken = default
+    );
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

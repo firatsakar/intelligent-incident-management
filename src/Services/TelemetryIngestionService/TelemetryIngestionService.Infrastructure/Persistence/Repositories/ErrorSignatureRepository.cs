@@ -38,6 +38,20 @@ public sealed class ErrorSignatureRepository : IErrorSignatureRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ErrorSignature>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (ids.Count == 0)
+            return [];
+
+        return await _context
+            .ErrorSignatures.AsNoTracking()
+            .Where(x => ids.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         ErrorSignature signature,
         CancellationToken cancellationToken = default

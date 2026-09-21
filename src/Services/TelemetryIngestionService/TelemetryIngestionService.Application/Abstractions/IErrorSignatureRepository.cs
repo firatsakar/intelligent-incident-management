@@ -14,6 +14,11 @@ public interface IErrorSignatureRepository
         CancellationToken cancellationToken = default
     );
 
+    Task<IReadOnlyList<ErrorSignature>> GetByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        CancellationToken cancellationToken = default
+    );
+
     Task AddAsync(ErrorSignature signature, CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
