@@ -12,7 +12,7 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-21)
-- **Sıradaki:** Adım 18 — Unit & Integration testler
+- **Devam eden:** Adım 18 — Unit testler (`IIM-28`)
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
@@ -83,7 +83,13 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
 - [ ] **Adım 17** — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu
 - [ ] **Adım 17.5** — MCP entegrasyonu (Grafana/Kubernetes/GitHub/PagerDuty dış tool'ları). Kural: kendi verine in-process, başkasının verisine MCP. Önkoşul: 13 + 16 + 17. Erken opsiyon: Adım 12 sonrası salt-okunur GitHub MCP spike (ürüne girmez)
-- [ ] **Adım 18** — Unit & Integration testler (xUnit)
+- [~] **Adım 18** (`IIM-28`) — Unit testler (xUnit + NSubstitute + düz `Assert`). Yığın kararı 2026-09-21: FluentAssertions v8 ticari lisans istiyor, Moq'un SponsorLink geçmişi var — ikisi de alınmadı. **Integration testleri (Testcontainers) bu adımın dışında bırakıldı**; sonucu olarak `NotificationDelivery` yarış durumu ve EF mapping/jsonb/migration doğrulaması test edilmemiş kalıyor
+  - [ ] **Parça 1** (`IIM-29`) — Test iskeleti: `tests/` altında 4 proje, `.slnx` kaydı, `dotnet test` yeşil
+  - [ ] **Parça 2** (`IIM-30`) — `SignalScoring` + `RateBaseline` (zayıf bandın ilk doğrudan kapsanması)
+  - [ ] **Parça 3** (`IIM-31`) — Telemetri domain: `LogFingerprint` regex fallback'i, `ErrorSignature.CanAbsorbInto`, `LogRecord` clock skew, `DetectionRule`, `EvidenceSummary`
+  - [ ] **Parça 4** (`IIM-32`) — `DetectSignalsCommandHandler` karar ağacının her dalı
+  - [ ] **Parça 5** (`IIM-33`) — `Integration.Matches` + `DispatchNotificationsCommandHandler`
+  - [ ] **Parça 6** (`IIM-34`) — `Incident` aggregate, redelivery no-op, `OutboxDispatcher` sırası
 - [ ] **Adım 19** — React frontend (Vite + TS; liste + detay)
 - [ ] **Adım 20** — AI önerileri paneli + analytics dashboard (MTTR, trendler, model performansı)
 - [ ] **Adım 21** — CI/CD (GitHub Actions)
