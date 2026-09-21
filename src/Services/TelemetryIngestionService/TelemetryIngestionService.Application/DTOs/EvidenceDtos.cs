@@ -91,16 +91,28 @@ public sealed record SignalDto
     public required long OccurrenceCount { get; init; }
     public required double Confidence { get; init; }
 
+    // Carried from the signature rather than looked up per row. A signal that cannot say which
+    // service broke and how is close to useless to a human, and the heat map cannot place it at
+    // all — the signal itself only knows a signature id.
+    public string? Service { get; init; }
+    public string? ExceptionType { get; init; }
+    public string? NormalizedMessage { get; init; }
+
     // Why the gate decided what it decided.
     public required IReadOnlyDictionary<string, double> ScoreBreakdown { get; init; }
 
     public string? Reason { get; init; }
     public Guid? IncidentId { get; init; }
 
-    public static SignalDto FromDomain(Signal signal) =>
+    // The signature is optional: a signal outliving its signature should still be listed, just
+    // without the description.
+    public static SignalDto FromDomain(Signal signal, ErrorSignature? signature = null) =>
         new()
         {
             Id = signal.Id,
+            Service = signature?.Service,
+            ExceptionType = signature?.ExceptionType,
+            NormalizedMessage = signature?.NormalizedMessage,
             ErrorSignatureId = signal.ErrorSignatureId,
             Kind = signal.Kind,
             Status = signal.Status,

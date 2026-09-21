@@ -12,7 +12,7 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 18 — Unit testler (`IIM-28`, 2026-09-21) — 203 test, 4 proje
-- **Sıradaki:** Adım 19 — React frontend
+- **Devam eden:** Adım 19 — React frontend (`IIM-35`)
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
@@ -88,7 +88,14 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
 - [ ] **Adım 17** — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu
 - [ ] **Adım 17.5** — MCP entegrasyonu (Grafana/Kubernetes/GitHub/PagerDuty dış tool'ları). Kural: kendi verine in-process, başkasının verisine MCP. Önkoşul: 13 + 16 + 17. Erken opsiyon: Adım 12 sonrası salt-okunur GitHub MCP spike (ürüne girmez)
-- [ ] **Adım 19** — React frontend (Vite + TS; liste + detay)
+- [~] **Adım 19** (`IIM-35`) — React frontend (Vite + TS + Tailwind/shadcn + SignalR). Kararlar 2026-09-21: **tam yüzey, 6 ekran** · UI **Tailwind + shadcn/ui** · canlılık **SignalR (gerçek push, payload taşır)** · backend eklemesi `Confidence` + `SignalDto` zenginleştirmesi. **CORS alınmadı** → SPA yalnızca Vite proxy'sinin (`ws: true`) ardında çalışır; üretim cevabı Adım 15 gateway. State: sunucu state'i TanStack Query, filtreler URL'de, geçici UI state'i yerel — **global store yok**
+  - [ ] **Parça 1** (`IIM-36`) — Backend veri boşlukları: incident `Confidence` + `SignalDto`'ya servis/hata + opsiyonel pencere filtresi
+  - [ ] **Parça 2** (`IIM-37`) — SignalR hub'ları (3 servis, `IRealtimeNotifier` Application'da, `IHubContext` API'de)
+  - [ ] **Parça 3** (`IIM-38`) — Frontend iskelet: `web/`, Vite+TS, Tailwind/shadcn, router, kabuk, API client, tipler, Vite proxy
+  - [ ] **Parça 4** (`IIM-39`) — Incident listesi + detay (zaman çizelgesi, tespit gecikmesi, AI paneli)
+  - [ ] **Parça 5** (`IIM-40`) — Telemetri yüzeyi: **ısı haritası** (servis × imza, log ölçekli renk, güven bandı işareti) + sinyal kuyruğu + kanıt görüntüleyici + "neden uyandırıldık" paneli
+  - [ ] **Parça 6** (`IIM-41`) — Ayarlar: entegrasyonlar + telemetri kaynakları (maskeli credential ezme tuzağı dahil)
+  - [ ] **Parça 7** (`IIM-42`) — Realtime client (cache yazma, reconnect invalidation) + uçtan uca doğrulama
 - [ ] **Adım 20** — AI önerileri paneli + analytics dashboard (MTTR, trendler, model performansı)
 - [ ] **Adım 21** — CI/CD (GitHub Actions)
 - [ ] **Adım 22** — Kubernetes / production config

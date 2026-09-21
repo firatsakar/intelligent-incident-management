@@ -42,6 +42,8 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(x => x.IsAiAnalyzed).IsRequired().HasDefaultValue(false);
 
+        builder.Property(x => x.AiConfidence);
+
         builder.Ignore(x => x.DomainEvents);
     }
 }

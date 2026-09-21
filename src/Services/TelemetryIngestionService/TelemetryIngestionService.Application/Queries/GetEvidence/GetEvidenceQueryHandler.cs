@@ -46,6 +46,8 @@ public sealed class GetEvidenceQueryHandler : IRequestHandler<GetEvidenceQuery, 
 
         var signatures = await _signatures.GetByIdsAsync(signatureIds, cancellationToken);
 
+        var byId = signatures.ToDictionary(signature => signature.Id);
+
         return new EvidenceWindowDto
         {
             From = request.From,
@@ -54,7 +56,14 @@ public sealed class GetEvidenceQueryHandler : IRequestHandler<GetEvidenceQuery, 
             TotalLogRecords = total,
             LogRecords = records.Select(LogRecordDto.FromDomain).ToList(),
             Signatures = signatures.Select(ErrorSignatureDto.FromDomain).ToList(),
-            Signals = signals.Select(SignalDto.FromDomain).ToList(),
+            Signals = signals
+                .Select(signal =>
+                    SignalDto.FromDomain(
+                        signal,
+                        byId.GetValueOrDefault(signal.ErrorSignatureId)
+                    )
+                )
+                .ToList(),
         };
     }
 }

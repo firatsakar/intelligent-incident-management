@@ -25,7 +25,12 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
             priority = incident.Priority;
         }
 
-        incident.ApplyAiAnalysis(priority, request.SuggestedCategory, request.Reasoning);
+        incident.ApplyAiAnalysis(
+            priority,
+            request.SuggestedCategory,
+            request.Reasoning,
+            request.Confidence
+        );
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
