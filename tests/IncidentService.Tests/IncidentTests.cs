@@ -1,0 +1,140 @@
+using IncidentService.Domain.Aggregates;
+using IncidentService.Domain.Enums;
+using IncidentService.Domain.Events;
+
+namespace IncidentService.Tests;
+
+public sealed class IncidentTests
+{
+    private static Incident Create(Guid? id = null, DateTime? detectedAt = null) =>
+        Incident.Create(
+            "checkout-service: TimeoutException",
+            "Payment gateway stopped responding.",
+            IncidentPriority.Medium,
+            IncidentSource.Telemetry,
+            assignedTeam: null,
+            id: id,
+            detectedAt: detectedAt
+        );
+
+    [Fact]
+    public void Create_OpensTheIncidentAndAnnouncesIt()
+    {
+        var incident = Create();
+
+        Assert.Equal(IncidentStatus.Open, incident.Status);
+        Assert.False(incident.IsAiAnalyzed);
+
+        var created = Assert.Single(incident.DomainEvents.OfType<IncidentCreatedDomainEvent>());
+
+        Assert.Equal(incident.Id, created.IncidentId);
+        Assert.Equal(incident.Title, created.Title);
+    }
+
+    [Fact]
+    public void Create_AcceptsACallerChosenId()
+    {
+        // A telemetry promotion picks the id so that a redelivered event collides on the primary
+        // key instead of opening a second incident for the same burst.
+        var id = Guid.NewGuid();
+
+        Assert.Equal(id, Create(id: id).Id);
+    }
+
+    [Fact]
+    public void Create_GeneratesAnIdWhenTheCallerHasNoOpinion()
+    {
+        Assert.NotEqual(Guid.Empty, Create().Id);
+    }
+
+    [Fact]
+    public void DetectedAtIsSeparateFromCreatedAt()
+    {
+        // When the problem started, as distinct from when the record was filed. An engineer
+        // opening an incident at 14:35 for something that began at 14:20 has the same need as a
+        // telemetry promotion: correlating evidence against the wrong moment finds nothing.
+        var detectedAt = DateTime.UtcNow.AddMinutes(-15);
+
+        var incident = Create(detectedAt: detectedAt);
+
+        Assert.Equal(detectedAt, incident.DetectedAt);
+        Assert.True(incident.CreatedAt > incident.DetectedAt);
+    }
+
+    [Fact]
+    public void DetectedAtIsOptional()
+    {
+        // Manual creation need not know when the problem started.
+        Assert.Null(Create().DetectedAt);
+    }
+
+    public sealed class ApplyAiAnalysis
+    {
+        [Fact]
+        public void OverwritesThePriorityAndRecordsTheAnalysis()
+        {
+            var incident = Create();
+
+            incident.ApplyAiAnalysis(
+                IncidentPriority.Critical,
+                "Application",
+                "Repeated timeouts against the payment gateway."
+            );
+
+            Assert.Equal(IncidentPriority.Critical, incident.Priority);
+            Assert.Equal("Application", incident.AiSuggestedCategory);
+            Assert.Equal(
+                "Repeated timeouts against the payment gateway.",
+                incident.AiReasoning
+            );
+            Assert.True(incident.IsAiAnalyzed);
+        }
+
+        [Fact]
+        public void IsIdempotent()
+        {
+            // The analysis result arrives over an at-least-once bus, so applying it twice has to
+            // be indistinguishable from applying it once.
+            var incident = Create();
+
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
+            var afterFirst = (incident.Priority, incident.AiSuggestedCategory, incident.AiReasoning);
+
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
+
+            Assert.Equal(
+                afterFirst,
+                (incident.Priority, incident.AiSuggestedCategory, incident.AiReasoning)
+            );
+            Assert.True(incident.IsAiAnalyzed);
+        }
+
+        [Fact]
+        public void DoesNotReopenOrReassign()
+        {
+            // Analysis changes what we think the incident is, never where it is in its lifecycle
+            // or who owns it.
+            var incident = Create();
+            incident.AssignTeam("payments");
+            incident.UpdateStatus(IncidentStatus.InProgress);
+
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
+
+            Assert.Equal(IncidentStatus.InProgress, incident.Status);
+            Assert.Equal("payments", incident.AssignedTeam);
+        }
+    }
+
+    [Fact]
+    public void UpdateStatusAndAssignTeam()
+    {
+        var incident = Create();
+
+        incident.UpdateStatus(IncidentStatus.Resolved);
+        incident.AssignTeam("payments");
+
+        Assert.Equal(IncidentStatus.Resolved, incident.Status);
+        Assert.Equal("payments", incident.AssignedTeam);
+        Assert.NotNull(incident.UpdatedAt);
+    }
+}
