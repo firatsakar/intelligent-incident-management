@@ -39,6 +39,9 @@ export const integrationFields: Record<NotificationChannelType, ConfigField[]> =
     { key: 'ProjectKey', label: 'Project key', placeholder: 'OPS', required: true },
     { key: 'Email', label: 'Account email', required: true },
     { key: 'ApiToken', label: 'API token', required: true, secret: true },
+    // Optional on the server, which falls back to Task. Absent from this list the form would drop
+    // it on every edit, and the customer's chosen issue type would quietly revert.
+    { key: 'IssueType', label: 'Issue type', placeholder: 'Task' },
   ],
 }
 
