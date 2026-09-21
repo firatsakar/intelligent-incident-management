@@ -2,6 +2,8 @@ import { HubConnectionState } from '@microsoft/signalr'
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 
+import { useAuth } from '@/features/auth/AuthProvider'
+
 import { connect, hubs } from './realtime'
 
 type Status = 'connecting' | 'live' | 'reconnecting' | 'offline'
@@ -24,9 +26,16 @@ function summarise(states: Record<string, HubConnectionState>): Status {
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  const { isAuthenticated } = useAuth()
   const [states, setStates] = useState<Record<string, HubConnectionState>>({})
 
   useEffect(() => {
+    // Mounted above the router and connected on a flag, rather than mounted inside the guard.
+    // Three sockets held open behind a login screen serve nothing the screen shows; three sockets
+    // rebuilt on every navigation is worse. This way the connections open once when a session
+    // starts, survive every route change, and close when it ends.
+    if (!isAuthenticated) return
+
     // StrictMode mounts, unmounts and mounts again in development, which aborts the first
     // start(). Without this flag that abort is reported as a connection failure, and a console
     // full of expected errors is where real ones go to hide.
@@ -55,8 +64,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       cancelled = true
 
       for (const connection of connections) void connection.stop()
+
+      // These states described connections that no longer exist. Left behind, the next session
+      // would open on "live" before anything had connected.
+      setStates({})
     }
-  }, [queryClient])
+  }, [queryClient, isAuthenticated])
 
   return (
     <RealtimeContext.Provider value={summarise(states)}>{children}</RealtimeContext.Provider>

@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes'
 import { useState, type ReactNode } from 'react'
 
 import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/features/auth/AuthProvider'
 
 import { RealtimeProvider } from './RealtimeProvider'
 
@@ -43,7 +44,12 @@ export function Providers({ children }: { children: ReactNode }) {
       storageKey="iim-theme"
     >
       <QueryClientProvider client={client}>
-        <RealtimeProvider>{children}</RealtimeProvider>
+        {/* Auth above the router, not inside it: the login screen and the guard are both routes,
+            and a session that lived under one of them would be re-read on every navigation. Under
+            the query client, because signing in empties the cache. */}
+        <AuthProvider>
+          <RealtimeProvider>{children}</RealtimeProvider>
+        </AuthProvider>
         <Toaster position="bottom-right" />
       </QueryClientProvider>
     </ThemeProvider>

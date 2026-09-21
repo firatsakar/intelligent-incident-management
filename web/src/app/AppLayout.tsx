@@ -10,6 +10,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { BrandMark } from '@/components/BrandMark'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -19,6 +20,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
 import { RealtimeIndicator } from './RealtimeIndicator'
@@ -57,22 +59,25 @@ const navigation: NavGroup[] = [
   },
 ]
 
-function Brand({ className }: { className?: string }) {
+/**
+ * The organisation rides under the product name wherever there is a second line for it — the rail
+ * and the drawer, not the phone header. It is the scope of every number on every screen, so it
+ * belongs somewhere permanently visible rather than behind a click in the account menu; and it
+ * sits here, in the one block that is about identity rather than navigation, so that the day there
+ * is more than one organisation the switch has an obvious home.
+ */
+function Brand({ className, organization }: { className?: string; organization?: string }) {
   return (
     <span className={cn('flex items-center gap-2.5', className)}>
-      <span className="text-primary" aria-hidden="true">
-        <svg viewBox="0 0 24 24" className="size-6" fill="none">
-          <rect width="24" height="24" rx="6" fill="currentColor" />
-          <path
-            d="M4.5 14.5h3.2l2.1-6.2 3 11 2.2-4.8h4.5"
-            stroke="var(--primary-foreground)"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      <BrandMark />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold tracking-tight">
+          Incident Management
+        </span>
+        {organization && (
+          <span className="text-muted-foreground block truncate text-xs">{organization}</span>
+        )}
       </span>
-      <span className="text-sm font-semibold tracking-tight">Incident Management</span>
     </span>
   )
 }
@@ -122,6 +127,9 @@ function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: bool
 
 export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false)
+  // Never null in practice — RequireAuth is the only route that renders this — but the context is
+  // typed for the login screen too, where it is.
+  const { organization } = useAuth()
 
   return (
     <div className="bg-background text-foreground min-h-svh">
@@ -136,12 +144,14 @@ export function AppLayout() {
           chunk), and a vertical list of five is muscle memory for someone who keeps this open all
           day. The tables keep their width because the content column is capped anyway. */}
       <aside className="bg-sidebar border-sidebar-border fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r lg:flex">
-        <div className="flex h-12 shrink-0 items-center px-4">
+        {/* h-14 rather than h-12 now that the block carries two lines. The rail no longer lines up
+            with the header bar, which was never a visible edge — there is no rule under it. */}
+        <div className="flex h-14 shrink-0 items-center px-4">
           <NavLink
             to="/incidents"
-            className="focus-visible:ring-ring/50 rounded-md outline-none focus-visible:ring-[3px]"
+            className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
           >
-            <Brand />
+            <Brand organization={organization?.name} />
           </NavLink>
         </div>
 
@@ -168,9 +178,9 @@ export function AppLayout() {
               </SheetTrigger>
 
               <SheetContent side="left" className="w-72 sm:max-w-none">
-                <SheetHeader className="h-12 justify-center px-4 py-0">
+                <SheetHeader className="h-14 justify-center px-4 py-0">
                   <SheetTitle>
-                    <Brand />
+                    <Brand organization={organization?.name} />
                   </SheetTitle>
                   <SheetDescription className="sr-only">
                     Move between the console's sections.
