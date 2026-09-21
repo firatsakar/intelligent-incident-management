@@ -18,23 +18,39 @@ public sealed class Incident : AggregateRoot
     public string? AiReasoning { get; private set; }
     public bool IsAiAnalyzed { get; private set; }
 
+    // How sure the analysis was, on its own calibration. IncidentAnalyzedEvent has carried this
+    // since Adım 12 and nothing stored it, so the number the product leans on hardest could not be
+    // shown anywhere. Nullable because an analysis may decline to give one.
+    public double? AiConfidence { get; private set; }
+
+    // When the problem started, as distinct from CreatedAt, which is when the record was filed.
+    // An engineer opening an incident at 14:35 for something that began at 14:20 has the same
+    // need as a telemetry promotion: correlating evidence against the wrong moment finds nothing.
+    public DateTime? DetectedAt { get; private set; }
+
     public static Incident Create(
         string title,
         string description,
         IncidentPriority priority,
         IncidentSource source,
-        string assignedTeam = null
+        string? assignedTeam = null,
+        // Supplied when the caller already knows the identity — a telemetry promotion picks the
+        // id so that a redelivered event collides on the primary key instead of opening a second
+        // incident.
+        Guid? id = null,
+        DateTime? detectedAt = null
     )
     {
         var incident = new Incident
         {
-            Id = Guid.NewGuid(),
+            Id = id ?? Guid.NewGuid(),
             Title = title,
             Description = description,
             Status = IncidentStatus.Open,
             Priority = priority,
             Source = source,
             AssignedTeam = assignedTeam,
+            DetectedAt = detectedAt,
         };
 
         incident.AddDomainEvent(
@@ -56,15 +72,20 @@ public sealed class Incident : AggregateRoot
         SetUpdatedAt();
     }
 
+    // No default on confidence: every caller already knows whether the analysis gave one, and a
+    // default would let a new call site drop it silently — which is exactly how this field came to
+    // be missing in the first place.
     public void ApplyAiAnalysis(
         IncidentPriority suggestedPriority,
         string suggestedCategory,
-        string reasoning
+        string reasoning,
+        double? confidence
     )
     {
         Priority = suggestedPriority;
         AiSuggestedCategory = suggestedCategory;
         AiReasoning = reasoning;
+        AiConfidence = confidence;
         IsAiAnalyzed = true;
         SetUpdatedAt();
     }

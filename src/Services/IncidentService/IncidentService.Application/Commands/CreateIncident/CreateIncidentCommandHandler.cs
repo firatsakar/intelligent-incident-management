@@ -12,13 +12,16 @@ public sealed class CreateIncidentCommandHandler
 {
     private readonly IIncidentRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly IRealtimeNotifier _realtime;
 
     public CreateIncidentCommandHandler(
         IIncidentRepository repository,
-        IEventBus eventBus)
+        IEventBus eventBus,
+        IRealtimeNotifier realtime)
     {
         _repository = repository;
         _eventBus = eventBus;
+        _realtime = realtime;
     }
 
     public async Task<IncidentDto> Handle(
@@ -30,7 +33,8 @@ public sealed class CreateIncidentCommandHandler
             request.Description,
             request.Priority,
             request.Source,
-            request.AssignedTeam);
+            request.AssignedTeam,
+            detectedAt: request.DetectedAt);
 
         await _repository.AddAsync(incident, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -44,17 +48,10 @@ public sealed class CreateIncidentCommandHandler
             Source = incident.Source.ToString()
         }, cancellationToken);
 
-        return new IncidentDto
-        {
-            Id = incident.Id,
-            Title = incident.Title,
-            Description = incident.Description,
-            Status = incident.Status,
-            Priority = incident.Priority,
-            Source = incident.Source,
-            AssignedTeam = incident.AssignedTeam,
-            CreatedAt = incident.CreatedAt,
-            UpdatedAt = incident.UpdatedAt
-        };
+        // Only the id: whether this incident belongs on the first page of whatever filter someone
+        // has open is the server's call, so the client asks rather than guesses.
+        await _realtime.IncidentCreatedAsync(incident.Id, cancellationToken);
+
+        return IncidentDto.FromDomain(incident);
     }
 }

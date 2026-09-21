@@ -8,4 +8,5 @@ public sealed record ApplyAiAnalysisCommand : IRequest
     public required string SuggestedPriority { get; init; }
     public required string SuggestedCategory { get; init; }
     public required string Reasoning { get; init; }
+    public double? Confidence { get; init; }
 }

@@ -27,20 +27,7 @@ public sealed class GetIncidentsQueryHandler
             cancellationToken
         );
 
-        var dtos = items
-            .Select(incident => new IncidentDto
-            {
-                Id = incident.Id,
-                Title = incident.Title,
-                Description = incident.Description,
-                Status = incident.Status,
-                Priority = incident.Priority,
-                Source = incident.Source,
-                AssignedTeam = incident.AssignedTeam,
-                CreatedAt = incident.CreatedAt,
-                UpdatedAt = incident.UpdatedAt,
-            })
-            .ToList();
+        var dtos = items.Select(IncidentDto.FromDomain).ToList();
 
         return new PagedResult<IncidentDto>
         {

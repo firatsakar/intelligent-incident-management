@@ -30,6 +30,8 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(x => x.CreatedAt).IsRequired();
 
+        builder.Property(x => x.DetectedAt);
+
         builder.Property(x => x.UpdatedAt);
 
         builder
@@ -39,6 +41,8 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
         builder.Property(x => x.AiReasoning).HasMaxLength(IncidentConstants.AiReasoningMaxLength);
 
         builder.Property(x => x.IsAiAnalyzed).IsRequired().HasDefaultValue(false);
+
+        builder.Property(x => x.AiConfidence);
 
         builder.Ignore(x => x.DomainEvents);
     }

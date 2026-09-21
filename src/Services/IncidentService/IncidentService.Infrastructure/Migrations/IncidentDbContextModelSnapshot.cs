@@ -28,6 +28,9 @@ namespace IncidentService.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<double?>("AiConfidence")
+                        .HasColumnType("double precision");
+
                     b.Property<string>("AiReasoning")
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
@@ -47,6 +50,9 @@ namespace IncidentService.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTime?>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsAiAnalyzed")
                         .ValueGeneratedOnAdd()

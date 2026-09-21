@@ -27,6 +27,13 @@ public sealed class EventBusSubscriber : IHostedService
 
         _logger.LogInformation("Subscribed to IncidentAnalyzedEvent.");
 
+        _eventBus.Subscribe<
+            SignalPromotedEvent,
+            IIntegrationEventHandler<SignalPromotedEvent>
+        >();
+
+        _logger.LogInformation("Subscribed to SignalPromotedEvent.");
+
         return Task.CompletedTask;
     }
 

@@ -1,0 +1,72 @@
+using System.Text.Json.Serialization;
+using BuildingBlocks.Application.Behaviors;
+using BuildingBlocks.Contracts;
+using BuildingBlocks.EventBus;
+using BuildingBlocks.Observability;
+using BuildingBlocks.Web;
+using FluentValidation;
+using NotificationService.API.BackgroundServices;
+using NotificationService.API.Realtime;
+using NotificationService.Application.Abstractions;
+using NotificationService.Application.Commands.SendTestNotification;
+using NotificationService.Application.EventHandlers;
+using NotificationService.Infrastructure;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.NotificationService);
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(SendTestNotificationCommand).Assembly)
+);
+
+builder.Services.AddTransient(typeof(MediatR.IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+builder.Services.AddValidatorsFromAssembly(typeof(SendTestNotificationCommand).Assembly);
+
+builder.Services.AddInfrastructure(builder.Configuration);
+
+builder.Services.AddRabbitMqEventBus(builder.Configuration);
+
+builder.Services.AddScoped<
+    IIntegrationEventHandler<IncidentAnalyzedEvent>,
+    IncidentAnalyzedEventHandler
+>();
+
+builder.Services.AddHostedService<EventBusSubscriber>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+builder
+    .Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IRealtimeNotifier, SignalRNotificationNotifier>();
+
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
+
+app.Run();

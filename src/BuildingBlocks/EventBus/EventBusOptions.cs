@@ -10,4 +10,8 @@ public sealed class EventBusOptions
     public string VirtualHost { get; set; } = "/";
     public int RetryCount { get; set; } = 3;
     public string ExchangeName { get; set; } = "intelligent_incident_exchange";
+
+    // The service's own durable queue name — one queue per service, bound to a routing key per
+    // subscribed event. Must be unique per service, otherwise services become competing consumers.
+    public string SubscriptionClientName { get; set; } = string.Empty;
 }

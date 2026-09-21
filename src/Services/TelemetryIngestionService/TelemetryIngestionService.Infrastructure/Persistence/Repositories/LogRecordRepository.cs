@@ -1,0 +1,159 @@
+using Microsoft.EntityFrameworkCore;
+using TelemetryIngestionService.Application.Abstractions;
+using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Enums;
+
+namespace TelemetryIngestionService.Infrastructure.Persistence.Repositories;
+
+public sealed class LogRecordRepository : ILogRecordRepository
+{
+    private readonly TelemetryDbContext _context;
+
+    public LogRecordRepository(TelemetryDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<IReadOnlySet<string>> GetExistingSourceEventIdsAsync(
+        Guid telemetrySourceId,
+        IReadOnlyCollection<string> sourceEventIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (sourceEventIds.Count == 0)
+            return new HashSet<string>();
+
+        var known = await _context
+            .LogRecords.AsNoTracking()
+            .Where(x =>
+                x.TelemetrySourceId == telemetrySourceId
+                && x.SourceEventId != null
+                && sourceEventIds.Contains(x.SourceEventId)
+            )
+            .Select(x => x.SourceEventId!)
+            .ToListAsync(cancellationToken);
+
+        return known.ToHashSet();
+    }
+
+    public async Task AddRangeAsync(
+        IEnumerable<LogRecord> records,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await _context.LogRecords.AddRangeAsync(records, cancellationToken);
+    }
+
+    public async Task<long> CountByFingerprintAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .Where(x => x.Fingerprint == fingerprint && x.Timestamp >= from && x.Timestamp <= to)
+            .LongCountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<DateTime>> GetTimestampsByFingerprintAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // One column over a BRIN-indexed range. At real log volume this wants bucketing pushed
+        // into SQL, but the baseline only ever spans a handful of windows.
+        return await _context
+            .LogRecords.AsNoTracking()
+            .Where(x => x.Fingerprint == fingerprint && x.Timestamp >= from && x.Timestamp < to)
+            .Select(x => x.Timestamp)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountDistinctServicesAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .Where(x => x.Fingerprint == fingerprint && x.Timestamp >= from && x.Timestamp <= to)
+            .Select(x => x.Service)
+            .Distinct()
+            .CountAsync(cancellationToken);
+    }
+
+    public async Task<bool> HasFatalAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .AnyAsync(
+                x =>
+                    x.Fingerprint == fingerprint
+                    && x.Timestamp >= from
+                    && x.Timestamp <= to
+                    && x.Severity == LogSeverity.Fatal,
+                cancellationToken
+            );
+    }
+
+    public async Task<string?> GetSampleStackTraceAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .LogRecords.AsNoTracking()
+            .Where(x =>
+                x.Fingerprint == fingerprint
+                && x.Timestamp >= from
+                && x.Timestamp <= to
+                && x.StackTrace != null
+            )
+            .OrderByDescending(x => x.Timestamp)
+            .Select(x => x.StackTrace)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<(IReadOnlyList<LogRecord> Records, int TotalCount)> GetWindowAsync(
+        string? service,
+        DateTime from,
+        DateTime to,
+        int limit,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _context.LogRecords.AsNoTracking().Where(x => x.Timestamp >= from && x.Timestamp <= to);
+
+        if (!string.IsNullOrWhiteSpace(service))
+            query = query.Where(x => x.Service == service);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        // The count is reported in full even though the rows are capped, so a truncated view is
+        // obviously truncated rather than quietly misleading.
+        var records = await query
+            .OrderByDescending(x => x.Timestamp)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return (records, total);
+    }
+
+    public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+}

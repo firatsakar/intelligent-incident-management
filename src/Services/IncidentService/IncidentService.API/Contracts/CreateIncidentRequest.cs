@@ -9,4 +9,7 @@ public sealed record CreateIncidentRequest
     public required IncidentPriority Priority { get; init; }
     public required IncidentSource Source { get; init; }
     public string? AssignedTeam { get; init; }
+
+    // Optional: when the problem started, if that differs from when it is being filed.
+    public DateTime? DetectedAt { get; init; }
 }

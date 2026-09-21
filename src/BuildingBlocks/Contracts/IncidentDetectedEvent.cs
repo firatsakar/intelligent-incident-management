@@ -10,5 +10,8 @@ public sealed record IncidentDetectedEvent : IntegrationEvent
     public required string Severity { get; init; }   // Critical, High, Medium, Low
     public required string Source { get; init; }     // Manual, Telemetry, Alert
     public string? AssignedTeam { get; init; }
+
+    // When the problem started, when that is known. Null for an incident filed without one.
+    public DateTime? DetectedAt { get; init; }
     public Dictionary<string, string> Metadata { get; init; } = [];
 }

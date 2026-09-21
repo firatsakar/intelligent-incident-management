@@ -4,6 +4,7 @@ using AgentOrchestrator.Infrastructure.Outbox;
 using AgentOrchestrator.Infrastructure.Persistence;
 using AgentOrchestrator.Infrastructure.Persistence.Repositories;
 using AgentOrchestrator.Infrastructure.Search;
+using BuildingBlocks.Outbox;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -61,7 +62,13 @@ public static class ServiceCollectionExtensions
             }
         );
 
+        // The outbox mechanics are shared; only the routing is ours.
+        services.AddScoped<IOutboxStore, AgentOutboxStore>();
+        services.AddScoped<IOutboxMessageHandler, IncidentAnalysisCompletedOutboxHandler>();
+
         services.AddHostedService<OutboxDispatcher>();
+        services.AddHostedService<OutboxCleanupService>();
+
         return services;
     }
 }

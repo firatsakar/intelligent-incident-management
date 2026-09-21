@@ -4,8 +4,14 @@
     <File Path="docker-compose.override.yml" />
     <File Path="docker-compose.yml" />
   </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/MonitoredShop/MonitoredShop.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />
+  <Folder Name="/src/BuildingBlocks/Application/">
+    <Project Path="src/BuildingBlocks/Application/BuildingBlocks.Application.csproj" />
+  </Folder>
   <Folder Name="/src/BuildingBlocks/Contracts/">
     <Project Path="src/BuildingBlocks/Contracts/BuildingBlocks.Contracts.csproj" />
   </Folder>
@@ -15,8 +21,14 @@
   <Folder Name="/src/BuildingBlocks/Observability/">
     <Project Path="src/BuildingBlocks/Observability/BuildingBlocks.Observability.csproj" />
   </Folder>
+  <Folder Name="/src/BuildingBlocks/Outbox/">
+    <Project Path="src/BuildingBlocks/Outbox/BuildingBlocks.Outbox.csproj" />
+  </Folder>
   <Folder Name="/src/BuildingBlocks/SharedKernel/">
     <Project Path="src/BuildingBlocks/SharedKernel/BuildingBlocks.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Web/">
+    <Project Path="src/BuildingBlocks/Web/BuildingBlocks.Web.csproj" />
   </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/AgentOrchestrator/">
@@ -32,10 +44,21 @@
     <Project Path="src/Services/IncidentService/IncidentService.Infrastructure/IncidentService.Infrastructure.csproj" Id="ed1a8d24-4016-40ed-9c00-16994e939556" />
   </Folder>
   <Folder Name="/src/Services/NotificationService/">
-    <Project Path="src/Services/NotificationService/Services.NotificationService.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.API/NotificationService.API.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Application/NotificationService.Application.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Domain/NotificationService.Domain.csproj" />
+    <Project Path="src/Services/NotificationService/NotificationService.Infrastructure/NotificationService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/Services/TelemetryIngestionService/">
-    <Project Path="src/Services/TelemetryIngestionService/Services.TelemetryIngestionService.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.API/TelemetryIngestionService.API.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Application/TelemetryIngestionService.Application.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Domain/TelemetryIngestionService.Domain.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Infrastructure/TelemetryIngestionService.Infrastructure.csproj" />
   </Folder>
-  <Folder Name="/tests/" />
+  <Folder Name="/tests/">
+    <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
+    <Project Path="tests/IncidentService.Tests/IncidentService.Tests.csproj" />
+    <Project Path="tests/NotificationService.Tests/NotificationService.Tests.csproj" />
+    <Project Path="tests/TelemetryIngestionService.Tests/TelemetryIngestionService.Tests.csproj" />
+  </Folder>
 </Solution>
