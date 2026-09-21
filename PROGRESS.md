@@ -12,7 +12,8 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 19 — React frontend (`IIM-35`, 2026-09-21) — 6 ekran, SignalR push, 242 test
-- **Sıradaki:** Adım 15 + 16 birlikte (gateway + auth)
+- **Devam eden:** Adım 19.5 — Tasarım sistemi ve UX revizyonu (`IIM-46`, 2026-09-21)
+- **Sıradaki:** Adım 15 + 16 birlikte (gateway + auth) — sahiplik modeli **organizasyon bazlı** (2026-09-21 kararı)
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
@@ -21,11 +22,14 @@ Yol haritası **adım numarası sırasına göre değil**, aşağıdaki sıraya 
 1. ~~**Adım 18 — testler.**~~ **Yapıldı** (`IIM-28`). Regresyon koruması artık var.
    Integration testleri (Testcontainers) bilinçli olarak kapsam dışı bırakıldı → ayrı adım.
 2. ~~**Adım 19 — React frontend.**~~ **Yapıldı** (`IIM-35`). Sistem artık görünür.
-3. **SIRADAKİ — Adım 15 + 16 birlikte** — gateway auth'tan ayrı yapılırsa auth iki kere yazılır; JWT
+3. **DEVAM EDEN — Adım 19.5 — tasarım sistemi ve UX revizyonu** (`IIM-46`). Adım 19'un görsel
+   katmanı seçilmemişti; ayrıca login/logout yüzeyi Adım 16'nın önüne alınıyor ki auth geldiğinde
+   değişecek tek şey `session.ts` olsun. Backend'e dokunmuyor.
+4. **SIRADAKİ — Adım 15 + 16 birlikte** — gateway auth'tan ayrı yapılırsa auth iki kere yazılır; JWT
    doğrulama, rate limiting ve CORS'un doğal yeri gateway. 16 olmadan credential şifreleme de
-   yarım kalır.
-4. **Adım 13.5 + 17 birlikte** — ikisi de OpenTelemetry bağımlılığını paylaşıyor.
-5. Sonra: 17.5 (MCP), 20 (AI paneli + analytics), 21 (CI/CD), 22 (Kubernetes).
+   yarım kalır. Sahiplik **organizasyon bazlı**; kapsam envanteri Adım 16 maddesinde.
+5. **Adım 13.5 + 17 birlikte** — ikisi de OpenTelemetry bağımlılığını paylaşıyor.
+6. Sonra: 17.5 (MCP), 20 (AI paneli + analytics), 21 (CI/CD), 22 (Kubernetes).
 
 **Önceliği düşürüldü:** Adım 14 (Comment & Timeline) — evidence API'si ve delivery geçmişi
 audit hikâyesinin çoğunu zaten veriyor.
@@ -83,6 +87,13 @@ audit hikâyesinin çoğunu zaten veriyor.
   - [x] **Parça 5** (`IIM-40`, 2026-09-21) — Telemetri yüzeyi: **ısı haritası** + sinyal kuyruğu + kanıt görüntüleyici + "neden uyandırıldık" paneli. Harita servis × imza (ilk 8 + "other"), renk = tekrar sayısı, nokta = kapının nereye götürdüğü — iki kanal. **Renk ölçeği iki denemede oturdu:** plandaki log ölçeği gerçek veride *fazla* düzeltti (max 30 iken 30 ile 15 aynı tona düştü; log kısa aralığın üstünü yassıltıyor). Karekök ikisinin arasında: 30/15/1 ayrı basamaklara düşüyor, 80/2/2 de. **İkinci kusur ekranı okurken bulundu:** sinyalde *saklanan* gerekçe makinenin kültürüyle formatlanıyordu (`Confidence 1,00 ... 0,90`) — aynı sinyal hangi makinede tespit edildiğine göre kendini farklı açıklıyordu. `EvidenceSummary` zaten bilerek invariant; aynı kural ikinci yerde kırılmıştı. `tr-TR` altında koşan testle düzeltildi
   - [x] **Parça 6** (`IIM-41`, 2026-09-21) — Ayarlar ekranları (242 test). **Düzenleme formunu yazmak Adım 19'dan eski bir veri kaybı bug'ını ortaya çıkardı:** okuma credential'ı `***` ile maskeliyor, yazma config'i komple değiştiriyor ve maskeden haberi yok — yani `***` geri gönderilince müşterinin SMTP parolası gerçekten `***` oluyordu, anahtar atlanınca da siliniyor/validasyondan dönüyordu. Client gerçek değeri hiç görmediği için koruyamaz. `BuildingBlocks.Application/ConfigMasking` artık round-trip'in iki yarısını birden sahipleniyor (aynı "credential'a benziyor" tanımı hem gizlemeye hem geri koymaya karar veriyor); maskeye eşit değer "sakladığını koru" demek, validasyondan **önce** uygulanıyor. **İlk doğrulama denemesi kanıt değildi** — Mailpit her parolayı kabul ettiği için test geçmesi bir şey söylemiyor; Postgres'ten satırı okumak söylüyor: `***` gönderildikten sonra saklanan değer hâlâ `the-real-secret`. 16 yeni test
   - [x] **Parça 7** (`IIM-42`, 2026-09-21) — Realtime client: üç bağlantı, payload doğrudan cache'e yazılıyor; yalnızca `incidentCreated` invalidate ediyor. Reconnect'te ilgili key'ler bir kez invalidate (payload push'un gerçek maliyeti: soket düşükken gelenler kaybolur). **Kabul koşusu ölçülerek yapıldı** — `window.fetch` sarmalandı, "yeni HTTP isteği yok" iddia değil sayı: incident oluşturma 7→8 satır, **tam 1 istek** (id-only mesajın tasarlanan davranışı); sunucu tarafında takım değişikliği satıra `· platform` yazdı, **çağrı listesi boş**; timeout fırtınası ısı haritası hücresini 15→40 yaptı, **yine sıfır istek**. AI analizi de kendiliğinden düştü (Medium→Low, Other, %20 — sahte test incident'ı doğru şekilde önemsiz bulundu)
+- [~] **Adım 19.5** (`IIM-46`, 2026-09-21) — Tasarım sistemi ve UX revizyonu. Adım 19 altı ekranı ayağa kaldırdı ama **görsel katman stok shadcn'di ve hiç seçilmedi**: `index.css`'teki her renk token'ı `oklch(x 0 0)` — chroma sıfır, tema baştan sona gri; `next-themes` bağımlılıkta duruyor ama hiçbir yere bağlı değil. Kararlar 2026-09-21: sahiplik modeli **organizasyon bazlı** · backend scoping **Adım 16'da** (bu adım backend'e dokunmuyor) · kapsam **tam revizyon** · tasarımı `ui-ux-designer` subagent'ı üretiyor
+  - [~] **Parça 1** (`IIM-47`, 2026-09-21) — Designer agent + tasarım token'ları + app shell
+  - [ ] **Parça 2** (`IIM-48`) — Isı haritası → finans tarzı treemap (alan + sarı→kırmızı, hover'da alttan kayan sayaç)
+  - [ ] **Parça 3** (`IIM-49`) — Integrations kataloğu (ikonlu kutucuk + Connect → credential dialog)
+  - [ ] **Parça 4** (`IIM-50`) — Settings kabuğu + profil; telemetry kaynakları profile taşınıyor
+  - [ ] **Parça 5** (`IIM-51`) — Login/logout ekranları + auth dikiş yeri (`session.ts`). **Kozmetik, sıfır güvenlik**
+  - [ ] **Parça 6** (`IIM-52`) — Kalan ekranlar + ölçülen kabul koşusu
 
 ---
 
@@ -92,7 +103,7 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] **Adım 13.6** — Generic alert webhook ingest (Datadog monitor, Grafana alert, CloudWatch alarm). En düşük hacim, en yüksek sinyal; ham log çekmek istemeyen müşteriler için. Provider başına küçük bir payload mapper yeter
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [ ] **Adım 15** — YARP API Gateway (tek giriş noktası)
-- [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
+- [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer) + **organizasyon bazlı veri sahipliği**; MCP per-customer secret/auth önkoşulu. **Sahiplik modeli 2026-09-21'de kararlaştırıldı: organizasyon bazlı** — veri org'a ait, kullanıcı org üyesi (incident'ı ekip paylaşır; sadece açan kişi görseydi ürün çalışmazdı). Adım 19.5'te çıkarılan envanter, kapsamın tamamı: **11 entity + ortak `Entity` base'i · 4 DbContext (hiçbirinde `HasQueryFilter` yok, dördüne de eklenecek) · 11 EF configuration · 8 controller / 26 endpoint · 3 SignalR hub (şu an her bağlı client herkesin event'ini alıyor) · 3 integration event + `IntegrationEvent` base'ine `TenantId` · 7 async consumer (outbox dispatcher, `TelemetryPollingService`, üç `EventBusSubscriber` — `HttpContext` yok, org **event üzerinde taşınmalı**) · 4 ayrı migration klasörü.** Çözümde `AddAuthentication` / `[Authorize]` / `ClaimsPrincipal` / `IHttpContextAccessor` için **sıfır eşleşme** — tamamen greenfield. Ayrıca `DetectionRuleSeeder` global seed yapıyor, org başına olmalı. Frontend tarafı hazır: `web/src/features/auth/session.ts` tek dikiş yeri, org alanı tipte zaten var
 - [ ] **Adım 17** — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu
 - [ ] **Adım 17.5** — MCP entegrasyonu (Grafana/Kubernetes/GitHub/PagerDuty dış tool'ları). Kural: kendi verine in-process, başkasının verisine MCP. Önkoşul: 13 + 16 + 17. Erken opsiyon: Adım 12 sonrası salt-okunur GitHub MCP spike (ürüne girmez)
 - [ ] **Adım 20** — AI önerileri paneli + analytics dashboard (MTTR, trendler, model performansı)

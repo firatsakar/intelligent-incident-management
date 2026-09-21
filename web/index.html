@@ -4,7 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Incident Management</title>
+    <script>
+      // next-themes only resolves once React mounts, which in a Vite SPA means one painted frame
+      // of the wrong theme. On a console that is usually opened dark, that frame is a white flash
+      // in a dark room. Reads the same key and the same values ThemeProvider writes.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('iim-theme')
+          var dark =
+            stored === 'dark' ||
+            ((!stored || stored === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+          if (dark) document.documentElement.classList.add('dark')
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch {
+          /* Private mode or blocked storage: fall through to the CSS default. */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

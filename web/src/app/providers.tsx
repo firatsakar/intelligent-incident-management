@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ThemeProvider } from 'next-themes'
 import { useState, type ReactNode } from 'react'
 
 import { Toaster } from '@/components/ui/sonner'
@@ -28,9 +29,23 @@ export function Providers({ children }: { children: ReactNode }) {
   )
 
   return (
-    <QueryClientProvider client={client}>
-      <RealtimeProvider>{children}</RealtimeProvider>
-      <Toaster position="bottom-right" />
-    </QueryClientProvider>
+    // System default rather than light: whoever opens this at 3am has already told their OS what
+    // they want, and asking them again with a bright screen is the wrong first impression.
+    //
+    // disableTransitionOnChange matters more here than on a marketing page — the token change
+    // touches every surface at once, and without it switching themes animates several hundred
+    // elements through an intermediate colour for 150ms, which looks like a fault.
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      storageKey="iim-theme"
+    >
+      <QueryClientProvider client={client}>
+        <RealtimeProvider>{children}</RealtimeProvider>
+        <Toaster position="bottom-right" />
+      </QueryClientProvider>
+    </ThemeProvider>
   )
 }
