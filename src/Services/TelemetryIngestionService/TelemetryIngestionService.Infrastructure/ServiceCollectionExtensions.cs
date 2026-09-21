@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISourceCursorRepository, SourceCursorRepository>();
         services.AddScoped<ILogRecordRepository, LogRecordRepository>();
         services.AddScoped<IErrorSignatureRepository, ErrorSignatureRepository>();
+        services.AddScoped<IDetectionRuleRepository, DetectionRuleRepository>();
+        services.AddScoped<ISignalRepository, SignalRepository>();
 
         // Keyed by source kind so the poller can resolve a connector straight from the source row.
         services.AddHttpClient(SeqTelemetryConnector.HttpClientName);
@@ -35,6 +37,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITelemetrySourceConnectorResolver, TelemetrySourceConnectorResolver>();
 
+        services.AddHostedService<DetectionRuleSeeder>();
         services.AddHostedService<TelemetryPollingService>();
 
         return services;

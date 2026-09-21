@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
+using TelemetryIngestionService.Application.Commands.DetectSignals;
 using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
@@ -25,6 +26,7 @@ public sealed class PollTelemetrySourceCommandHandler
     private readonly ILogRecordRepository _logRecords;
     private readonly IErrorSignatureRepository _signatures;
     private readonly ITelemetrySourceConnectorResolver _connectors;
+    private readonly ISender _sender;
     private readonly ILogger<PollTelemetrySourceCommandHandler> _logger;
 
     public PollTelemetrySourceCommandHandler(
@@ -33,6 +35,7 @@ public sealed class PollTelemetrySourceCommandHandler
         ILogRecordRepository logRecords,
         IErrorSignatureRepository signatures,
         ITelemetrySourceConnectorResolver connectors,
+        ISender sender,
         ILogger<PollTelemetrySourceCommandHandler> logger
     )
     {
@@ -41,6 +44,7 @@ public sealed class PollTelemetrySourceCommandHandler
         _logRecords = logRecords;
         _signatures = signatures;
         _connectors = connectors;
+        _sender = sender;
         _logger = logger;
     }
 
@@ -163,6 +167,11 @@ public sealed class PollTelemetrySourceCommandHandler
         await _logRecords.SaveChangesAsync(cancellationToken);
 
         await ApplyOccurrencesAsync(occurrences, cancellationToken);
+
+        // Storing what happened and deciding what it means are separate jobs, and detection runs
+        // only on the signatures this batch actually touched.
+        if (occurrences.Count > 0)
+            await _sender.Send(new DetectSignalsCommand(occurrences.Keys.ToList()), cancellationToken);
 
         _logger.LogInformation(
             "Telemetry source {SourceName}: stored {Stored} of {Fetched} event(s), {Duplicates} already held, {Signatures} signature(s) touched.",

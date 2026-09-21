@@ -25,5 +25,22 @@ public interface ILogRecordRepository
         CancellationToken cancellationToken = default
     );
 
+    // Just the timestamps, for bucketing into the rate baseline. One column, and the range is
+    // BRIN-indexed.
+    Task<IReadOnlyList<DateTime>> GetTimestampsByFingerprintAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
+    // How many distinct services this signature has been seen in — the blast-radius input.
+    Task<int> CountDistinctServicesAsync(
+        string fingerprint,
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }
