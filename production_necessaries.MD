@@ -2,7 +2,7 @@
 
 > Adım 1–13 boyunca biriken, **ürün kullanımına geçmeden önce** ele alınması gereken her şey.
 > `PROGRESS.md` nerede olduğumuzu söyler; bu dosya neyin eksik olduğunu söyler.
-> Son güncelleme: 2026-09-21 (Adım 13 sonu).
+> Son güncelleme: 2026-09-21 (Adım 18 sonu — §7 yeniden yazıldı).
 
 ## Nasıl okunmalı
 
@@ -206,19 +206,46 @@ Adım 21 ve Adım 22. Build + test + imaj yayınlama hattı yok.
 
 ## 7. Test
 
-### 🔴 Hiç otomatik test yok
+### 🟡 Unit testler var, integration testi yok
 
-Tek bir test projesi yok. Adım 1–13'ün tamamı elle doğrulandı. Her doğrulama gerçek ve
-kayıtlı, ama **regresyon koruması sıfır**.
+**Adım 18** (`IIM-28`, 2026-09-21) dört unit test projesi ekledi — **203 test**, xUnit +
+NSubstitute + düz `Assert`. Önceki "🔴 hiç otomatik test yok" maddesi kapandı.
 
-**Adım 18** bunu kapatır. Özellikle test edilmemiş, bilinen yollar:
+Kapsanan: `SignalScoring`, `RateBaseline`, `LogFingerprint`, `ErrorSignature`, `LogRecord`,
+`DetectionRule`, `EvidenceSummary`, `DetectSignalsCommandHandler` (karar ağacının her dalı),
+`Integration.Matches`, `DispatchNotificationsCommandHandler`, `Incident`,
+`CreateIncidentFromSignalCommandHandler`, `OutboxDispatcher`.
 
-| Yol | Neden test edilmedi |
+Süitin gerçekten yakaladığı doğrulandı: `OutboxDispatcher`'ın sırası bilerek ters çevrildi, üç
+test düştü, sonra geri alındı.
+
+#### Kapatılan bilinen boşluklar
+
+| Yol | Durum |
 |---|---|
-| Zayıf sinyal bandı (0.60–0.89) | Düz baseline tam anomali bonusu verdiği için tüm burst'ler 1.00 aldı |
-| Regex normalizasyon fallback'i | Demo store'daki her olay Serilog şablonu taşıyor, şablon yolu hepsini kapsadı |
-| `NotificationDelivery` yarış durumu | Eşzamanlı aynı-event teslimi elle tetiklenemedi |
-| Clock skew işaretlemesi | Kaynak saati hiç ileri kaydırılmadı |
+| Zayıf sinyal bandı (0.60–0.89) | ✅ Kapsandı — aşağıdaki nota bakın |
+| Regex normalizasyon fallback'i | ✅ Kapsandı (maskeleme sırası dahil: GUID > uzun hex > sayı) |
+| Clock skew işaretlemesi | ✅ Kapsandı |
+| `SignalScoring` bileşenleri | ✅ Kapsandı (clamp iki uçta, breakdown toplamı = total) |
+| `ErrorSignature.CanAbsorbInto` | ✅ Kapsandı (beş dal + pencerenin son olaydan ölçülmesi) |
+| `RateBaseline` kenar durumları | ✅ Kapsandı |
+
+**Zayıf band hakkında bilinmesi gereken:** unit testler bandın *mantığının* doğru olduğunu
+kanıtlıyor, ama band **geçmişi olmayan bir imza için erişilemez**. Baseline 12 tam pencereden
+kuruluyor; geçmişsiz imza 12 *sıfır* bucket'a düşüyor → düz baseline → sınırlı 4.0 → anomali
+eşiği geçiliyor. Aynı 6 hatalık burst normal baseline'a karşı 0.65 (zayıf), boş baseline'a karşı
+0.90 (terfi). Tasarım gereği doğru, ama eşik ayarlamadan önce bilinmeli. İki yarı da testle sabit.
+
+#### Hâlâ açık
+
+| Yol | Neden |
+|---|---|
+| `NotificationDelivery` yarış durumu | Gerçek Postgres unique index'i gerekiyor → integration testi |
+| EF mapping / jsonb / migration doğrulaması | Aynı sebep |
+| Servisler arası uçtan uca akış | Aynı sebep (RabbitMQ + 4 DB) |
+
+Integration testleri (Testcontainers) Adım 18 kapsamı dışında bırakıldı — bilinçli karar,
+2026-09-21. Ayrı bir adım olarak ele alınmalı.
 
 ---
 
