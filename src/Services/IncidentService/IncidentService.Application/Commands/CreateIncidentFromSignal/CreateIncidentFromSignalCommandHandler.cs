@@ -13,16 +13,19 @@ public sealed class CreateIncidentFromSignalCommandHandler
 {
     private readonly IIncidentRepository _repository;
     private readonly IEventBus _eventBus;
+    private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<CreateIncidentFromSignalCommandHandler> _logger;
 
     public CreateIncidentFromSignalCommandHandler(
         IIncidentRepository repository,
         IEventBus eventBus,
+        IRealtimeNotifier realtime,
         ILogger<CreateIncidentFromSignalCommandHandler> logger
     )
     {
         _repository = repository;
         _eventBus = eventBus;
+        _realtime = realtime;
         _logger = logger;
     }
 
@@ -71,6 +74,11 @@ public sealed class CreateIncidentFromSignalCommandHandler
             },
             cancellationToken
         );
+
+        // The redelivery guard above matters here too: a second arrival returns early and never
+        // reaches this, so a duplicated promotion cannot make the same incident appear twice on
+        // an open screen.
+        await _realtime.IncidentCreatedAsync(incident.Id, cancellationToken);
 
         _logger.LogInformation(
             "Opened incident {IncidentId} from a telemetry signal, detected at {DetectedAt:u}.",

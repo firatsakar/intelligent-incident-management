@@ -1,4 +1,5 @@
 ﻿using IncidentService.Application.Abstractions;
+using IncidentService.Application.DTOs;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Exceptions;
 using MediatR;
@@ -8,10 +9,15 @@ namespace IncidentService.Application.Commands.ApplyAiAnalysis;
 public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnalysisCommand>
 {
     private readonly IIncidentRepository _repository;
+    private readonly IRealtimeNotifier _realtime;
 
-    public ApplyAiAnalysisCommandHandler(IIncidentRepository repository)
+    public ApplyAiAnalysisCommandHandler(
+        IIncidentRepository repository,
+        IRealtimeNotifier realtime
+    )
     {
         _repository = repository;
+        _realtime = realtime;
     }
 
     public async Task Handle(ApplyAiAnalysisCommand request, CancellationToken cancellationToken)
@@ -34,5 +40,12 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
+
+        // The moment a demo is watching for: the priority the AI decided on, arriving on a screen
+        // that is already open.
+        await _realtime.IncidentChangedAsync(
+            IncidentDto.FromDomain(incident),
+            cancellationToken
+        );
     }
 }

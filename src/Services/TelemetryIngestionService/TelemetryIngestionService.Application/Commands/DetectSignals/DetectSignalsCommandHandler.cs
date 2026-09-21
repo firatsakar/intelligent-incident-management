@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
+using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Services;
@@ -16,6 +17,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
     private readonly IDetectionRuleRepository _rules;
     private readonly ILogRecordRepository _logRecords;
     private readonly ISignalRepository _signals;
+    private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<DetectSignalsCommandHandler> _logger;
 
     public DetectSignalsCommandHandler(
@@ -23,6 +25,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         IDetectionRuleRepository rules,
         ILogRecordRepository logRecords,
         ISignalRepository signals,
+        IRealtimeNotifier realtime,
         ILogger<DetectSignalsCommandHandler> logger
     )
     {
@@ -30,6 +33,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         _rules = rules;
         _logRecords = logRecords;
         _signals = signals;
+        _realtime = realtime;
         _logger = logger;
     }
 
@@ -54,24 +58,35 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
             cancellationToken
         );
 
-        var detected = 0;
+        var detected = new List<(Signal Signal, ErrorSignature Signature)>();
 
         foreach (var signature in signatures)
         {
-            if (await TryDetectAsync(signature, rules, cancellationToken))
-                detected++;
+            if (await TryDetectAsync(signature, rules, cancellationToken) is { } signal)
+                detected.Add((signal, signature));
         }
 
         // One SaveChanges for the batch: the interceptor harvests any promotion events into the
         // outbox in the same transaction, so a promotion and its message commit together or not
         // at all.
-        if (detected > 0)
+        if (detected.Count > 0)
             await _signals.SaveChangesAsync(cancellationToken);
 
-        return detected;
+        // Announced only once committed, and with the signature attached — a signal that cannot
+        // say which service broke has nowhere to land on the heat map.
+        foreach (var (signal, signature) in detected)
+        {
+            await _realtime.SignalRecordedAsync(
+                SignalDto.FromDomain(signal, signature),
+                cancellationToken
+            );
+        }
+
+        return detected.Count;
     }
 
-    private async Task<bool> TryDetectAsync(
+    // Returns the signal it raised, or null when this signature did not warrant one.
+    private async Task<Signal?> TryDetectAsync(
         ErrorSignature signature,
         IReadOnlyList<DetectionRule> rules,
         CancellationToken cancellationToken
@@ -80,7 +95,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         var rule = ResolveRule(signature, rules);
 
         if (rule is null)
-            return false;
+            return null;
 
         var now = DateTime.UtcNow;
         var windowStart = now - rule.Window;
@@ -102,7 +117,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         );
 
         if (!hasFatal && occurrences < rule.Threshold)
-            return false;
+            return null;
 
         // A signature that keeps firing must not raise a fresh signal every poll. One signal per
         // window is what makes the count meaningful rather than a measure of how often we looked.
@@ -115,7 +130,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
                 signature.Fingerprint
             );
 
-            return false;
+            return null;
         }
 
         var signal = Signal.Detect(
@@ -168,7 +183,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
 
         await ResolveAsync(signal, signature, rule, inputs, distinctServices, cancellationToken);
 
-        return true;
+        return signal;
     }
 
     // What happens to a scored signal: promote, absorb into the incident already open for this

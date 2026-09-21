@@ -18,6 +18,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
 
     private readonly IIncidentRepository _repository = Substitute.For<IIncidentRepository>();
     private readonly IEventBus _eventBus = Substitute.For<IEventBus>();
+    private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
     private readonly CreateIncidentFromSignalCommandHandler _handler;
 
     public CreateIncidentFromSignalCommandHandlerTests()
@@ -25,6 +26,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         _handler = new CreateIncidentFromSignalCommandHandler(
             _repository,
             _eventBus,
+            _realtime,
             NullLogger<CreateIncidentFromSignalCommandHandler>.Instance
         );
     }
@@ -85,6 +87,34 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         await _eventBus
             .DidNotReceive()
             .PublishAsync(Arg.Any<IncidentDetectedEvent>(), Arg.Any<CancellationToken>());
+
+        // Nor a second row sliding into an open list.
+        await _realtime
+            .DidNotReceive()
+            .IncidentCreatedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TheNewIncidentIsAnnouncedToOpenScreens()
+    {
+        await Handle();
+
+        // Only the id: whether this incident belongs on the first page of whatever filter someone
+        // has open is a question only the server can answer.
+        await _realtime.Received(1).IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TheAnnouncementComesAfterTheSave()
+    {
+        // Announcing first would invite a refetch for an incident that is not there yet.
+        await Handle();
+
+        Received.InOrder(() =>
+        {
+            _repository.SaveChangesAsync(Arg.Any<CancellationToken>());
+            _realtime.IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+        });
     }
 
     [Fact]
