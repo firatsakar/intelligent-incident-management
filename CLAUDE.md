@@ -154,5 +154,7 @@ Solo development — no pull requests. Merge directly.
 - Never read or write `.env`, `.env.*`, or `appsettings.*.json` (secrets live there).
 - Never run destructive commands: `rm -rf`, `git reset --hard`, force push,
   `dotnet ef database drop`, `docker compose down -v`.
-- EF migrations and `docker compose up/down` require my confirmation.
+- EF migrations are pre-approved (`dotnet ef` is in `allow`), except `migrations remove`,
+  which is an undo and stays in `ask`; `database drop` stays hard-blocked.
+- `docker compose up/down` require my confirmation.
 - Do not run a feature as "done" without tests where the layer has test coverage.
