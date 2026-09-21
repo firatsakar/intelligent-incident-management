@@ -3,6 +3,8 @@ import { useState, type ReactNode } from 'react'
 
 import { Toaster } from '@/components/ui/sonner'
 
+import { RealtimeProvider } from './RealtimeProvider'
+
 // Server state lives here and nowhere else. There is no store: this app owns no state of its own
 // worth one, and a store would mean keeping a second copy of what the server already knows.
 //
@@ -27,7 +29,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      {children}
+      <RealtimeProvider>{children}</RealtimeProvider>
       <Toaster position="bottom-right" />
     </QueryClientProvider>
   )

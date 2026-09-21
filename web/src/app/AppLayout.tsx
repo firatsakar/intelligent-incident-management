@@ -2,6 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 
+import { RealtimeIndicator } from './RealtimeIndicator'
+
 const navigation = [
   { to: '/incidents', label: 'Incidents' },
   { to: '/signals', label: 'Signals' },
@@ -37,6 +39,10 @@ export function AppLayout() {
               </NavLink>
             ))}
           </nav>
+
+          <div className="ml-auto">
+            <RealtimeIndicator />
+          </div>
         </div>
       </header>
 
