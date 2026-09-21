@@ -30,6 +30,8 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(x => x.CreatedAt).IsRequired();
 
+        builder.Property(x => x.DetectedAt);
+
         builder.Property(x => x.UpdatedAt);
 
         builder
