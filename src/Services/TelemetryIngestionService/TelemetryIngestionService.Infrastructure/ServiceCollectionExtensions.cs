@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Infrastructure.Connectors;
+using TelemetryIngestionService.Infrastructure.Ingestion;
 using TelemetryIngestionService.Infrastructure.Persistence;
 using TelemetryIngestionService.Infrastructure.Persistence.Repositories;
 
@@ -22,6 +23,8 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<ITelemetrySourceRepository, TelemetrySourceRepository>();
         services.AddScoped<ISourceCursorRepository, SourceCursorRepository>();
+        services.AddScoped<ILogRecordRepository, LogRecordRepository>();
+        services.AddScoped<IErrorSignatureRepository, ErrorSignatureRepository>();
 
         // Keyed by source kind so the poller can resolve a connector straight from the source row.
         services.AddHttpClient(SeqTelemetryConnector.HttpClientName);
@@ -31,6 +34,8 @@ public static class ServiceCollectionExtensions
         );
 
         services.AddScoped<ITelemetrySourceConnectorResolver, TelemetrySourceConnectorResolver>();
+
+        services.AddHostedService<TelemetryPollingService>();
 
         return services;
     }
