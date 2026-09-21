@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
 using IncidentService.API.BackgroundServices;
@@ -10,6 +11,8 @@ using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.IncidentService);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateIncidentCommand).Assembly)
@@ -26,6 +29,11 @@ builder.Services.AddRabbitMqEventBus(builder.Configuration);
 builder.Services.AddScoped<
     IIntegrationEventHandler<IncidentAnalyzedEvent>,
     IncidentAnalyzedEventHandler
+>();
+
+builder.Services.AddScoped<
+    IIntegrationEventHandler<SignalPromotedEvent>,
+    SignalPromotedEventHandler
 >();
 
 builder.Services.AddHostedService<EventBusSubscriber>();

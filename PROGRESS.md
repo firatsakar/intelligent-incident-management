@@ -11,8 +11,8 @@
 - `[!]` **Yapılmadı** — atlandı veya ertelendi (tek satır gerekçe ekle)
 
 ## Son durum
-- **Son tamamlanan:** Adım 12 — NotificationService (`IIM-1`, 2026-09-16)
-- **Sıradaki:** Adım 13 — TelemetryIngestionService (Outbox → BuildingBlocks çıkarımı da burada)
+- **Son tamamlanan:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-21)
+- **Sıradaki:** Adım 13.5 (OTLP log ingest) *veya* Adım 14 (Comment & Timeline)
 
 ---
 
@@ -39,12 +39,26 @@
   - [x] **Parça 8a** (`IIM-11`, 2026-09-16) — `ValidationBehavior` → yeni `BuildingBlocks.Application`; `GlobalExceptionHandler` → yeni `BuildingBlocks.Web`; SharedKernel'e `NotFoundException` tabanı (handler eskiden `IncidentNotFoundException`'a bağlıydı, paylaşılamıyordu). NotificationService gerçek ikinci tüketici = YAGNI tetikleyicisi. IncidentService davranışı birebir aynı (400+errors / 404 doğrulandı)
   - [x] **Parça 8** (`IIM-9`, 2026-09-16) — `IncidentAnalyzedEvent` aboneliği + `DispatchNotificationsCommand` fan-out (filtre → idempotency → keyed kanal → `NotificationDelivery`), kanal başına hata izolasyonu, Integration CRUD (+ kanal başına zorunlu ayar validasyonu) ve `GET /api/notifications/incident/{id}` audit ucu. Credential görünümlü config değerleri okumada maskeleniyor. Tek event iki servise birden ulaştı, filtre ve idempotency doğrulandı
   - [x] **Parça 9** (`IIM-10`, 2026-09-16) — Uçtan uca doğrulandı: incident → gerçek AI analizi (Medium→Critical, kategori Application, confidence %82) → Outbox → RabbitMQ → hem IncidentService write-back hem NotificationService fan-out; 3 kanalın üçü de `Sent` (Mailpit maili, webhook echo, Jira `IIM-13`). 3 servis kuyruğu + 3 DLQ, DLQ'lar boş
+- [x] **Adım 13** (`IIM-14`, 2026-09-21) — TelemetryIngestionService: dış log kaynağından çekme → imza → sinyal → **deterministik skorla** otomatik incident. Uçtan uca doğrulandı; AI analizi kanıt sayesinde 0.82 confidence'a çıktı ve gerekçesinde tekrar sayısını, süreyi ve oran anomalisini doğrudan alıntıladı. Telemetri bir *entegrasyon*: kaynak müşteri tarafından konfigüre edilir (Adım 12'deki `Integration` deseni), ilk connector Seq. Skorlamada AI yok; AI'a giden tek şey incident açıklamasına gömülen kompakt kanıt özeti.
+  - **Signal ≠ Incident:** `≥0.90` incident · `0.60–0.89` zayıf sinyal (incident yok) · `<0.60` sadece kayıt (baseline + emsal beslenir)
+  - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
+  - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
+  - [x] **Parça 2** (`IIM-16`, 2026-09-17) — `TelemetrySource` CRUD (jsonb config + kind başına zorunlu ayar validasyonu + credential maskeleme + `POST {id}/test`), `ITelemetrySourceConnector` keyed DI, Seq connector: `clef=true` ile NDJSON CLEF parse, `afterId` cursor'ı, boş batch'te pozisyon korunur. `ApiKey` opsiyonel (kimliksiz Seq'e de bağlanır); eksikse test ucu net hata veriyor
+  - [x] **Parça 3a** (`IIM-24`, 2026-09-21) — `demo/MonitoredShop` (checkout servisi taklidi: sürekli trafik + `error-storm` / `timeout-storm` / `fatal` tetikleyicileri) + `seq-demo` (8082, `SEQ_FIRSTRUN_NOAUTHENTICATION` ile anonim okuma). Tespit verisi buradan gelir. **Kapsam düzeltmesi:** platform kendini değil, müşterinin sistemini izler. Canlı Seq'e karşı doğrulama Parça 2'de **iki gerçek bug** ortaya çıkardı: CLEF `@i` benzersiz id değil *event tipi hash'i* (bir fırtına tek satıra çökerdi), ve `afterId` ileri değil **geriye** sayfalıyor (tail cursor `fromDateUtc` olmalı)
+  - [x] **Parça 3b** (`IIM-17`, 2026-09-21) — `BuildingBlocks.Observability.UsePlatformLogging()` ile 4 servis Serilog → `seq` (8081). `Service` damgası `TelemetryConstants.ServiceNames`'ten. Adım 12'de bulunan "Seq'e kimse yazmıyor" boşluğu kapandı; *tespit kaynağı değil*, sadece bizim gözlemlenebilirliğimiz. Ayrım korunuyor: servisler `seq`'e yazar, dedektör `seq-demo`'yu okur
+  - [x] **Parça 4** (`IIM-18`, 2026-09-21) — Poller (hosted service sadece *ne zaman*a karar verir, iş `PollTelemetrySourceCommand`'da) + normalizasyon + fingerprint + `ErrorSignature` upsert. **Fingerprint mesaj şablonunu kullanıyor** — şablon yapısı gereği zaten normalize (değişkenler adlandırılmış yer tutucu), regex sadece şablonsuz kaynaklar için fallback. Doğrulandı: 110 kayıt → **2 imza** (80 + 30), 110 farklı event id (kopya yok), `Timestamp` ≠ `IngestedAt`
+  - [x] **Parça 5** (`IIM-19`, 2026-09-21) — `DetectionRule` değerlendirmesi → `Signal` (kind=`LogBurst`) + imza başına z-score baseline (12 tam pencere; açık pencere hariç, düz baseline sınırlı skor, 5 örnekten az ise skor yok). Pencere başına tek sinyal (poll başına değil). Varsayılan kural boş tabloya bir kez seed'leniyor. Doğrulandı: 2 hata (eşik 3) → sinyal yok; 8 → tek sinyal; ikinci imza bağımsız sinyal
+  - [x] **Parça 6** (`IIM-20`, 2026-09-21) — Outbox → `BuildingBlocks.Outbox`. İki dikiş yeri paylaşılabilir kıldı: `IOutboxStore` (satırlar hangi DB'de) ve `IOutboxMessageHandler` (mesaj ne anlama geliyor — eskiden dispatcher içindeki `switch`). Dispatch sırası korundu (önce yan etki, sonra `ProcessedOn`). `OutboxCleanupService` eklendi. Migration gerekmedi (EF: model değişmemiş); Adım 12 zinciri aynen çalışıyor
+  - [x] **Parça 7** (`IIM-21`, 2026-09-21) — Deterministik skorlama (bileşen dökümü signal'de saklanıyor, AI yok) + TTL'li dedup + terfi + kanıt özeti → outbox → `SignalPromotedEvent`. IncidentId **telemetri tarafında** üretiliyor: at-least-once teslimde ikinci kopya, ikinci incident değil duplicate key olur. Test sırasında bug yakalandı: FATAL kısayolu eşik kontrolünden sonra geliyordu, tek crash eleniyordu — düzeltildi. Doğrulandı: FATAL tek seferde terfi, ikincisi açık incident'a yazıldı, üçüncüsü dedup dalından geçti, farklı imza bağımsız terfi etti
+  - [x] **Parça 8** (`IIM-22`, 2026-09-21) — `SignalPromotedEvent` tüketimi → `Source=Telemetry` incident + `Incident.DetectedAt` (manuel oluşturmada da opsiyonel olarak var). Redelivery no-op (id promoter tarafından seçiliyor). `IncidentDto`'daki üç elle map tek `FromDomain`'e indi ve AI alanları artık dışarı veriliyor. Doğrulandı: `detectedAt 07:09:46` vs `createdAt 07:11:51`
+  - [x] **Parça 9** (`IIM-23`, 2026-09-21) — `GET /api/telemetry/evidence` (insan + Adım 19 frontend'i için; AI tool'u **değil**) ve `GET /api/telemetry/signals` (varsayılan: zayıf band). Beş servisle tam uçtan uca koşu doğrulandı
 
 ---
 
 ## Sıradaki / kalan yol haritası (AI öne çekilmiş)
 
-- [ ] **Adım 13** — TelemetryIngestionService (anomali → otomatik incident tetikleme; MCP motivasyonunun doğduğu yer). — **SIRADA**
+- [ ] **Adım 13.5** — OTLP log ingest (müşteri log entegrasyonunun **genel çözümü**). Vendor başına connector yazmak yerine tek bir standart tel formatı kabul edilir; uzun kuyruğu müşterinin zaten kullandığı shipper (OTel Collector / Fluent Bit / Vector) çözer. Adım 17 ile aynı bağımlılık → birlikte ele alınabilir. Karar notu: her log satırı saklanmaz, imza başına sayım + örnek satırlar saklanır; filtreleme kaynağa (Collector) itilir
+- [ ] **Adım 13.6** — Generic alert webhook ingest (Datadog monitor, Grafana alert, CloudWatch alarm). En düşük hacim, en yüksek sinyal; ham log çekmek istemeyen müşteriler için. Provider başına küçük bir payload mapper yeter
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [ ] **Adım 15** — YARP API Gateway (tek giriş noktası)
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
@@ -63,15 +77,15 @@
 - [x] `MafAiAnalyzer` debug `LogWarning("RAW AI RESPONSE")` kaldırıldı
 - [x] `GET /api/analyses/similar` silindi (saf test amaçlıydı)
 - [ ] `POST /api/analyses/reindex` — **bilinçli bırakıldı** (operasyonel: mapping değişimi / ES rebuild). Ürünleşmede gözden geçir.
-- [ ] Outbox → BuildingBlocks'a çıkarma — **Adım 13'e ertelendi** (Adım 12 kararı: NotificationService terminal consumer, integration event publish etmiyor → gerçek ikinci kullanım yok, YAGNI. İkinci kullanım TelemetryIngestionService ile doğacak; processed-satır temizlik job'ı da o aşamada)
-- [ ] `IncidentDto` AI alanlarını dışarı vermiyor — `AiSuggestedCategory` / `AiReasoning` / `IsAiAnalyzed` DB'de dolu ama `GET /api/incidents/{id}` yanıtında yok. Adım 19 frontend'i ve Adım 20 AI paneli için gerekli. (2026-09-16, Adım 12 Parça 9 sırasında fark edildi)
+- [x] Outbox → BuildingBlocks'a çıkarma — **yapıldı** (Adım 13 Parça 6, `IIM-20`, 2026-09-21); processed-satır temizlik job'ı da dahil. Önceki not: **Adım 13'e ertelenmişti** (Adım 12 kararı: NotificationService terminal consumer, integration event publish etmiyor → gerçek ikinci kullanım yok, YAGNI. İkinci kullanım TelemetryIngestionService ile doğacak; processed-satır temizlik job'ı da o aşamada)
+- [x] `IncidentDto` AI alanlarını dışarı vermiyor — **kapandı** (Adım 13 Parça 8, `IIM-22`, 2026-09-21); üç elle map tek factory'ye indirildi. Önceki not: `IncidentDto` AI alanlarını dışarı vermiyordu — `AiSuggestedCategory` / `AiReasoning` / `IsAiAnalyzed` DB'de dolu ama `GET /api/incidents/{id}` yanıtında yok. Adım 19 frontend'i ve Adım 20 AI paneli için gerekli. (2026-09-16, Adım 12 Parça 9 sırasında fark edildi)
 - [ ] `README.md`'ye "API key nereden alınır" notu — production'da Anthropic API key'in hangi hesaptan/konsoldan alınacağı, hangi ortam değişkeni/secret store'a konacağı (dev'de `dotnet user-secrets`, `AiAnalyzer:ApiKey`). Fırat'ın isteği, 2026-09-16
 - [ ] `Integration.config` (jsonb) içindeki müşteri credential'ları (SMTP parolası, Jira API token'ı) düz metin — at-rest şifreleme gerekiyor; Adım 16 secret migration ile
 - [ ] Production secret migration (API key, DB/RabbitMQ/ES credentials) — User Secrets/.env'den Key Vault/Secrets Manager'a; Adım 16 ile
 - [ ] ES production sertleştirme (xpack.security, TLS, auth; multi-node/replica) — Adım 16 / ölçek ile
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
 - [ ] `Microsoft.OpenApi` 2.0.0 yüksek önem dereceli güvenlik açığı (GHSA-v5pm-xwqc-g5wc) — `Microsoft.AspNetCore.OpenApi` 10.0.7 transitif olarak çekiyor; IncidentService.API + NotificationService.API etkileniyor. Yamalı sürüme çıkılmalı
-- [ ] Seq'e log gönderimi yok — container Adım 4'ten beri ayakta ama hiçbir serviste Serilog/Seq sink'i yok, loglar sadece console. (2026-09-16, Adım 12 Parça 1 sırasında fark edildi)
+- [x] Seq'e log gönderimi yok — **kapandı** (Adım 13 Parça 3b, `IIM-17`, 2026-09-21)
 - [ ] UML diyagramları (class / sequence / component) — çekirdek bitince
 - [ ] pgvector / hybrid search (BM25 eş anlamlı kaçırınca) — ertelendi (YAGNI)
 

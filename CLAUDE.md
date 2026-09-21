@@ -25,8 +25,10 @@ For **every** task you are given, do this before writing or changing any code:
 6. If a task is large, split it into subtasks — one Jira subtask per "Parça", and
    one `PROGRESS.md` line per Parça. Keep Jira and `PROGRESS.md` in sync as you go.
 
-Jira write actions (create / transition / comment) require my confirmation — they
-are in the `ask` list. Never assume a status transition; do it explicitly.
+Jira write actions (create / transition / comment / edit) are pre-approved — they are
+in the `allow` list, so do them without asking. Confluence writes and the generic
+`executeWrite` runner still require my confirmation, and deletes stay hard-blocked.
+Never assume a status transition; do it explicitly.
 `PROGRESS.md` is the single source of truth for roadmap position — read it at the
 start of a task and keep it accurate. Never mark something `[x] Yapıldı` unless it
 builds (and tests pass where they exist).
@@ -152,5 +154,7 @@ Solo development — no pull requests. Merge directly.
 - Never read or write `.env`, `.env.*`, or `appsettings.*.json` (secrets live there).
 - Never run destructive commands: `rm -rf`, `git reset --hard`, force push,
   `dotnet ef database drop`, `docker compose down -v`.
-- EF migrations and `docker compose up/down` require my confirmation.
+- EF migrations are pre-approved (`dotnet ef` is in `allow`), except `migrations remove`,
+  which is an undo and stays in `ask`; `database drop` stays hard-blocked.
+- `docker compose up/down` require my confirmation.
 - Do not run a feature as "done" without tests where the layer has test coverage.

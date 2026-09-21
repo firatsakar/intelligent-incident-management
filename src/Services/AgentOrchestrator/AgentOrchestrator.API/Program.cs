@@ -5,8 +5,11 @@ using AgentOrchestrator.Application.EventHandlers;
 using AgentOrchestrator.Infrastructure;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.AgentOrchestrator);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(AnalyzeIncidentCommand).Assembly)

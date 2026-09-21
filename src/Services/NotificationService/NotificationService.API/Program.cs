@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
 using NotificationService.API.BackgroundServices;
@@ -10,6 +11,8 @@ using NotificationService.Application.EventHandlers;
 using NotificationService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.NotificationService);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(SendTestNotificationCommand).Assembly)

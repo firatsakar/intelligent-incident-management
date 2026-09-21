@@ -1,9 +1,12 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using BuildingBlocks.SharedKernel;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 
-namespace AgentOrchestrator.Infrastructure.Outbox;
+namespace BuildingBlocks.Outbox;
 
+// Atomicity comes from the transaction, not from cleverness: domain events are harvested into
+// outbox rows inside the same SaveChanges that writes the aggregate, so a message can never exist
+// without the state change that caused it, nor the other way round.
 public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesInterceptor
 {
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
@@ -13,6 +16,7 @@ public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesIntercep
     )
     {
         var context = eventData.Context;
+
         if (context is null)
             return base.SavingChangesAsync(eventData, result, cancellationToken);
 

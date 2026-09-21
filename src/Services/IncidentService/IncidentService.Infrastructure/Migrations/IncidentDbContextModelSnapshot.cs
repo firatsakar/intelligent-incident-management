@@ -48,6 +48,9 @@ namespace IncidentService.Infrastructure.Migrations
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
+                    b.Property<DateTime?>("DetectedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("IsAiAnalyzed")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

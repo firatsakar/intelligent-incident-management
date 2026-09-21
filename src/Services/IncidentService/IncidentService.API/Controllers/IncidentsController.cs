@@ -34,6 +34,7 @@ public sealed class IncidentsController : ControllerBase
             Priority = request.Priority,
             Source = request.Source,
             AssignedTeam = request.AssignedTeam,
+            DetectedAt = request.DetectedAt,
         };
 
         var result = await _sender.Send(command, cancellationToken);

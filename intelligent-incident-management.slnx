@@ -4,6 +4,9 @@
     <File Path="docker-compose.override.yml" />
     <File Path="docker-compose.yml" />
   </Folder>
+  <Folder Name="/demo/">
+    <Project Path="demo/MonitoredShop/MonitoredShop.csproj" />
+  </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />
   <Folder Name="/src/BuildingBlocks/Application/">
@@ -17,6 +20,9 @@
   </Folder>
   <Folder Name="/src/BuildingBlocks/Observability/">
     <Project Path="src/BuildingBlocks/Observability/BuildingBlocks.Observability.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/Outbox/">
+    <Project Path="src/BuildingBlocks/Outbox/BuildingBlocks.Outbox.csproj" />
   </Folder>
   <Folder Name="/src/BuildingBlocks/SharedKernel/">
     <Project Path="src/BuildingBlocks/SharedKernel/BuildingBlocks.SharedKernel.csproj" />
@@ -44,7 +50,10 @@
     <Project Path="src/Services/NotificationService/NotificationService.Infrastructure/NotificationService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/src/Services/TelemetryIngestionService/">
-    <Project Path="src/Services/TelemetryIngestionService/Services.TelemetryIngestionService.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.API/TelemetryIngestionService.API.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Application/TelemetryIngestionService.Application.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Domain/TelemetryIngestionService.Domain.csproj" />
+    <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Infrastructure/TelemetryIngestionService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/" />
 </Solution>

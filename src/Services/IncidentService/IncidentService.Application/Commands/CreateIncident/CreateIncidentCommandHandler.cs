@@ -30,7 +30,8 @@ public sealed class CreateIncidentCommandHandler
             request.Description,
             request.Priority,
             request.Source,
-            request.AssignedTeam);
+            request.AssignedTeam,
+            detectedAt: request.DetectedAt);
 
         await _repository.AddAsync(incident, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -44,17 +45,6 @@ public sealed class CreateIncidentCommandHandler
             Source = incident.Source.ToString()
         }, cancellationToken);
 
-        return new IncidentDto
-        {
-            Id = incident.Id,
-            Title = incident.Title,
-            Description = incident.Description,
-            Status = incident.Status,
-            Priority = incident.Priority,
-            Source = incident.Source,
-            AssignedTeam = incident.AssignedTeam,
-            CreatedAt = incident.CreatedAt,
-            UpdatedAt = incident.UpdatedAt
-        };
+        return IncidentDto.FromDomain(incident);
     }
 }
