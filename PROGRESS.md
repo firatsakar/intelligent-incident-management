@@ -12,7 +12,26 @@
 
 ## Son durum
 - **Son tamamlanan:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-21)
-- **Sıradaki:** Adım 13.5 (OTLP log ingest) *veya* Adım 14 (Comment & Timeline)
+- **Sıradaki:** Adım 18 — Unit & Integration testler
+
+### Öncelik sırası (2026-09-21'de kararlaştırıldı)
+
+Yol haritası **adım numarası sırasına göre değil**, aşağıdaki sıraya göre yürüyecek:
+
+1. **Adım 18 — testler.** Adım 13'te üç sessiz bug elle doğrulama sırasında şansa yakalandı.
+   Kod tabanı artık bir refactor'ın bir şeyi sessizce bozacağı büyüklükte ve sıfır regresyon
+   koruması var. Test edilmemiş yollar zaten biliniyor (zayıf band, regex fallback, yarış
+   durumları — bkz. `production_necessaries.MD` §7).
+2. **Adım 19 — React frontend.** Sistem şu an yalnızca log/psql/curl üzerinden görünüyor;
+   yapılan her şey gerçek ama görünmez. API yüzeyi buna hazır.
+3. **Adım 15 + 16 birlikte** — gateway auth'tan ayrı yapılırsa auth iki kere yazılır; JWT
+   doğrulama, rate limiting ve CORS'un doğal yeri gateway. 16 olmadan credential şifreleme de
+   yarım kalır.
+4. **Adım 13.5 + 17 birlikte** — ikisi de OpenTelemetry bağımlılığını paylaşıyor.
+5. Sonra: 17.5 (MCP), 20 (AI paneli + analytics), 21 (CI/CD), 22 (Kubernetes).
+
+**Önceliği düşürüldü:** Adım 14 (Comment & Timeline) — evidence API'si ve delivery geçmişi
+audit hikâyesinin çoğunu zaten veriyor.
 
 ---
 
