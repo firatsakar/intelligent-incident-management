@@ -39,14 +39,30 @@ public sealed class TelemetryController : ControllerBase
         return Ok(await _sender.Send(new GetEvidenceQuery(service, start, end), cancellationToken));
     }
 
-    // The weak-signal queue: recorded, explained, but not worth waking anyone over.
+    // Without a window: the queue for one status, defaulting to the weak band — recorded,
+    // explained, but not worth waking anyone over.
+    //
+    // With a window: everything detected in that span across all statuses, which is what an
+    // aggregate view needs. Filtering by status first would hide the contrast between the bursts
+    // that were promoted and the ones that were not.
     [HttpGet("signals")]
     public async Task<IActionResult> GetSignals(
         [FromQuery] SignalStatus status = SignalStatus.Weak,
         [FromQuery] int limit = 50,
+        [FromQuery] DateTime? from = null,
+        [FromQuery] DateTime? to = null,
         CancellationToken cancellationToken = default
     )
     {
-        return Ok(await _sender.Send(new GetSignalsQuery(status, limit), cancellationToken));
+        // Half a window is a mistake worth naming rather than quietly ignoring.
+        if (from.HasValue != to.HasValue)
+            return BadRequest(new { error = "'from' and 'to' must be supplied together." });
+
+        if (from >= to)
+            return BadRequest(new { error = "'from' must be earlier than 'to'." });
+
+        return Ok(
+            await _sender.Send(new GetSignalsQuery(status, limit, from, to), cancellationToken)
+        );
     }
 }

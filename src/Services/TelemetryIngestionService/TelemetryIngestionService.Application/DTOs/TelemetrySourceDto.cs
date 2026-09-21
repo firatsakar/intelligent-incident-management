@@ -1,3 +1,4 @@
+using BuildingBlocks.Application;
 using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
 
@@ -5,17 +6,6 @@ namespace TelemetryIngestionService.Application.DTOs;
 
 public sealed record TelemetrySourceDto
 {
-    private const string MaskedValue = "***";
-
-    private static readonly string[] SensitiveKeyMarkers =
-    [
-        "password",
-        "token",
-        "secret",
-        "apikey",
-        "credential",
-    ];
-
     public required Guid Id { get; init; }
     public required string Name { get; init; }
     public required TelemetrySourceKind Kind { get; init; }
@@ -37,20 +27,12 @@ public sealed record TelemetrySourceDto
             Name = source.Name,
             Kind = source.Kind,
             IsEnabled = source.IsEnabled,
-            Config = source.Config.ToDictionary(
-                pair => pair.Key,
-                pair => IsSensitive(pair.Key) ? MaskedValue : pair.Value
-            ),
+            // Shared with the update handler so what is hidden on read is exactly what can be
+            // restored on write.
+            Config = ConfigMasking.Mask(source.Config),
             PollIntervalSeconds = source.PollIntervalSeconds,
             CreatedAt = source.CreatedAt,
             UpdatedAt = source.UpdatedAt,
         };
-    }
-
-    private static bool IsSensitive(string key)
-    {
-        return SensitiveKeyMarkers.Any(marker =>
-            key.Contains(marker, StringComparison.OrdinalIgnoreCase)
-        );
     }
 }

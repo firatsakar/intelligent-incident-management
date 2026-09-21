@@ -21,6 +21,7 @@ public sealed class DispatchNotificationsCommandHandlerTests
         Substitute.For<INotificationDeliveryRepository>();
     private readonly INotificationChannelResolver _channels =
         Substitute.For<INotificationChannelResolver>();
+    private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
 
     private readonly List<NotificationDelivery> _recorded = [];
     private readonly DispatchNotificationsCommandHandler _handler;
@@ -40,6 +41,7 @@ public sealed class DispatchNotificationsCommandHandlerTests
             _integrations,
             _deliveries,
             _channels,
+            _realtime,
             NullLogger<DispatchNotificationsCommandHandler>.Instance
         );
     }
@@ -339,6 +341,91 @@ public sealed class DispatchNotificationsCommandHandlerTests
         var exception = await Record.ExceptionAsync(() => Dispatch());
 
         Assert.Null(exception);
+    }
+
+    [Fact]
+    public async Task UnsavedDeliveriesAreNotAnnounced()
+    {
+        // The rows were never stored, so pushing them would put a delivery strip on screen that
+        // the next refresh erases. Arriving late beats arriving wrong.
+        GivenEnabled(AnIntegration());
+        GivenChannel(NotificationChannelType.Email);
+
+        _deliveries
+            .SaveChangesAsync(Arg.Any<CancellationToken>())
+            .ThrowsAsync(new InvalidOperationException("connection reset"));
+
+        await Dispatch();
+
+        await _realtime
+            .DidNotReceive()
+            .DeliveryRecordedAsync(
+                Arg.Any<NotificationDeliveryDto>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    // ---- realtime ---------------------------------------------------------------------------
+
+    [Fact]
+    public async Task EveryRecordedDeliveryIsAnnounced()
+    {
+        // The last link a demo watches: channels turning green one by one, on a screen that is
+        // already open.
+        GivenEnabled(
+            AnIntegration("ops email"),
+            AnIntegration("ops webhook", NotificationChannelType.Webhook)
+        );
+        GivenChannel(NotificationChannelType.Email);
+        GivenChannel(NotificationChannelType.Webhook);
+
+        await Dispatch();
+
+        await _realtime
+            .Received(2)
+            .DeliveryRecordedAsync(
+                Arg.Any<NotificationDeliveryDto>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task AFailedDeliveryIsAnnouncedToo()
+    {
+        // A channel that failed is exactly what an operator needs to see, and the reason with it.
+        GivenEnabled(AnIntegration());
+        GivenChannel(NotificationChannelType.Email, DeliveryResult.Failure("SMTP 535"));
+
+        await Dispatch();
+
+        await _realtime
+            .Received(1)
+            .DeliveryRecordedAsync(
+                Arg.Is<NotificationDeliveryDto>(dto =>
+                    dto.Status == DeliveryStatus.Failed && dto.LastError == "SMTP 535"
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task ASkippedRedeliveryAnnouncesNothing()
+    {
+        GivenEnabled(AnIntegration());
+        GivenChannel(NotificationChannelType.Email);
+
+        _deliveries
+            .ExistsAsync(Arg.Any<Guid>(), IncidentId, Arg.Any<CancellationToken>())
+            .Returns(true);
+
+        await Dispatch();
+
+        await _realtime
+            .DidNotReceive()
+            .DeliveryRecordedAsync(
+                Arg.Any<NotificationDeliveryDto>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]

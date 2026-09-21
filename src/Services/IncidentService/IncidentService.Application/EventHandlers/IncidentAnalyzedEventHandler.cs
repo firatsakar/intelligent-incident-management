@@ -36,6 +36,7 @@ public sealed class IncidentAnalyzedEventHandler : IIntegrationEventHandler<Inci
             SuggestedPriority = integrationEvent.SuggestedPriority,
             SuggestedCategory = integrationEvent.SuggestedCategory,
             Reasoning = integrationEvent.Reasoning,
+            Confidence = integrationEvent.Confidence,
         };
 
         await _sender.Send(command, cancellationToken);

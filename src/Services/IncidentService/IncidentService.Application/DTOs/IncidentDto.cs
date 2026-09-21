@@ -21,6 +21,7 @@ public sealed record IncidentDto
     public string? AiSuggestedCategory { get; init; }
     public string? AiReasoning { get; init; }
     public bool IsAiAnalyzed { get; init; }
+    public double? AiConfidence { get; init; }
 
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
@@ -42,6 +43,7 @@ public sealed record IncidentDto
             AiSuggestedCategory = incident.AiSuggestedCategory,
             AiReasoning = incident.AiReasoning,
             IsAiAnalyzed = incident.IsAiAnalyzed,
+            AiConfidence = incident.AiConfidence,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
         };

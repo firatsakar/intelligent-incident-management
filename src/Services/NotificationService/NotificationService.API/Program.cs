@@ -6,6 +6,8 @@ using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
 using NotificationService.API.BackgroundServices;
+using NotificationService.API.Realtime;
+using NotificationService.Application.Abstractions;
 using NotificationService.Application.Commands.SendTestNotification;
 using NotificationService.Application.EventHandlers;
 using NotificationService.Infrastructure;
@@ -48,6 +50,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IRealtimeNotifier, SignalRNotificationNotifier>();
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -61,5 +67,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();

@@ -1,7 +1,9 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.DetectSignals;
+using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Events;
@@ -26,6 +28,7 @@ public sealed class DetectSignalsCommandHandlerTests
     private readonly IDetectionRuleRepository _rules = Substitute.For<IDetectionRuleRepository>();
     private readonly ILogRecordRepository _logRecords = Substitute.For<ILogRecordRepository>();
     private readonly ISignalRepository _signals = Substitute.For<ISignalRepository>();
+    private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
 
     private readonly List<Signal> _recorded = [];
     private readonly DetectSignalsCommandHandler _handler;
@@ -47,6 +50,7 @@ public sealed class DetectSignalsCommandHandlerTests
             _rules,
             _logRecords,
             _signals,
+            _realtime,
             NullLogger<DetectSignalsCommandHandler>.Instance
         );
     }
@@ -504,5 +508,109 @@ public sealed class DetectSignalsCommandHandlerTests
         await Detect();
 
         await _signals.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    // ---- realtime ------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ADetectedSignalIsAnnouncedWithItsSignatureAttached()
+    {
+        // The signal alone knows only a signature id. Without the service and the error on it,
+        // the heat map has nowhere to place the row and a queue entry cannot say what broke.
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenWindow(occurrences: 30, hasFatal: true);
+
+        await Detect();
+
+        await _realtime
+            .Received(1)
+            .SignalRecordedAsync(
+                Arg.Is<SignalDto>(dto =>
+                    dto.Service == Service
+                    && dto.ExceptionType == "TimeoutException"
+                    && dto.Status == SignalStatus.Promoted
+                ),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task WeakAndSuppressedSignalsAreAnnouncedToo()
+    {
+        // Not only the promoted ones: the queue and the map exist precisely to show what the gate
+        // decided against.
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenOrdinaryBaselineOf(mean: 6);
+        GivenWindow(occurrences: 6);
+
+        await Detect();
+
+        await _realtime
+            .Received(1)
+            .SignalRecordedAsync(
+                Arg.Is<SignalDto>(dto => dto.Status == SignalStatus.Weak),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task TheAnnouncementComesAfterTheBatchIsSaved()
+    {
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenWindow(occurrences: 30, hasFatal: true);
+
+        await Detect();
+
+        Received.InOrder(() =>
+        {
+            _signals.SaveChangesAsync(Arg.Any<CancellationToken>());
+            _realtime.SignalRecordedAsync(Arg.Any<SignalDto>(), Arg.Any<CancellationToken>());
+        });
+    }
+
+    [Fact]
+    public async Task TheReasonIsFormattedInvariantlyWhateverCultureTheServiceRunsUnder()
+    {
+        // Found by reading it on screen: under a Turkish culture the stored reason said
+        // "Confidence 1,00 met the promotion threshold of 0,90", so the same signal explained
+        // itself differently depending on which machine detected it. EvidenceSummary already
+        // formats invariantly on purpose; this is the same rule in the other place it matters.
+        var current = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+
+        try
+        {
+            GivenRules(Rule(threshold: 3, promoteThreshold: 0.90));
+            GivenSignature();
+            GivenOrdinaryBaselineOf(mean: 6);
+            GivenWindow(occurrences: 6);
+
+            await Detect();
+
+            Assert.Contains("0.65", _recorded[0].Reason);
+            Assert.Contains("0.90", _recorded[0].Reason);
+            Assert.DoesNotContain(",", _recorded[0].Reason);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = current;
+        }
+    }
+
+    [Fact]
+    public async Task NothingDetected_MeansNothingAnnounced()
+    {
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenWindow(occurrences: 1);
+
+        await Detect();
+
+        await _realtime
+            .DidNotReceive()
+            .SignalRecordedAsync(Arg.Any<SignalDto>(), Arg.Any<CancellationToken>());
     }
 }

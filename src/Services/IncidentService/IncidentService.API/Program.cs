@@ -4,8 +4,10 @@ using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
+using IncidentService.API.Realtime;
 using FluentValidation;
 using IncidentService.API.BackgroundServices;
+using IncidentService.Application.Abstractions;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
@@ -53,6 +55,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IRealtimeNotifier, SignalRIncidentNotifier>();
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -66,5 +72,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHub<IncidentHub>("/hubs/incidents");
 
 app.Run();

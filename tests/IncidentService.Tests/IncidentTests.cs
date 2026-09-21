@@ -78,7 +78,8 @@ public sealed class IncidentTests
             incident.ApplyAiAnalysis(
                 IncidentPriority.Critical,
                 "Application",
-                "Repeated timeouts against the payment gateway."
+                "Repeated timeouts against the payment gateway.",
+                confidence: 0.82
             );
 
             Assert.Equal(IncidentPriority.Critical, incident.Priority);
@@ -87,6 +88,25 @@ public sealed class IncidentTests
                 "Repeated timeouts against the payment gateway.",
                 incident.AiReasoning
             );
+            Assert.Equal(0.82, incident.AiConfidence);
+            Assert.True(incident.IsAiAnalyzed);
+        }
+
+        [Fact]
+        public void AcceptsAnAnalysisThatGivesNoConfidence()
+        {
+            // The analysis may decline to put a number on it. That is a missing measurement, not
+            // a zero one — rendering it as 0% would read as "certain this is nothing".
+            var incident = Create();
+
+            incident.ApplyAiAnalysis(
+                IncidentPriority.High,
+                "Application",
+                "Because.",
+                confidence: null
+            );
+
+            Assert.Null(incident.AiConfidence);
             Assert.True(incident.IsAiAnalyzed);
         }
 
@@ -97,14 +117,24 @@ public sealed class IncidentTests
             // be indistinguishable from applying it once.
             var incident = Create();
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
-            var afterFirst = (incident.Priority, incident.AiSuggestedCategory, incident.AiReasoning);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            var afterFirst = (
+                incident.Priority,
+                incident.AiSuggestedCategory,
+                incident.AiReasoning,
+                incident.AiConfidence
+            );
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
 
             Assert.Equal(
                 afterFirst,
-                (incident.Priority, incident.AiSuggestedCategory, incident.AiReasoning)
+                (
+                    incident.Priority,
+                    incident.AiSuggestedCategory,
+                    incident.AiReasoning,
+                    incident.AiConfidence
+                )
             );
             Assert.True(incident.IsAiAnalyzed);
         }
@@ -118,7 +148,7 @@ public sealed class IncidentTests
             incident.AssignTeam("payments");
             incident.UpdateStatus(IncidentStatus.InProgress);
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.");
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
 
             Assert.Equal(IncidentStatus.InProgress, incident.Status);
             Assert.Equal("payments", incident.AssignedTeam);

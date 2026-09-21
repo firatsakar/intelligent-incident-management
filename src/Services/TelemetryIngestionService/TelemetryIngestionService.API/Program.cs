@@ -4,6 +4,8 @@ using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using FluentValidation;
+using TelemetryIngestionService.API.Realtime;
+using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 using TelemetryIngestionService.Infrastructure;
 
@@ -39,6 +41,10 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
+builder.Services.AddSignalR();
+
+builder.Services.AddSingleton<IRealtimeNotifier, SignalRSignalNotifier>();
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -52,5 +58,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.MapControllers();
+app.MapHub<SignalHub>("/hubs/signals");
 
 app.Run();

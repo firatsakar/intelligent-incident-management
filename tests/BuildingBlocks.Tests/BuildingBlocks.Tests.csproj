@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
   </ItemGroup>
 

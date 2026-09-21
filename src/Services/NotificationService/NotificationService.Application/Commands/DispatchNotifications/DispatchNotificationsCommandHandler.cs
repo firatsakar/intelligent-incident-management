@@ -12,18 +12,21 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
     private readonly IIntegrationRepository _integrations;
     private readonly INotificationDeliveryRepository _deliveries;
     private readonly INotificationChannelResolver _channels;
+    private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<DispatchNotificationsCommandHandler> _logger;
 
     public DispatchNotificationsCommandHandler(
         IIntegrationRepository integrations,
         INotificationDeliveryRepository deliveries,
         INotificationChannelResolver channels,
+        IRealtimeNotifier realtime,
         ILogger<DispatchNotificationsCommandHandler> logger
     )
     {
         _integrations = integrations;
         _deliveries = deliveries;
         _channels = channels;
+        _realtime = realtime;
         _logger = logger;
     }
 
@@ -46,7 +49,7 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
 
         var priority = ParsePriority(request.SuggestedPriority, request.IncidentId);
         var message = BuildMessage(request);
-        var dispatched = 0;
+        var recorded = new List<NotificationDelivery>();
 
         foreach (var integration in integrations)
         {
@@ -64,13 +67,14 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
                 continue;
             }
 
-            await _deliveries.AddAsync(
-                await SendAsync(message, integration, request, cancellationToken),
-                cancellationToken
-            );
+            var delivery = await SendAsync(message, integration, request, cancellationToken);
 
-            dispatched++;
+            await _deliveries.AddAsync(delivery, cancellationToken);
+
+            recorded.Add(delivery);
         }
+
+        var dispatched = recorded.Count;
 
         try
         {
@@ -85,6 +89,18 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
                 ex,
                 "Failed to persist delivery records for incident {IncidentId}. Notifications were already sent.",
                 request.IncidentId
+            );
+
+            // Nothing was stored, so nothing is announced: a strip of delivery rows that a
+            // refresh erases is worse than one that arrives late.
+            recorded.Clear();
+        }
+
+        foreach (var delivery in recorded)
+        {
+            await _realtime.DeliveryRecordedAsync(
+                NotificationDeliveryDto.FromDomain(delivery),
+                cancellationToken
             );
         }
 
