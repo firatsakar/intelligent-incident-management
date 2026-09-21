@@ -25,8 +25,10 @@ For **every** task you are given, do this before writing or changing any code:
 6. If a task is large, split it into subtasks — one Jira subtask per "Parça", and
    one `PROGRESS.md` line per Parça. Keep Jira and `PROGRESS.md` in sync as you go.
 
-Jira write actions (create / transition / comment) require my confirmation — they
-are in the `ask` list. Never assume a status transition; do it explicitly.
+Jira write actions (create / transition / comment / edit) are pre-approved — they are
+in the `allow` list, so do them without asking. Confluence writes and the generic
+`executeWrite` runner still require my confirmation, and deletes stay hard-blocked.
+Never assume a status transition; do it explicitly.
 `PROGRESS.md` is the single source of truth for roadmap position — read it at the
 start of a task and keep it accurate. Never mark something `[x] Yapıldı` unless it
 builds (and tests pass where they exist).
