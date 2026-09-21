@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Relational, not just Core: the mapping needs ToTable and HasColumnType. It stops short of
+         a provider, so the choice of database stays with the service. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.9" />
+    <!-- Hosting.Abstractions rather than the full host package, and it brings the DI and logging
+         abstractions along at matching versions. -->
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SharedKernel\BuildingBlocks.SharedKernel.csproj" />
+  </ItemGroup>
+
+</Project>

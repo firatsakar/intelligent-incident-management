@@ -21,6 +21,9 @@
   <Folder Name="/src/BuildingBlocks/Observability/">
     <Project Path="src/BuildingBlocks/Observability/BuildingBlocks.Observability.csproj" />
   </Folder>
+  <Folder Name="/src/BuildingBlocks/Outbox/">
+    <Project Path="src/BuildingBlocks/Outbox/BuildingBlocks.Outbox.csproj" />
+  </Folder>
   <Folder Name="/src/BuildingBlocks/SharedKernel/">
     <Project Path="src/BuildingBlocks/SharedKernel/BuildingBlocks.SharedKernel.csproj" />
   </Folder>

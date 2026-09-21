@@ -1,11 +1,11 @@
-﻿namespace AgentOrchestrator.Infrastructure.Outbox;
+namespace BuildingBlocks.Outbox;
 
 public sealed class OutboxMessage
 {
     public Guid Id { get; init; }
 
-    // Fully-qualified type name of the payload — dispatcher uses this to route
-    // (e.g. "IncidentAnalyzedEvent" → RabbitMQ, an ES-doc type → Elasticsearch).
+    // The domain event's type name. The dispatcher routes on this, matching it against the
+    // registered handlers.
     public required string Type { get; init; }
 
     // Serialized event/payload (JSON).

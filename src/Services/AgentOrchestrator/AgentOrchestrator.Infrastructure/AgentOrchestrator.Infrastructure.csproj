@@ -22,5 +22,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\AgentOrchestrator.Application\AgentOrchestrator.Application.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
 	</ItemGroup>
 </Project>
