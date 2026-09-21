@@ -2,7 +2,7 @@
 
 > Adım 1–13 boyunca biriken, **ürün kullanımına geçmeden önce** ele alınması gereken her şey.
 > `PROGRESS.md` nerede olduğumuzu söyler; bu dosya neyin eksik olduğunu söyler.
-> Son güncelleme: 2026-09-21 (Adım 18 sonu — §7 yeniden yazıldı).
+> Son güncelleme: 2026-09-21 (Adım 19 sonu).
 
 ## Nasıl okunmalı
 
@@ -79,7 +79,11 @@ GHSA-v5pm-xwqc-g5wc (yüksek önem). `Microsoft.AspNetCore.OpenApi` 10.0.7 trans
 
 ### 🟡 CORS ve rate limiting yok
 
-- CORS: Adım 19'daki React frontend'i için gerekecek.
+- **CORS hâlâ yok ve Adım 19'da bilinçli olarak eklenmedi.** Frontend Vite dev proxy'sinin
+  ardında çalışıyor: tarayıcı yalnızca dev server ile konuşuyor, proxy sunucu tarafında
+  çağırıyor, origin hiç değişmiyor. **Sonucu:** `dist/` başka bir origin'den servis edilirse
+  uygulama çalışmaz. Üretim cevabı Adım 15 (YARP gateway) — gateway gelene kadar SPA yalnızca
+  Vite dev/preview sunucusunun ardında ayakta.
 - Rate limiting: kimliksiz uçlar kapandıktan sonra bile, `POST /api/incidents` ve test uçları
   kötüye kullanıma açık.
 
@@ -111,6 +115,27 @@ saklama süresi ve **geri yükleme tatbikatı** tanımlı değil.
 ### ⚪ ES index lifecycle
 
 `incident-analyses` index'i için ILM politikası yok.
+
+---
+
+## 3.5 Ürün döngüsündeki kopukluk
+
+### 🔴 Çözülen incident telemetriye geri bildirilmiyor
+
+`ErrorSignature.DetachIncident` **kod tabanında hiç çağrılmıyor** (Adım 19 sırasında bulundu).
+Bir incident çözüldüğünde ya da kapatıldığında imza `CurrentIncidentId`'yi bırakmıyor ve
+`ConfirmedRealCount` / `FalsePositiveCount` hiç artmıyor.
+
+İki sonucu var:
+
+- **`SignalScoring`'deki precedent bonusu (+0.15) ve false-positive cezası (−0.25) pratikte
+  ölü terimler.** "Sistem kullanıldıkça öğrenir" hikâyesi bağlı ama besleyen yok.
+- **Dedup yalnızca 24 saatlik TTL ile açılıyor, çözümle değil.** Kapatılmış bir incident bir
+  gün boyunca yeni burst'leri kendine emmeye devam ediyor.
+
+Adım 18 testleri geçiyor çünkü metot doğru — sadece kimse çağırmıyor. Kapatmak için
+IncidentService'ten çıkan bir `IncidentResolvedEvent` ve TelemetryIngestionService tarafında
+bir tüketici gerekiyor; ayrı bir adım olarak ele alınmalı.
 
 ---
 
@@ -243,6 +268,13 @@ eşiği geçiliyor. Aynı 6 hatalık burst normal baseline'a karşı 0.65 (zayı
 | `NotificationDelivery` yarış durumu | Gerçek Postgres unique index'i gerekiyor → integration testi |
 | EF mapping / jsonb / migration doğrulaması | Aynı sebep |
 | Servisler arası uçtan uca akış | Aynı sebep (RabbitMQ + 4 DB) |
+| **Frontend'in tamamı** | Adım 19'a test alınmadı — 6 ekran + SignalR zaten genişti |
+
+**Frontend testi yok** (Adım 19, 2026-09-21). `web/` altında tek bir test yok: ısı haritası
+aggregate'i (`heatmap.ts` — saf fonksiyon, test etmesi ucuz), maskeleme form mantığı
+(`buildConfig` — yanlışsa credential yok eder), realtime cache yazma haritası. Ekranlar
+tarayıcıda elle doğrulandı ve üç kusur böyle bulundu, ama regresyon koruması sıfır.
+Vitest + Testing Library ile kapatılmalı.
 
 Integration testleri (Testcontainers) Adım 18 kapsamı dışında bırakıldı — bilinçli karar,
 2026-09-21. Ayrı bir adım olarak ele alınmalı.
