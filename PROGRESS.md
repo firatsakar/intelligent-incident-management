@@ -11,17 +11,15 @@
 - `[!]` **Yapılmadı** — atlandı veya ertelendi (tek satır gerekçe ekle)
 
 ## Son durum
-- **Son tamamlanan:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-21)
-- **Devam eden:** Adım 18 — Unit testler (`IIM-28`)
+- **Son tamamlanan:** Adım 18 — Unit testler (`IIM-28`, 2026-09-21) — 203 test, 4 proje
+- **Sıradaki:** Adım 19 — React frontend
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
 Yol haritası **adım numarası sırasına göre değil**, aşağıdaki sıraya göre yürüyecek:
 
-1. **Adım 18 — testler.** Adım 13'te üç sessiz bug elle doğrulama sırasında şansa yakalandı.
-   Kod tabanı artık bir refactor'ın bir şeyi sessizce bozacağı büyüklükte ve sıfır regresyon
-   koruması var. Test edilmemiş yollar zaten biliniyor (zayıf band, regex fallback, yarış
-   durumları — bkz. `production_necessaries.MD` §7).
+1. ~~**Adım 18 — testler.**~~ **Yapıldı** (`IIM-28`). Regresyon koruması artık var.
+   Integration testleri (Testcontainers) bilinçli olarak kapsam dışı bırakıldı → ayrı adım.
 2. **Adım 19 — React frontend.** Sistem şu an yalnızca log/psql/curl üzerinden görünüyor;
    yapılan her şey gerçek ama görünmez. API yüzeyi buna hazır.
 3. **Adım 15 + 16 birlikte** — gateway auth'tan ayrı yapılırsa auth iki kere yazılır; JWT
@@ -71,6 +69,13 @@ audit hikâyesinin çoğunu zaten veriyor.
   - [x] **Parça 7** (`IIM-21`, 2026-09-21) — Deterministik skorlama (bileşen dökümü signal'de saklanıyor, AI yok) + TTL'li dedup + terfi + kanıt özeti → outbox → `SignalPromotedEvent`. IncidentId **telemetri tarafında** üretiliyor: at-least-once teslimde ikinci kopya, ikinci incident değil duplicate key olur. Test sırasında bug yakalandı: FATAL kısayolu eşik kontrolünden sonra geliyordu, tek crash eleniyordu — düzeltildi. Doğrulandı: FATAL tek seferde terfi, ikincisi açık incident'a yazıldı, üçüncüsü dedup dalından geçti, farklı imza bağımsız terfi etti
   - [x] **Parça 8** (`IIM-22`, 2026-09-21) — `SignalPromotedEvent` tüketimi → `Source=Telemetry` incident + `Incident.DetectedAt` (manuel oluşturmada da opsiyonel olarak var). Redelivery no-op (id promoter tarafından seçiliyor). `IncidentDto`'daki üç elle map tek `FromDomain`'e indi ve AI alanları artık dışarı veriliyor. Doğrulandı: `detectedAt 07:09:46` vs `createdAt 07:11:51`
   - [x] **Parça 9** (`IIM-23`, 2026-09-21) — `GET /api/telemetry/evidence` (insan + Adım 19 frontend'i için; AI tool'u **değil**) ve `GET /api/telemetry/signals` (varsayılan: zayıf band). Beş servisle tam uçtan uca koşu doğrulandı
+- [x] **Adım 18** (`IIM-28`, 2026-09-21) — Unit testler (xUnit + NSubstitute + düz `Assert`). Yığın kararı 2026-09-21: FluentAssertions v8 ticari lisans istiyor, Moq'un SponsorLink geçmişi var — ikisi de alınmadı. **Integration testleri (Testcontainers) bu adımın dışında bırakıldı**; sonucu olarak `NotificationDelivery` yarış durumu ve EF mapping/jsonb/migration doğrulaması test edilmemiş kalıyor
+  - [x] **Parça 1** (`IIM-29`, 2026-09-21) — Test iskeleti: `tests/` altında 4 proje (3 servis + BuildingBlocks), `.slnx` kaydı, xUnit 2.9.3 + NSubstitute 5.3.0. `dotnet test` yeşil (8 test). Her projede boş iskelet yerine gerçek bir assertion var ve bunlar bilinçli olarak sonraki parçaların tekrar etmeyeceği şeyler: tespit sabitleri + severity sırası, keyed DI'ın çözdüğü kanal enum'u, iki servisteki priority kopyalarının isim uyumu, outbox satırının pending varsayılanları
+  - [x] **Parça 2** (`IIM-30`, 2026-09-21) — `SignalScoring` + `RateBaseline` (64 test). **Zayıf band (0.60–0.89) ilk kez doğrudan kapsandı**: eşiğin iki katı, korroborasyonsuz burst tam 0.65 → zayıf; aynı burst rate anomalisiyle tam 0.90 → terfi. Bandın tabanı sabit 0.60, tavanı kuralın — yani `PromoteThreshold` düşürülünce band kayar değil *daralır*. Ayrıca: fatal kısayolu diğer tüm terimleri atlıyor, doubling cap'i, sıfır eşik bölme koruması, z-score 2.0 dahil, clamp iki uçta, breakdown bileşenleri toplamı = kaydedilen total. `RateBaseline`: <5 örnek `null` (0 değil), düz baseline sınırlı 4.0, gürültülü baseline içindeki sayım anomali değil, açık pencere dışlanıyor, **boş zaman damgası listesi sıfırlanmış bucket döndürüyor** (boş liste dönseydi minimum örnek sayısının altına düşüp anomali bonusunu sessizce bastırırdı)
+  - [x] **Parça 3** (`IIM-31`, 2026-09-21) — Telemetri domain (131 test). **`LogFingerprint` regex fallback'i ilk kez kapsandı**: maskeleme sırası kritik (GUID > uzun hex > sayı — sayı önce koşsaydı GUID `#-#-#-#-#` olurdu ve her müşterinin hatası ayrı imza görünürdü). **`ErrorSignature.CanAbsorbInto`** beş dal + pencerenin *son olaydan* ölçüldüğü (terfiden değil). **`LogRecord` clock skew** ilk kez tetiklendi. Ayrıca `DetectionRule`, `EvidenceSummary`. Not: fingerprint alan ayırıcısı `U+001F` — düz metinde görünmüyor, bir reformat sessizce silebilir; iki test tam olarak bunu yakalamak için var
+  - [x] **Parça 4** (`IIM-32`, 2026-09-21) — `DetectSignalsCommandHandler` karar ağacının 19 dalı (150 test). **Bulgu: zayıf band, geçmişi olmayan imza için erişilemez.** Baseline 12 tam pencereden kuruluyor; geçmişi olmayan imza 12 *sıfır* bucket'a düşüyor → düz baseline → sınırlı 4.0 → anomali eşiğini geçiyor. Yani ilk burst'te anomali bonusu her zaman veriliyor: aynı 6 hatalık burst normal baseline'a karşı **0.65** (zayıf), boş baseline'a karşı **0.90** (terfi). Tasarım gereği doğru — bir haftadır sessiz imzanın ilk burst'ü gerçekten dikkate değer — ama eşik ayarlamadan önce bilinmesi gerekiyor. İki yarı da artık testle sabit
+  - [x] **Parça 5** (`IIM-33`, 2026-09-21) — `Integration.Matches` filtre matrisi + `DispatchNotificationsCommandHandler` (27 test). Ağırlık hata yollarında: kanal patlarsa `Failed` yazılıp diğerleri gönderiliyor, kanal *çözülemezse* de aynı yere düşüyor, idempotency `(integration, incident)` bazında — kısmi hatadan sonra redelivery satırı olmayan entegrasyona ulaşıyor. `SaveChanges` hatasının yutulması bilinçli: bildirimler zaten gitti, rethrow DLQ'ya düşürüp redelivery'de hepsini tekrar gönderirdi — test tam olarak bunun "düzeltilmesini" engellemek için var
+  - [x] **Parça 6** (`IIM-34`, 2026-09-21) — `Incident` aggregate (verilen id, `DetectedAt` ≠ `CreatedAt`, `ApplyAiAnalysis` idempotent ve statü/takımı bozmuyor), `CreateIncidentFromSignalCommandHandler` redelivery no-op + kaydetme *sonra* duyurma sırası, `OutboxDispatcher` (26 test). **Süitin gerçekten yakaladığı doğrulandı:** `OutboxDispatcher`'ın sırası bilerek ters çevrildi → üç test düştü → geri alındı
 
 ---
 
@@ -83,17 +88,11 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] **Adım 16** — JWT Authentication + rol sistemi (Admin/Engineer/Viewer); MCP per-customer secret/auth önkoşulu
 - [ ] **Adım 17** — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu
 - [ ] **Adım 17.5** — MCP entegrasyonu (Grafana/Kubernetes/GitHub/PagerDuty dış tool'ları). Kural: kendi verine in-process, başkasının verisine MCP. Önkoşul: 13 + 16 + 17. Erken opsiyon: Adım 12 sonrası salt-okunur GitHub MCP spike (ürüne girmez)
-- [~] **Adım 18** (`IIM-28`) — Unit testler (xUnit + NSubstitute + düz `Assert`). Yığın kararı 2026-09-21: FluentAssertions v8 ticari lisans istiyor, Moq'un SponsorLink geçmişi var — ikisi de alınmadı. **Integration testleri (Testcontainers) bu adımın dışında bırakıldı**; sonucu olarak `NotificationDelivery` yarış durumu ve EF mapping/jsonb/migration doğrulaması test edilmemiş kalıyor
-  - [x] **Parça 1** (`IIM-29`, 2026-09-21) — Test iskeleti: `tests/` altında 4 proje (3 servis + BuildingBlocks), `.slnx` kaydı, xUnit 2.9.3 + NSubstitute 5.3.0. `dotnet test` yeşil (8 test). Her projede boş iskelet yerine gerçek bir assertion var ve bunlar bilinçli olarak sonraki parçaların tekrar etmeyeceği şeyler: tespit sabitleri + severity sırası, keyed DI'ın çözdüğü kanal enum'u, iki servisteki priority kopyalarının isim uyumu, outbox satırının pending varsayılanları
-  - [x] **Parça 2** (`IIM-30`, 2026-09-21) — `SignalScoring` + `RateBaseline` (64 test). **Zayıf band (0.60–0.89) ilk kez doğrudan kapsandı**: eşiğin iki katı, korroborasyonsuz burst tam 0.65 → zayıf; aynı burst rate anomalisiyle tam 0.90 → terfi. Bandın tabanı sabit 0.60, tavanı kuralın — yani `PromoteThreshold` düşürülünce band kayar değil *daralır*. Ayrıca: fatal kısayolu diğer tüm terimleri atlıyor, doubling cap'i, sıfır eşik bölme koruması, z-score 2.0 dahil, clamp iki uçta, breakdown bileşenleri toplamı = kaydedilen total. `RateBaseline`: <5 örnek `null` (0 değil), düz baseline sınırlı 4.0, gürültülü baseline içindeki sayım anomali değil, açık pencere dışlanıyor, **boş zaman damgası listesi sıfırlanmış bucket döndürüyor** (boş liste dönseydi minimum örnek sayısının altına düşüp anomali bonusunu sessizce bastırırdı)
-  - [x] **Parça 3** (`IIM-31`, 2026-09-21) — Telemetri domain (131 test). **`LogFingerprint` regex fallback'i ilk kez kapsandı**: maskeleme sırası kritik (GUID > uzun hex > sayı — sayı önce koşsaydı GUID `#-#-#-#-#` olurdu ve her müşterinin hatası ayrı imza görünürdü). **`ErrorSignature.CanAbsorbInto`** beş dal + pencerenin *son olaydan* ölçüldüğü (terfiden değil). **`LogRecord` clock skew** ilk kez tetiklendi. Ayrıca `DetectionRule`, `EvidenceSummary`. Not: fingerprint alan ayırıcısı `U+001F` — düz metinde görünmüyor, bir reformat sessizce silebilir; iki test tam olarak bunu yakalamak için var
-  - [x] **Parça 4** (`IIM-32`, 2026-09-21) — `DetectSignalsCommandHandler` karar ağacının 19 dalı (150 test). **Bulgu: zayıf band, geçmişi olmayan imza için erişilemez.** Baseline 12 tam pencereden kuruluyor; geçmişi olmayan imza 12 *sıfır* bucket'a düşüyor → düz baseline → sınırlı 4.0 → anomali eşiğini geçiyor. Yani ilk burst'te anomali bonusu her zaman veriliyor: aynı 6 hatalık burst normal baseline'a karşı **0.65** (zayıf), boş baseline'a karşı **0.90** (terfi). Tasarım gereği doğru — bir haftadır sessiz imzanın ilk burst'ü gerçekten dikkate değer — ama eşik ayarlamadan önce bilinmesi gerekiyor. İki yarı da artık testle sabit
-  - [x] **Parça 5** (`IIM-33`, 2026-09-21) — `Integration.Matches` filtre matrisi + `DispatchNotificationsCommandHandler` (27 test). Ağırlık hata yollarında: kanal patlarsa `Failed` yazılıp diğerleri gönderiliyor, kanal *çözülemezse* de aynı yere düşüyor, idempotency `(integration, incident)` bazında — kısmi hatadan sonra redelivery satırı olmayan entegrasyona ulaşıyor. `SaveChanges` hatasının yutulması bilinçli: bildirimler zaten gitti, rethrow DLQ'ya düşürüp redelivery'de hepsini tekrar gönderirdi — test tam olarak bunun "düzeltilmesini" engellemek için var
-  - [x] **Parça 6** (`IIM-34`, 2026-09-21) — `Incident` aggregate (verilen id, `DetectedAt` ≠ `CreatedAt`, `ApplyAiAnalysis` idempotent ve statü/takımı bozmuyor), `CreateIncidentFromSignalCommandHandler` redelivery no-op + kaydetme *sonra* duyurma sırası, `OutboxDispatcher` (26 test). **Süitin gerçekten yakaladığı doğrulandı:** `OutboxDispatcher`'ın sırası bilerek ters çevrildi → üç test düştü → geri alındı
 - [ ] **Adım 19** — React frontend (Vite + TS; liste + detay)
 - [ ] **Adım 20** — AI önerileri paneli + analytics dashboard (MTTR, trendler, model performansı)
 - [ ] **Adım 21** — CI/CD (GitHub Actions)
 - [ ] **Adım 22** — Kubernetes / production config
+- [ ] **Adım 23** — Integration testleri (Testcontainers + gerçek Postgres). Adım 18'de bilinçli olarak kapsam dışı bırakıldı. Kapatacağı boşluklar: `NotificationDelivery` eşzamanlı teslim yarışı (gerçek unique index gerekiyor), EF mapping / jsonb / migration doğrulaması, servisler arası uçtan uca akış. Docker Desktop gerektirir
 
 ---
 
@@ -113,6 +112,7 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] `AnthropicAiAnalyzer` drift (fallback, tool-calling'siz, gövdede kullanılmıyor) — düşük öncelik
 - [ ] `Microsoft.OpenApi` 2.0.0 yüksek önem dereceli güvenlik açığı (GHSA-v5pm-xwqc-g5wc) — `Microsoft.AspNetCore.OpenApi` 10.0.7 transitif olarak çekiyor; IncidentService.API + NotificationService.API etkileniyor. Yamalı sürüme çıkılmalı
 - [x] Seq'e log gönderimi yok — **kapandı** (Adım 13 Parça 3b, `IIM-17`, 2026-09-21)
+- [x] Otomatik test yok — **kapandı** (Adım 18, `IIM-28`, 2026-09-21); 203 unit test. Integration testleri Adım 23'e ayrıldı
 - [ ] UML diyagramları (class / sequence / component) — çekirdek bitince
 - [ ] pgvector / hybrid search (BM25 eş anlamlı kaçırınca) — ertelendi (YAGNI)
 
