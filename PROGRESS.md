@@ -84,8 +84,8 @@ audit hikâyesinin çoğunu zaten veriyor.
 - [ ] **Adım 17** — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu
 - [ ] **Adım 17.5** — MCP entegrasyonu (Grafana/Kubernetes/GitHub/PagerDuty dış tool'ları). Kural: kendi verine in-process, başkasının verisine MCP. Önkoşul: 13 + 16 + 17. Erken opsiyon: Adım 12 sonrası salt-okunur GitHub MCP spike (ürüne girmez)
 - [~] **Adım 18** (`IIM-28`) — Unit testler (xUnit + NSubstitute + düz `Assert`). Yığın kararı 2026-09-21: FluentAssertions v8 ticari lisans istiyor, Moq'un SponsorLink geçmişi var — ikisi de alınmadı. **Integration testleri (Testcontainers) bu adımın dışında bırakıldı**; sonucu olarak `NotificationDelivery` yarış durumu ve EF mapping/jsonb/migration doğrulaması test edilmemiş kalıyor
-  - [ ] **Parça 1** (`IIM-29`) — Test iskeleti: `tests/` altında 4 proje, `.slnx` kaydı, `dotnet test` yeşil
-  - [ ] **Parça 2** (`IIM-30`) — `SignalScoring` + `RateBaseline` (zayıf bandın ilk doğrudan kapsanması)
+  - [x] **Parça 1** (`IIM-29`, 2026-09-21) — Test iskeleti: `tests/` altında 4 proje (3 servis + BuildingBlocks), `.slnx` kaydı, xUnit 2.9.3 + NSubstitute 5.3.0. `dotnet test` yeşil (8 test). Her projede boş iskelet yerine gerçek bir assertion var ve bunlar bilinçli olarak sonraki parçaların tekrar etmeyeceği şeyler: tespit sabitleri + severity sırası, keyed DI'ın çözdüğü kanal enum'u, iki servisteki priority kopyalarının isim uyumu, outbox satırının pending varsayılanları
+  - [~] **Parça 2** (`IIM-30`) — `SignalScoring` + `RateBaseline` (zayıf bandın ilk doğrudan kapsanması)
   - [ ] **Parça 3** (`IIM-31`) — Telemetri domain: `LogFingerprint` regex fallback'i, `ErrorSignature.CanAbsorbInto`, `LogRecord` clock skew, `DetectionRule`, `EvidenceSummary`
   - [ ] **Parça 4** (`IIM-32`) — `DetectSignalsCommandHandler` karar ağacının her dalı
   - [ ] **Parça 5** (`IIM-33`) — `Integration.Matches` + `DispatchNotificationsCommandHandler`
