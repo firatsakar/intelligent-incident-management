@@ -11,9 +11,8 @@
 - `[!]` **Yapılmadı** — atlandı veya ertelendi (tek satır gerekçe ekle)
 
 ## Son durum
-- **Son tamamlanan:** Adım 12 — NotificationService (`IIM-1`, 2026-09-16)
-- **Devam eden:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-16)
-- **Sıradaki:** Adım 14 — Comment & Timeline
+- **Son tamamlanan:** Adım 13 — TelemetryIngestionService (`IIM-14`, 2026-09-21)
+- **Sıradaki:** Adım 13.5 (OTLP log ingest) *veya* Adım 14 (Comment & Timeline)
 
 ---
 
@@ -40,12 +39,7 @@
   - [x] **Parça 8a** (`IIM-11`, 2026-09-16) — `ValidationBehavior` → yeni `BuildingBlocks.Application`; `GlobalExceptionHandler` → yeni `BuildingBlocks.Web`; SharedKernel'e `NotFoundException` tabanı (handler eskiden `IncidentNotFoundException`'a bağlıydı, paylaşılamıyordu). NotificationService gerçek ikinci tüketici = YAGNI tetikleyicisi. IncidentService davranışı birebir aynı (400+errors / 404 doğrulandı)
   - [x] **Parça 8** (`IIM-9`, 2026-09-16) — `IncidentAnalyzedEvent` aboneliği + `DispatchNotificationsCommand` fan-out (filtre → idempotency → keyed kanal → `NotificationDelivery`), kanal başına hata izolasyonu, Integration CRUD (+ kanal başına zorunlu ayar validasyonu) ve `GET /api/notifications/incident/{id}` audit ucu. Credential görünümlü config değerleri okumada maskeleniyor. Tek event iki servise birden ulaştı, filtre ve idempotency doğrulandı
   - [x] **Parça 9** (`IIM-10`, 2026-09-16) — Uçtan uca doğrulandı: incident → gerçek AI analizi (Medium→Critical, kategori Application, confidence %82) → Outbox → RabbitMQ → hem IncidentService write-back hem NotificationService fan-out; 3 kanalın üçü de `Sent` (Mailpit maili, webhook echo, Jira `IIM-13`). 3 servis kuyruğu + 3 DLQ, DLQ'lar boş
-
----
-
-## Sıradaki / kalan yol haritası (AI öne çekilmiş)
-
-- [~] **Adım 13** — TelemetryIngestionService (`IIM-14`) — dış log kaynağından çekme → imza → sinyal → **deterministik skorla** otomatik incident. Telemetri bir *entegrasyon*: kaynak müşteri tarafından konfigüre edilir (Adım 12'deki `Integration` deseni), ilk connector Seq. Skorlamada AI yok; AI'a giden tek şey incident açıklamasına gömülen kompakt kanıt özeti.
+- [x] **Adım 13** (`IIM-14`, 2026-09-21) — TelemetryIngestionService: dış log kaynağından çekme → imza → sinyal → **deterministik skorla** otomatik incident. Uçtan uca doğrulandı; AI analizi kanıt sayesinde 0.82 confidence'a çıktı ve gerekçesinde tekrar sayısını, süreyi ve oran anomalisini doğrudan alıntıladı. Telemetri bir *entegrasyon*: kaynak müşteri tarafından konfigüre edilir (Adım 12'deki `Integration` deseni), ilk connector Seq. Skorlamada AI yok; AI'a giden tek şey incident açıklamasına gömülen kompakt kanıt özeti.
   - **Signal ≠ Incident:** `≥0.90` incident · `0.60–0.89` zayıf sinyal (incident yok) · `<0.60` sadece kayıt (baseline + emsal beslenir)
   - **Dedup eskimesi:** açık incident var **ve** `now − LastSeenAt ≤ DedupWindow` (24s) → sayaç artar; TTL dolmuş ya da incident kapanmışsa **yeni** incident, öncekine bağlı
   - [x] **Parça 1** (`IIM-15`, 2026-09-17) — İskelet + 6 tablo + `InitialCreate` uygulandı. `LogRecord`'da `Timestamp` (kaynak saati) ≠ `IngestedAt`, clock-skew flag'i; `SourceCursor` ayrı tabloda ve geri sarmıyor; `ErrorSignature.CanAbsorbInto()` eskime kuralını tek yerde tutuyor; zaman sütunlarında BRIN index
@@ -57,7 +51,12 @@
   - [x] **Parça 6** (`IIM-20`, 2026-09-21) — Outbox → `BuildingBlocks.Outbox`. İki dikiş yeri paylaşılabilir kıldı: `IOutboxStore` (satırlar hangi DB'de) ve `IOutboxMessageHandler` (mesaj ne anlama geliyor — eskiden dispatcher içindeki `switch`). Dispatch sırası korundu (önce yan etki, sonra `ProcessedOn`). `OutboxCleanupService` eklendi. Migration gerekmedi (EF: model değişmemiş); Adım 12 zinciri aynen çalışıyor
   - [x] **Parça 7** (`IIM-21`, 2026-09-21) — Deterministik skorlama (bileşen dökümü signal'de saklanıyor, AI yok) + TTL'li dedup + terfi + kanıt özeti → outbox → `SignalPromotedEvent`. IncidentId **telemetri tarafında** üretiliyor: at-least-once teslimde ikinci kopya, ikinci incident değil duplicate key olur. Test sırasında bug yakalandı: FATAL kısayolu eşik kontrolünden sonra geliyordu, tek crash eleniyordu — düzeltildi. Doğrulandı: FATAL tek seferde terfi, ikincisi açık incident'a yazıldı, üçüncüsü dedup dalından geçti, farklı imza bağımsız terfi etti
   - [x] **Parça 8** (`IIM-22`, 2026-09-21) — `SignalPromotedEvent` tüketimi → `Source=Telemetry` incident + `Incident.DetectedAt` (manuel oluşturmada da opsiyonel olarak var). Redelivery no-op (id promoter tarafından seçiliyor). `IncidentDto`'daki üç elle map tek `FromDomain`'e indi ve AI alanları artık dışarı veriliyor. Doğrulandı: `detectedAt 07:09:46` vs `createdAt 07:11:51`
-  - [ ] **Parça 9** (`IIM-23`) — Evidence API + uçtan uca doğrulama + kapanış
+  - [x] **Parça 9** (`IIM-23`, 2026-09-21) — `GET /api/telemetry/evidence` (insan + Adım 19 frontend'i için; AI tool'u **değil**) ve `GET /api/telemetry/signals` (varsayılan: zayıf band). Beş servisle tam uçtan uca koşu doğrulandı
+
+---
+
+## Sıradaki / kalan yol haritası (AI öne çekilmiş)
+
 - [ ] **Adım 13.5** — OTLP log ingest (müşteri log entegrasyonunun **genel çözümü**). Vendor başına connector yazmak yerine tek bir standart tel formatı kabul edilir; uzun kuyruğu müşterinin zaten kullandığı shipper (OTel Collector / Fluent Bit / Vector) çözer. Adım 17 ile aynı bağımlılık → birlikte ele alınabilir. Karar notu: her log satırı saklanmaz, imza başına sayım + örnek satırlar saklanır; filtreleme kaynağa (Collector) itilir
 - [ ] **Adım 13.6** — Generic alert webhook ingest (Datadog monitor, Grafana alert, CloudWatch alarm). En düşük hacim, en yüksek sinyal; ham log çekmek istemeyen müşteriler için. Provider başına küçük bir payload mapper yeter
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
