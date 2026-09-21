@@ -23,6 +23,7 @@ import { incidentStatuses, type IncidentStatus } from '@/types/api'
 import { AiAnalysisPanel } from './AiAnalysisPanel'
 import { DeliveryStrip } from './DeliveryStrip'
 import { IncidentTimeline } from './IncidentTimeline'
+import { ScoreBreakdownPanel } from './ScoreBreakdownPanel'
 import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './queries'
 
 export function IncidentDetailPage() {
@@ -141,6 +142,8 @@ export function IncidentDetailPage() {
               </pre>
             </CardContent>
           </Card>
+
+          <ScoreBreakdownPanel incident={data} />
 
           <IncidentTimeline incident={data} deliveries={deliveries.data ?? []} />
         </div>

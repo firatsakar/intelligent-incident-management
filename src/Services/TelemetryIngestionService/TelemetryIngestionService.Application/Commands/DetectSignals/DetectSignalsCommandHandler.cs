@@ -1,3 +1,4 @@
+using System.Globalization;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
@@ -206,9 +207,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         if (!SignalScoring.ShouldPromote(signal.Confidence, rule))
         {
             if (SignalScoring.IsWeak(signal.Confidence, rule))
-                signal.MarkWeak(
-                    $"Confidence {signal.Confidence:F2} is below the promotion threshold of {rule.PromoteThreshold:F2}."
-                );
+                signal.MarkWeak(Explain(signal.Confidence, rule.PromoteThreshold, "is below"));
 
             return;
         }
@@ -248,7 +247,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
             SignalScoring.SuggestSeverity(inputs),
             signature.Service,
             signature.Fingerprint,
-            $"Confidence {signal.Confidence:F2} met the promotion threshold of {rule.PromoteThreshold:F2}."
+            Explain(signal.Confidence, rule.PromoteThreshold, "met")
         );
 
         signature.AttachIncident(incidentId, DateTime.UtcNow);
@@ -306,6 +305,16 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
             .OrderByDescending(rule => rule.Service is not null)
             .FirstOrDefault();
     }
+
+    // This reason is stored on the signal and read back by a person, so it is formatted
+    // invariantly rather than in whatever culture the service happens to be started under.
+    // EvidenceSummary already does this deliberately; a reason that reads "1,00" on one machine
+    // and "1.00" on another is the same bug in a second place.
+    private static string Explain(double confidence, double threshold, string verb) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"Confidence {confidence:F2} {verb} the promotion threshold of {threshold:F2}."
+        );
 
     private static DateTime MaxOf(DateTime left, DateTime right) => left > right ? left : right;
 }

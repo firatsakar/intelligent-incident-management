@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using TelemetryIngestionService.Application.Abstractions;
@@ -568,6 +569,35 @@ public sealed class DetectSignalsCommandHandlerTests
             _signals.SaveChangesAsync(Arg.Any<CancellationToken>());
             _realtime.SignalRecordedAsync(Arg.Any<SignalDto>(), Arg.Any<CancellationToken>());
         });
+    }
+
+    [Fact]
+    public async Task TheReasonIsFormattedInvariantlyWhateverCultureTheServiceRunsUnder()
+    {
+        // Found by reading it on screen: under a Turkish culture the stored reason said
+        // "Confidence 1,00 met the promotion threshold of 0,90", so the same signal explained
+        // itself differently depending on which machine detected it. EvidenceSummary already
+        // formats invariantly on purpose; this is the same rule in the other place it matters.
+        var current = CultureInfo.CurrentCulture;
+        CultureInfo.CurrentCulture = new CultureInfo("tr-TR");
+
+        try
+        {
+            GivenRules(Rule(threshold: 3, promoteThreshold: 0.90));
+            GivenSignature();
+            GivenOrdinaryBaselineOf(mean: 6);
+            GivenWindow(occurrences: 6);
+
+            await Detect();
+
+            Assert.Contains("0.65", _recorded[0].Reason);
+            Assert.Contains("0.90", _recorded[0].Reason);
+            Assert.DoesNotContain(",", _recorded[0].Reason);
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = current;
+        }
     }
 
     [Fact]
