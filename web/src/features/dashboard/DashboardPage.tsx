@@ -1,5 +1,9 @@
 import { useSearchParams } from 'react-router-dom'
 
+// Moved up to the chart primitives once the funnel and the delivery screens needed the same bar:
+// three callers is a shared thing, and three copies of a ratio-to-pixels rule is how two of them
+// end up rounding differently.
+import { ProportionBar } from '@/components/chart/ProportionBar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -136,38 +140,6 @@ export function DashboardPage() {
 
 function CardSkeleton({ height }: { height: string }) {
   return <Skeleton className={cn('w-full', height)} />
-}
-
-/**
- * A stacked proportion bar.
- *
- * Flex rather than measured percentages: the segments are a ratio, and `flex-grow` is a ratio the
- * browser already knows how to resolve at any width. A minimum width so a segment holding one of
- * forty is a sliver rather than nothing — the whole point of a proportion bar is that the small
- * parts are still on it.
- */
-function ProportionBar({
-  segments,
-}: {
-  segments: { key: string; value: number; className: string }[]
-}) {
-  const total = segments.reduce((sum, segment) => sum + segment.value, 0)
-
-  if (total <= 0) return <div className="bg-muted h-2 w-full rounded-full" />
-
-  return (
-    <div aria-hidden className="bg-muted flex h-2 w-full gap-px overflow-hidden rounded-full">
-      {segments
-        .filter((segment) => segment.value > 0)
-        .map((segment) => (
-          <div
-            key={segment.key}
-            className={cn('h-full', segment.className)}
-            style={{ flexGrow: segment.value, flexBasis: 0, minWidth: 3 }}
-          />
-        ))}
-    </div>
-  )
 }
 
 function OpenRightNow({ stats }: { stats: IncidentStats }) {

@@ -1,8 +1,11 @@
 import {
   ActivityIcon,
+  FunnelIcon,
   LayoutDashboardIcon,
   MenuIcon,
   ScrollTextIcon,
+  SendIcon,
+  ServerIcon,
   SettingsIcon,
   SirenIcon,
 } from 'lucide-react'
@@ -54,6 +57,17 @@ interface NavGroup {
 // work" from "the setup", which is the distinction the headings were drawing; the heading itself
 // is gone because a heading reading "Settings" over a single row reading "Settings" is the same
 // hierarchy printed twice, and printing it twice is precisely what this change removes.
+//
+// The three aggregate screens are a group of their own rather than three more rows under
+// Operations. Operations answers "what is broken and what do I do about it", one incident at a
+// time; Pipeline answers "is the machine doing its job" — what the gate filtered, which service is
+// producing it, and whether anybody was actually told. Different question, asked at a different
+// hour, by a reader in a different posture. Seven rows under one heading would have made every one
+// of them look equally likely to be the one you want at 3am, which is the opposite of what a rail
+// is for.
+//
+// Inside the group, Funnel leads because it is the product's own claim stated as a number; the
+// other two are where you go when it raises a question — which service, and did anyone hear.
 const navigation: NavGroup[] = [
   {
     label: 'Operations',
@@ -64,6 +78,14 @@ const navigation: NavGroup[] = [
       { to: '/incidents', label: 'Incidents', icon: SirenIcon },
       { to: '/signals', label: 'Signals', icon: ActivityIcon },
       { to: '/evidence', label: 'Evidence', icon: ScrollTextIcon },
+    ],
+  },
+  {
+    label: 'Pipeline',
+    items: [
+      { to: '/funnel', label: 'Funnel', icon: FunnelIcon },
+      { to: '/services', label: 'Services', icon: ServerIcon },
+      { to: '/deliveries', label: 'Deliveries', icon: SendIcon },
     ],
   },
   {

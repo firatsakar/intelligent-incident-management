@@ -4,10 +4,13 @@ import { AppLayout } from './AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
+import { DeliveriesPage } from '@/features/deliveries/DeliveriesPage'
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage'
 import { IncidentListPage } from '@/features/incidents/IncidentListPage'
 import { EvidencePage } from '@/features/evidence/EvidencePage'
 import { SignalsPage } from '@/features/signals/SignalsPage'
+import { FunnelPage } from '@/features/telemetry/FunnelPage'
+import { ServicesPage } from '@/features/telemetry/ServicesPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
 import { SettingsLayout } from '@/features/settings/SettingsLayout'
@@ -34,6 +37,11 @@ export const router = createBrowserRouter([
           { path: 'incidents/:id', element: <IncidentDetailPage /> },
           { path: 'signals', element: <SignalsPage /> },
           { path: 'evidence', element: <EvidencePage /> },
+          // The three aggregate screens. New paths at the top level, so nothing that already
+          // resolves moves: every existing URL, bookmark and shared filtered link is untouched.
+          { path: 'funnel', element: <FunnelPage /> },
+          { path: 'services', element: <ServicesPage /> },
+          { path: 'deliveries', element: <DeliveriesPage /> },
           {
             // A layout route, so the sub-navigation is mounted once and does not re-enter on every
             // move between its pages.

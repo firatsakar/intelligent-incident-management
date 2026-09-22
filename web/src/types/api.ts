@@ -59,6 +59,20 @@ export type LogSeverity =
   | 'Error'
   | 'Fatal'
 
+/**
+ * Most severe first, matching `incidentPriorities`. The severity rollup on the funnel comes back
+ * keyed and sparse — a severity nothing arrived at is absent rather than zero — so a screen that
+ * wants a stable reading order has to bring one.
+ */
+export const logSeverities: LogSeverity[] = [
+  'Fatal',
+  'Error',
+  'Warning',
+  'Information',
+  'Debug',
+  'Verbose',
+]
+
 export type SignalKind = 'LogBurst' | 'RateAnomaly'
 
 export type SignalStatus =

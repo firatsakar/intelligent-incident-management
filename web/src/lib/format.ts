@@ -9,6 +9,19 @@ const dateTime = new Intl.DateTimeFormat(undefined, {
 
 const timeOnly = new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' })
 
+const wholeNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
+
+/**
+ * A count, with whatever thousands separator the operator's locale uses.
+ *
+ * Only the volume figures need it — a log window runs to five and six digits where everything else
+ * in this console is a handful — but they need it badly: 124038 and 12403 are the same shape at a
+ * glance, and the aggregate screens exist to be glanced at.
+ */
+export function formatCount(value: number): string {
+  return wholeNumber.format(value)
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   return value ? dateTime.format(new Date(value)) : '—'
 }
@@ -22,7 +35,10 @@ function renderSpan(ms: number): string {
   const abs = Math.abs(ms)
   const sign = ms < 0 ? '-' : ''
 
-  if (abs < 1000) return `${sign}${abs}ms`
+  // Rounded, because this branch is no longer only reached from two Dates. `formatSeconds` hands
+  // it a double now — a dispatch median of 0.073502 seconds — and unrounded that prints as
+  // "73.502ms", which claims a precision the measurement does not have.
+  if (abs < 1000) return `${sign}${Math.round(abs)}ms`
   if (abs < 60_000) return `${sign}${(abs / 1000).toFixed(1)}s`
   if (abs < 3_600_000) return `${sign}${Math.floor(abs / 60_000)}m ${Math.round((abs % 60_000) / 1000)}s`
 
@@ -185,7 +201,12 @@ export function scoreTerm(key: string): string {
 //
 // Colour is never the only channel here — every one of these renders next to its own label.
 
-const tier = {
+/**
+ * Exported so a screen can map a state of its own onto the shared tiers without retyping the class
+ * triples — which is how a seventh colour gets invented. Which tier a state lands on is the
+ * screen's judgement; what a tier looks like is not.
+ */
+export const statusTier = {
   alarm: 'bg-alarm text-alarm-foreground border-alarm-border',
   elevated: 'bg-elevated text-elevated-foreground border-elevated-border',
   caution: 'bg-caution text-caution-foreground border-caution-border',
@@ -195,10 +216,10 @@ const tier = {
 } as const
 
 export const priorityClass: Record<IncidentPriority, string> = {
-  Critical: tier.alarm,
-  High: tier.elevated,
-  Medium: tier.caution,
-  Low: tier.inert,
+  Critical: statusTier.alarm,
+  High: statusTier.elevated,
+  Medium: statusTier.caution,
+  Low: statusTier.inert,
 }
 
 // The same four priorities as a filled area, for the charts. A tier is a badge — a pale tint with
@@ -237,19 +258,19 @@ export const severityClass: Record<LogSeverity, string> = {
 }
 
 export const deliveryClass: Record<DeliveryStatus, string> = {
-  Sent: tier.nominal,
-  Failed: tier.alarm,
-  Pending: tier.inert,
+  Sent: statusTier.nominal,
+  Failed: statusTier.alarm,
+  Pending: statusTier.inert,
 }
 
 export const signalStatusClass: Record<SignalStatus, string> = {
-  Promoted: tier.alarm,
-  Weak: tier.caution,
-  Recorded: tier.inert,
+  Promoted: statusTier.alarm,
+  Weak: statusTier.caution,
+  Recorded: statusTier.inert,
   // Suppressed is the one state the gate silenced on purpose, so it sits a step quieter than
   // Recorded rather than sharing its ink.
   Suppressed: 'bg-inert text-dim-foreground border-inert-border',
-  Deduplicated: tier.info,
+  Deduplicated: statusTier.info,
 }
 
 /** Human labels for the enum names, which are fine in JSON and clumsy on screen. */
