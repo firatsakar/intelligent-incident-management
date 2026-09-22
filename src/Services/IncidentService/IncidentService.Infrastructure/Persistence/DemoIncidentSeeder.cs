@@ -70,6 +70,13 @@ public sealed class DemoIncidentSeeder
                     .Date.AddHours(random.Next(0, 24))
                     .AddMinutes(random.Next(0, 60));
 
+                // Today's bucket is only part of a day. Picking an hour out of twenty-four would
+                // date some rows in the future, and every window ends at "now" — so the totals
+                // on two screens reading the same data would disagree by however many rows
+                // landed past the end.
+                if (createdAt > now)
+                    createdAt = now.AddMinutes(-random.Next(1, 90));
+
                 Add(random, createdAt, isBadDay);
                 created++;
             }

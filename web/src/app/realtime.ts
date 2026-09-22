@@ -1,7 +1,13 @@
 import { HubConnectionBuilder, HubConnectionState, type HubConnection } from '@microsoft/signalr'
 import type { QueryClient } from '@tanstack/react-query'
 
-import type { Incident, NotificationDelivery, PagedResult, Signal } from '@/types/api'
+import type {
+  Incident,
+  NotificationDelivery,
+  PagedResult,
+  Signal,
+  SignalPage,
+} from '@/types/api'
 
 // Where a pushed message becomes a cache write.
 //
@@ -39,14 +45,23 @@ export const hubs: HubDefinition[] = [
   {
     name: 'incidents',
     url: '/hubs/incidents',
-    recoverKeys: [['incidents'], ['incident']],
+    recoverKeys: [['incidents'], ['incident'], ['incident-stats']],
     handlers: (client) => ({
       incidentCreated: () => {
         void client.invalidateQueries({ queryKey: ['incidents'] })
+        void client.invalidateQueries({ queryKey: ['incident-stats'] })
       },
       incidentChanged: (incident: Incident) => {
         client.setQueryData(['incident', incident.id], incident)
         patchIncidentLists(client, incident)
+
+        // The aggregate cannot be patched the way a row can — a status change moves the open
+        // counts, a new incident moves a day bucket, and neither is derivable from one DTO without
+        // reimplementing the query handler here. So the dashboard re-asks, and only when something
+        // was actually pushed. That is still the socket doing the work: no timer, no interval, and
+        // nothing fetched at all while the dashboard is closed, because an invalidation only
+        // refetches queries something is currently rendering.
+        void client.invalidateQueries({ queryKey: ['incident-stats'] })
       },
     }),
   },
@@ -85,10 +100,18 @@ export const hubs: HubDefinition[] = [
       signalRecorded: (signal: Signal) => {
         // Every cached window gets it. A signal detected now belongs in any window that is still
         // open, and the heat map recomputes from this list — so the map updates with no request.
-        for (const [key, current] of client.getQueriesData<Signal[]>({ queryKey: ['signals'] })) {
-          if (!current || current.some((row) => row.id === signal.id)) continue
+        //
+        // The total moves with the page. It is the count the window was cut from, so a signal
+        // arriving means there is one more to have been cut from, whether or not it is shown.
+        for (const [key, current] of client.getQueriesData<SignalPage>({
+          queryKey: ['signals'],
+        })) {
+          if (!current || current.items.some((row) => row.id === signal.id)) continue
 
-          client.setQueryData<Signal[]>(key, [signal, ...current])
+          client.setQueryData<SignalPage>(key, {
+            items: [signal, ...current.items],
+            totalCount: current.totalCount + 1,
+          })
         }
       },
     }),

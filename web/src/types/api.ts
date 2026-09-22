@@ -29,6 +29,12 @@ export interface Incident {
   isAiAnalyzed: boolean
   /** Null means the analysis declined to give one — not zero confidence. */
   aiConfidence: number | null
+  /**
+   * Non-null means the analysis ran and failed. A different state from `isAiAnalyzed: false`,
+   * which means it has not run yet — one of those resolves itself and the other does not, and
+   * before this field existed they looked identical on screen.
+   */
+  aiAnalysisError: string | null
   createdAt: string
   updatedAt: string | null
 }
@@ -126,6 +132,10 @@ export interface EvidenceWindow {
   service: string | null
   /** The true total; logRecords is capped at 200, so a truncated view can be shown as truncated. */
   totalLogRecords: number
+  /** Signals are capped too now — they were one of two collections here that never had a limit. */
+  totalSignals: number
+  /** Distinct signatures behind the signals shown, not a separate count of the whole window. */
+  totalSignatures: number
   logRecords: LogRecord[]
   signatures: ErrorSignature[]
   signals: Signal[]
@@ -191,3 +201,105 @@ export interface TestResult {
 
 /** The value the API substitutes for anything that looks like a credential. */
 export const maskedValue = '***'
+
+// ---- aggregates -------------------------------------------------------------------------------
+//
+// Added in Adım 20. Day buckets are UTC on the server, and the screens that draw them say so
+// rather than leaving a reader to assume their own zone.
+
+/** Counts keyed by enum name. The server fills every member, including the zeroes. */
+export type CountsByKey = Record<string, number>
+
+export interface IncidentDayBucket {
+  /** A UTC date, `YYYY-MM-DD`. */
+  day: string
+  total: number
+  byPriority: CountsByKey
+}
+
+export interface DetectionLatency {
+  /** Carried a detectedAt: the platform saw these itself. */
+  noticedCount: number
+  /** No detectedAt: somebody filed these. */
+  toldCount: number
+  /** Null when nothing was noticed automatically — which is not the same as instantly. */
+  medianSeconds: number | null
+  p95Seconds: number | null
+}
+
+export interface IncidentStats {
+  from: string
+  to: string
+  days: IncidentDayBucket[]
+  byPriority: CountsByKey
+  byStatus: CountsByKey
+  bySource: CountsByKey
+  /** Everything still unresolved, ignoring the window. */
+  openByPriority: CountsByKey
+  total: number
+  openTotal: number
+  detection: DetectionLatency
+}
+
+export interface Funnel {
+  logRecords: number
+  /** Distinct fingerprints behind those records. The drop is what fingerprinting bought. */
+  signatures: number
+  signals: number
+  signalsByStatus: CountsByKey
+  /**
+   * Signals the gate saw and chose not to raise. Excludes Deduplicated, which was folded into an
+   * incident that is already open — somebody was woken, just earlier.
+   */
+  notRaised: number
+  logRecordsBySeverity: CountsByKey
+}
+
+export interface ServiceHealth {
+  service: string
+  logRecords: number
+  signals: number
+  promoted: number
+  incidents: number
+  topSignature: string | null
+  topSignatureOccurrences: number
+  lastSignalAt: string | null
+}
+
+export interface TelemetryStats {
+  from: string
+  to: string
+  funnel: Funnel
+  services: ServiceHealth[]
+}
+
+export interface IntegrationHealth {
+  integrationId: string
+  /** Null when the integration was deleted. Its deliveries outlive it by design. */
+  name: string | null
+  channel: string | null
+  isEnabled: boolean
+  sent: number
+  failed: number
+  pending: number
+  /** Null when nothing succeeded in the window — not zero, which would read as instant. */
+  medianDispatchSeconds: number | null
+  lastError: string | null
+  lastErrorAt: string | null
+  lastSentAt: string | null
+}
+
+export interface NotificationStats {
+  from: string
+  to: string
+  integrations: IntegrationHealth[]
+  totalSent: number
+  totalFailed: number
+  totalPending: number
+}
+
+/** A window of signals with the count it was cut from, so a truncated list can say so. */
+export interface SignalPage {
+  items: Signal[]
+  totalCount: number
+}

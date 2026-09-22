@@ -3,6 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppLayout } from './AppLayout'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage'
 import { IncidentListPage } from '@/features/incidents/IncidentListPage'
 import { EvidencePage } from '@/features/evidence/EvidencePage'
@@ -24,7 +25,11 @@ export const router = createBrowserRouter([
         path: '/',
         element: <AppLayout />,
         children: [
-          { index: true, element: <Navigate to="/incidents" replace /> },
+          // The index route is the dashboard now rather than a redirect to the list. Nothing
+          // moved: `/incidents` is still its own route at its own URL, so every bookmark, every
+          // shared filtered link and every `to="/incidents"` in the app resolves exactly where it
+          // did before.
+          { index: true, element: <DashboardPage /> },
           { path: 'incidents', element: <IncidentListPage /> },
           { path: 'incidents/:id', element: <IncidentDetailPage /> },
           { path: 'signals', element: <SignalsPage /> },

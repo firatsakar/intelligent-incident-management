@@ -58,7 +58,9 @@ export function SignalsPage() {
     queryFn: () => telemetryApi.signals({ from: range.from, to: range.to }),
   })
 
-  const signals = query.data ?? []
+  // The endpoint returns an envelope now: a capped page plus the count it was cut from. The
+  // truncation is surfaced properly in Parça 6; this keeps the screen honest in the meantime.
+  const signals = query.data?.items ?? []
 
   const selected = service && errorKey ? { service, errorKey } : null
 

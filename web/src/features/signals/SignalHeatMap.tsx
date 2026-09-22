@@ -1,15 +1,9 @@
 import { ChevronRight } from 'lucide-react'
-import {
-  Fragment,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from 'react'
+import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
 
@@ -122,35 +116,6 @@ function toStyle(rect: Rect, box: { width: number; height: number }): CSSPropert
     width: `${(rect.width / box.width) * 100}%`,
     height: `${(rect.height / box.height) * 100}%`,
   }
-}
-
-/** Measures the box, and only the box. The map has no data source of its own. */
-function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null)
-  const [size, setSize] = useState({ width: 0, height: 0 })
-
-  useLayoutEffect(() => {
-    const node = ref.current
-
-    if (!node) return
-
-    // Read once synchronously so the first paint already has tiles; the observer then keeps up.
-    setSize({ width: node.clientWidth, height: node.clientHeight })
-
-    const observer = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect
-
-      setSize((current) =>
-        current.width === width && current.height === height ? current : { width, height },
-      )
-    })
-
-    observer.observe(node)
-
-    return () => observer.disconnect()
-  }, [])
-
-  return [ref, size] as const
 }
 
 export function SignalHeatMap({

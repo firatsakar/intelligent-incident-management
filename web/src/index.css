@@ -83,6 +83,21 @@
     --color-inert-border: var(--inert-border);
     --color-dim-foreground: var(--dim-foreground);
 
+    /* Priority as an area fill, for the charts.
+
+       The tiers above cannot do this job. A tier is a badge: a pale tint with an ink on top, and a
+       bar drawn in `--elevated` is very nearly the card it sits on. These are the same four hues at
+       the weight a filled area needs, so a Critical segment is still the alarm red and the chart
+       has not invented a second priority vocabulary.
+
+       Low is the only achromatic step, and that is its channel. A fourth hue in a warm ramp is a
+       hue nobody can name, and the three that are left run red -> orange -> amber, which is the one
+       ordering every operator already reads as severity. */
+    --color-priority-critical: var(--priority-critical);
+    --color-priority-high: var(--priority-high);
+    --color-priority-medium: var(--priority-medium);
+    --color-priority-low: var(--priority-low);
+
     /* Log severity is drawn as bare text inside a dense log line, so these are tuned against the
        page rather than against a tint — a different contrast problem from the tiers above. */
     --color-severity-fatal: var(--severity-fatal);
@@ -184,6 +199,19 @@
     /* One step quieter than --inert-foreground, for the states the gate deliberately silenced. */
     --dim-foreground: oklch(0.548 0.017 264);
 
+    /* Critical is the alarm red exactly; High and Medium carry on up the warm ramp; Low steps off
+       it into grey.
+
+       Measured against the card, not eyeballed: 5.5, 3.4, 1.9 and 3.1 to one. Medium is the one
+       that misses 3:1, and it misses because amber on white cannot reach it without becoming a
+       brown that stops meaning amber — the same trade `--heat-1` already makes two blocks up, and
+       at nearly twice its contrast. Every neighbouring pair clears 1.6:1, which is the number that
+       actually matters in a stack, and the segments are separated by a hairline besides. */
+    --priority-critical: oklch(0.545 0.212 26);
+    --priority-high: oklch(0.652 0.168 52);
+    --priority-medium: oklch(0.800 0.148 88);
+    --priority-low: oklch(0.660 0.017 264);
+
     --severity-fatal: oklch(0.480 0.190 26);
     --severity-error: oklch(0.520 0.196 27);
     --severity-warning: oklch(0.520 0.108 72);
@@ -265,6 +293,14 @@
     --inert-foreground: oklch(0.790 0.016 264);
     --inert-border: oklch(0.382 0.016 264);
     --dim-foreground: oklch(0.645 0.016 264);
+
+    /* The three chromatic steps barely move: they encode the same four priorities in both themes
+       and a bar that changes hue with the theme is a different reading of the same day. Low is the
+       exception and has to invert — grey is "closest to the ground", and the ground moved. */
+    --priority-critical: oklch(0.585 0.215 26);
+    --priority-high: oklch(0.690 0.165 52);
+    --priority-medium: oklch(0.815 0.140 88);
+    --priority-low: oklch(0.545 0.018 264);
 
     --severity-fatal: oklch(0.720 0.170 26);
     --severity-error: oklch(0.745 0.150 27);

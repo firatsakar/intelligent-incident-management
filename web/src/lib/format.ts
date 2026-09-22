@@ -17,16 +17,8 @@ export function formatTime(value: string | null | undefined): string {
   return value ? timeOnly.format(new Date(value)) : '—'
 }
 
-/**
- * The gap between two moments, in the largest unit that still reads as a number. Used for
- * detection latency, which is the clearest single proof that the platform noticed something on
- * its own rather than being told.
- */
-export function formatDuration(fromIso: string, toIso: string): string {
-  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime()
-
-  if (!Number.isFinite(ms)) return '—'
-
+/** A span in the largest unit that still reads as a number. */
+function renderSpan(ms: number): string {
   const abs = Math.abs(ms)
   const sign = ms < 0 ? '-' : ''
 
@@ -35,6 +27,55 @@ export function formatDuration(fromIso: string, toIso: string): string {
   if (abs < 3_600_000) return `${sign}${Math.floor(abs / 60_000)}m ${Math.round((abs % 60_000) / 1000)}s`
 
   return `${sign}${Math.floor(abs / 3_600_000)}h ${Math.round((abs % 3_600_000) / 60_000)}m`
+}
+
+/**
+ * The gap between two moments. Used for detection latency, which is the clearest single proof that
+ * the platform noticed something on its own rather than being told.
+ */
+export function formatDuration(fromIso: string, toIso: string): string {
+  const ms = new Date(toIso).getTime() - new Date(fromIso).getTime()
+
+  if (!Number.isFinite(ms)) return '—'
+
+  return renderSpan(ms)
+}
+
+/**
+ * The same span for the aggregates, which report a latency as seconds rather than as two instants.
+ *
+ * It shares `renderSpan` rather than rounding to its own taste, so a median on the dashboard and a
+ * gap on an incident cannot describe the same four minutes two different ways.
+ *
+ * A null is the aggregate declining to answer — nothing was measured — and renders as an em dash.
+ * It must never become 0, which would claim the opposite fact.
+ */
+export function formatSeconds(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '—'
+
+  return renderSpan(seconds * 1000)
+}
+
+// Day buckets are cut in UTC on the server, so their labels are pinned to UTC here rather than
+// passed through the operator's zone like every other timestamp in this file. Formatting them
+// locally would move a bucket by a day for anyone west of Greenwich, and the label would then
+// quietly disagree with the number it labels. The screens that draw these say "UTC" on the axis.
+const utcDay = new Intl.DateTimeFormat(undefined, {
+  month: 'short',
+  day: 'numeric',
+  timeZone: 'UTC',
+})
+
+const utcDayLong = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' })
+
+/** A `YYYY-MM-DD` UTC bucket as a short axis label. */
+export function formatUtcDay(day: string): string {
+  return utcDay.format(new Date(`${day}T00:00:00Z`))
+}
+
+/** The same bucket spelled out, for a readout that has room for it. */
+export function formatUtcDayLong(day: string): string {
+  return utcDayLong.format(new Date(`${day}T00:00:00Z`))
 }
 
 export function formatRelative(value: string | null | undefined): string {
@@ -158,6 +199,27 @@ export const priorityClass: Record<IncidentPriority, string> = {
   High: tier.elevated,
   Medium: tier.caution,
   Low: tier.inert,
+}
+
+// The same four priorities as a filled area, for the charts. A tier is a badge — a pale tint with
+// an ink printed on it — and neither half of that survives being stretched into a bar, so the fill
+// is its own token. Two maps rather than one composed name, because a class assembled at runtime is
+// a class Tailwind never sees and therefore never generates.
+
+/** Inside an `<svg>`. */
+export const priorityFill: Record<IncidentPriority, string> = {
+  Critical: 'fill-priority-critical',
+  High: 'fill-priority-high',
+  Medium: 'fill-priority-medium',
+  Low: 'fill-priority-low',
+}
+
+/** The same colour for a proportion bar drawn in HTML, where there is nothing to measure. */
+export const priorityBackground: Record<IncidentPriority, string> = {
+  Critical: 'bg-priority-critical',
+  High: 'bg-priority-high',
+  Medium: 'bg-priority-medium',
+  Low: 'bg-priority-low',
 }
 
 /**
