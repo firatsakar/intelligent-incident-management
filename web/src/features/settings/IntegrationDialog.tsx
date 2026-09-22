@@ -30,8 +30,8 @@ import {
   type NotificationChannelType,
 } from '@/types/api'
 
-import { buildConfig, ConfigFields } from './ConfigFields'
-import { integrationFields, type ConfigField } from './configSchema'
+import { buildConfig, ConfigFields, withStrayFields } from './ConfigFields'
+import { integrationFields } from './configSchema'
 import { connectable, describeFilters } from './integrationCatalogue'
 
 const anyValue = 'any'
@@ -74,34 +74,15 @@ export function IntegrationDialog({
   const entry = connectable.find((candidate) => candidate.channel === channel)
   const stored = integration?.config ?? null
 
-  /**
-   * The schema plus whatever else is actually stored on this integration.
-   *
-   * `Header:<name>` is free-form by design — that is how a customer passes a signing token — so no
-   * static list can enumerate it, and `buildConfig` only emits keys it was given a field for. A
-   * stored key with no field is therefore a key the form deletes on save, which for a masked one
-   * means deleting a credential nobody can retype because nobody is allowed to read it.
-   *
-   * Appending the strays as real fields fixes that without touching the masking rule: they go
-   * through exactly the same audited path as every other field, and a stray that reads back as the
-   * mask is marked secret so `buildConfig` sends the mask and the server restores the value.
-   */
-  const fields = useMemo<ConfigField[]>(() => {
-    const declared = integrationFields[channel]
-
-    if (!stored) return declared
-
-    const strays = Object.keys(stored)
-      .filter((key) => !declared.some((field) => field.key === key))
-      .map<ConfigField>((key) => ({
-        key,
-        label: key,
-        secret: stored[key] === maskedValue,
-        hint: 'Stored on this integration; this form does not know its shape.',
-      }))
-
-    return strays.length > 0 ? [...declared, ...strays] : declared
-  }, [channel, stored])
+  const fields = useMemo(
+    () =>
+      withStrayFields(
+        integrationFields[channel],
+        stored,
+        'Stored on this integration; this form does not know its shape.',
+      ),
+    [channel, stored],
+  )
 
   const save = useMutation({
     mutationFn: () => {

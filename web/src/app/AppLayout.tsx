@@ -1,11 +1,4 @@
-import {
-  ActivityIcon,
-  DatabaseIcon,
-  MenuIcon,
-  PlugIcon,
-  ScrollTextIcon,
-  SirenIcon,
-} from 'lucide-react'
+import { ActivityIcon, MenuIcon, ScrollTextIcon, SettingsIcon, SirenIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
@@ -34,13 +27,19 @@ interface NavItem {
 }
 
 interface NavGroup {
-  label: string
+  /** Omitted for a group whose only entry already says what the heading would have said. */
+  label?: string
   items: NavItem[]
 }
 
-// Grouped, not flat. The two Settings entries are due to collapse into one destination that holds
-// them as sub-navigation; with the grouping already here that becomes an edit to this array rather
-// than a re-layout of the rail, and the routes do not move either way.
+// The collapse this array was grouped in anticipation of: Settings is now one destination that
+// holds Profile, Telemetry and Integrations as sub-navigation, so the rail carries one entry for
+// it instead of a heading over two.
+//
+// That entry keeps its own group rather than joining Operations. The gap is what separates "the
+// work" from "the setup", which is the distinction the headings were drawing; the heading itself
+// is gone because a heading reading "Settings" over a single row reading "Settings" is the same
+// hierarchy printed twice, and printing it twice is precisely what this change removes.
 const navigation: NavGroup[] = [
   {
     label: 'Operations',
@@ -51,11 +50,7 @@ const navigation: NavGroup[] = [
     ],
   },
   {
-    label: 'Settings',
-    items: [
-      { to: '/settings/integrations', label: 'Integrations', icon: PlugIcon },
-      { to: '/settings/telemetry-sources', label: 'Telemetry', icon: DatabaseIcon },
-    ],
+    items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
   },
 ]
 
@@ -86,10 +81,12 @@ function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: bool
   return (
     <>
       {navigation.map((group) => (
-        <div key={group.label} className="mb-5 last:mb-0">
-          <p className="text-muted-foreground mb-1 px-2.5 text-[0.6875rem] font-medium tracking-wider uppercase">
-            {group.label}
-          </p>
+        <div key={group.label ?? group.items[0].to} className="mb-5 last:mb-0">
+          {group.label && (
+            <p className="text-muted-foreground mb-1 px-2.5 text-[0.6875rem] font-medium tracking-wider uppercase">
+              {group.label}
+            </p>
+          )}
 
           <ul className="space-y-0.5">
             {group.items.map((item) => (

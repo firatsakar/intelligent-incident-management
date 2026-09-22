@@ -133,6 +133,10 @@ export interface EvidenceWindow {
 
 export type TelemetrySourceKind = 'Seq'
 
+/** The runtime twin of the union, so the settings catalogue can be built from it rather than by
+    hand. One member today; the point is that a second one has to pass through here. */
+export const telemetrySourceKinds: TelemetrySourceKind[] = ['Seq']
+
 export interface TelemetrySource {
   id: string
   name: string

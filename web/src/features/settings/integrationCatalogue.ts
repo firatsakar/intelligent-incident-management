@@ -1,9 +1,9 @@
 import { MailIcon, WebhookIcon } from 'lucide-react'
-import type { ComponentType } from 'react'
 
 import { notificationChannels, type Integration, type NotificationChannelType } from '@/types/api'
 
 import { DiscordMark, JiraMark, PagerDutyMark, SlackMark, TeamsMark } from './BrandIcons'
+import type { MarkComponent, PlannedEntry } from './SettingsCatalogue'
 
 /**
  * What the catalogue is allowed to claim.
@@ -15,9 +15,6 @@ import { DiscordMark, JiraMark, PagerDutyMark, SlackMark, TeamsMark } from './Br
  * whole line between "connect this" and "coming soon", and it is drawn by the type system rather
  * than by memory.
  */
-
-/** Both lucide icons and the local marks accept a className; nothing else is needed from them. */
-export type MarkComponent = ComponentType<{ className?: string }>
 
 export interface CatalogueEntry {
   channel: NotificationChannelType
@@ -53,12 +50,6 @@ const entries: Record<NotificationChannelType, CatalogueEntry> = {
 }
 
 export const connectable: CatalogueEntry[] = notificationChannels.map((channel) => entries[channel])
-
-export interface PlannedEntry {
-  name: string
-  mark: MarkComponent
-  summary: string
-}
 
 /**
  * Destinations with no code behind them. They are listed because a catalogue of three reads as a

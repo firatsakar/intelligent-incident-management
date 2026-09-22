@@ -1,12 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  AlertTriangleIcon,
-  CircleCheckIcon,
-  PlusIcon,
-  TrashIcon,
-  XIcon,
-} from 'lucide-react'
-import { useState, type ReactNode } from 'react'
+import { PlusIcon, TrashIcon } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 import { integrationsApi } from '@/api/endpoints'
@@ -29,7 +23,6 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
-import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Integration, NotificationChannelType } from '@/types/api'
 
@@ -40,6 +33,13 @@ import {
   planned,
   type CatalogueEntry,
 } from './integrationCatalogue'
+import {
+  Notice,
+  PlannedRow,
+  SectionHeading,
+  TestReport,
+  type TestOutcome,
+} from './SettingsCatalogue'
 
 // A directory rather than a table behind an "Add" button.
 //
@@ -51,14 +51,10 @@ import {
 // Email entries with different priority filters is the intended way to route Critical somewhere
 // louder — so the instances live inside their own tile, where the count, the filters and the
 // controls for each one sit next to the thing they belong to. Nothing needs a second screen.
-
-/** The last test the operator ran, kept on the row. A toast is gone before a long SMTP error
-    can be read, and this button is the only feedback loop a customer has. */
-interface TestOutcome {
-  ok: boolean
-  detail: string
-  at: string
-}
+//
+// The pieces with no opinion about notifications — the section rule, the notice, the inert planned
+// row, the test strip — moved to SettingsCatalogue when the telemetry screen became the second
+// consumer of them.
 
 export function IntegrationsPage() {
   const queryClient = useQueryClient()
@@ -135,8 +131,10 @@ export function IntegrationsPage() {
 
   return (
     <div className="space-y-6">
+      {/* h2, not h1: the settings layout owns the h1. The two levels of heading are the same two
+          levels the rail and the sub-navigation draw. */}
       <div className="max-w-2xl">
-        <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+        <h2 className="text-lg font-medium tracking-tight">Integrations</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           Where a notification goes when an analysis completes. One destination type can hold
           several integrations — two Email entries with different filters is a normal setup.
@@ -195,25 +193,7 @@ export function IntegrationsPage() {
 
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           {planned.map((entry) => (
-            <div
-              key={entry.name}
-              className="border-inert-border flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5"
-            >
-              <span className="bg-muted/50 text-dim-foreground grid size-9 shrink-0 place-items-center rounded-lg">
-                <entry.mark className="size-5" />
-              </span>
-
-              <div className="min-w-0">
-                <p className="text-muted-foreground truncate text-sm font-medium">{entry.name}</p>
-                <p className="text-dim-foreground truncate text-xs">{entry.summary}</p>
-              </div>
-
-              {/* Not a disabled button. A control that cannot ever be pressed is still a control,
-                  and it invites the press that does nothing. This is a label. */}
-              <span className="border-inert-border text-dim-foreground ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap">
-                Coming soon
-              </span>
-            </div>
+            <PlannedRow key={entry.name} entry={entry} />
           ))}
         </div>
       </section>
@@ -242,18 +222,6 @@ export function IntegrationsPage() {
   )
 }
 
-function SectionHeading({ title, detail }: { title: string; detail?: string }) {
-  return (
-    <div className="flex items-baseline gap-3">
-      <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
-        {title}
-      </h2>
-      <span className="bg-border h-px flex-1" aria-hidden />
-      {detail && <span className="text-muted-foreground text-xs tabular-nums">{detail}</span>}
-    </div>
-  )
-}
-
 /**
  * The operational fact, stated as one.
  *
@@ -273,23 +241,6 @@ function Silence({ total, enabled }: { total: number; enabled: number }) {
           ? 'The only integration is paused. When an analysis completes, no one is told.'
           : `All ${total} integrations are paused. When an analysis completes, no one is told.`}
     </Notice>
-  )
-}
-
-function Notice({ tone, children }: { tone: 'warn' | 'bad'; children: ReactNode }) {
-  return (
-    <p
-      role={tone === 'bad' ? 'alert' : 'status'}
-      className={cn(
-        'flex items-start gap-2 rounded-lg border px-3 py-2 text-sm',
-        tone === 'warn'
-          ? 'bg-caution text-caution-foreground border-caution-border'
-          : 'border-alarm-border/70 bg-alarm/10 text-alarm-ink',
-      )}
-    >
-      <AlertTriangleIcon className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <span className="min-w-0">{children}</span>
-    </p>
   )
 }
 
@@ -463,38 +414,12 @@ function InstanceRow({
       </p>
 
       {outcome && (
-        <div
-          role="status"
-          className={cn(
-            'mt-2 flex items-start gap-2 rounded-md border px-2.5 py-1.5 text-xs',
-            outcome.ok
-              ? 'bg-nominal text-nominal-foreground border-nominal-border'
-              : // Not the solid alarm fill. That is reserved for a verdict the system reached on
-                // its own; this is the output of a probe the operator just ran, and the reason can
-                // run to several lines of somebody else's exception text.
-                'border-alarm-border/70 bg-alarm/10 text-alarm-ink',
-          )}
-        >
-          {outcome.ok ? (
-            <CircleCheckIcon className="mt-px size-3.5 shrink-0" aria-hidden />
-          ) : (
-            <AlertTriangleIcon className="mt-px size-3.5 shrink-0" aria-hidden />
-          )}
-
-          <span className="min-w-0 flex-1 break-words">
-            <span className="font-medium">{outcome.ok ? 'Test sent' : 'Test failed'}</span> at{' '}
-            {formatTime(outcome.at)} — {outcome.detail}
-          </span>
-
-          <button
-            type="button"
-            onClick={onDismiss}
-            aria-label="Dismiss test result"
-            className="focus-visible:ring-ring/50 -my-0.5 -mr-1 grid size-6 shrink-0 place-items-center rounded-sm outline-none hover:opacity-70 focus-visible:ring-3"
-          >
-            <XIcon className="size-3.5" aria-hidden />
-          </button>
-        </div>
+        <TestReport
+          outcome={outcome}
+          okLabel="Test sent"
+          failLabel="Test failed"
+          onDismiss={onDismiss}
+        />
       )}
     </li>
   )
