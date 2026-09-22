@@ -20,6 +20,10 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIncidentRepository, IncidentRepository>();
 
+        // Registered unconditionally; the endpoint that uses it checks the environment itself, so
+        // the gate lives in one obvious place rather than being split across two files.
+        services.AddScoped<DemoIncidentSeeder>();
+
         return services;
     }
 }
