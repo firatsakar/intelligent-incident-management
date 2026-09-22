@@ -107,6 +107,10 @@ GHSA-v5pm-xwqc-g5wc (yüksek önem). `Microsoft.AspNetCore.OpenApi` 10.0.7 trans
 
 - `POST /api/dev/webhook-echo` (NotificationService) — `IsDevelopment()` dışında 404 döner.
   Korumalı, ama üretim imajında bulunmaması daha temiz.
+- `POST /api/dev/seed-demo-incidents` (IncidentService, Adım 20 Parça 3) — geriye dönük tarihli
+  demo incident'ları basar. `IsDevelopment()` dışında 404, idempotent, satırlar açıklamada
+  `[demo-seed]` işareti taşır. **Gerçek veritabanına yazar**; üretim imajında bulunmamalı ve
+  silme karşılığı bilinçli olarak yok.
 - `POST /api/analyses/reindex` (AgentOrchestrator) — **bilinçli bırakıldı**, operasyonel
   (mapping değişimi / ES yeniden inşası). Yetkilendirme geldiğinde admin rolüne bağlanmalı.
 
