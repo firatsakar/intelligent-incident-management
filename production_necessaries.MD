@@ -51,6 +51,21 @@ token'ını ve log sistemi anahtarını olduğu gibi saklıyor.
 
 ## 2. Güvenlik
 
+### 🔴 Üç SignalR hub'ı da herkese yayın yapıyor — Adım 16'nın önkoşulu
+
+`IncidentHub`, `NotificationHub` ve `SignalHub` istisnasız `Clients.All` kullanıyor; ne grup
+var ne oda, ve hub'lar kimlik doğrulamasız. **Adım 20 bu yüzeyi belirgin şekilde genişletti**:
+artık entegrasyon ve telemetri kaynağı yapılandırmaları (maskeli config'leriyle), imza
+güncellemeleri ve ingest özetleri de yayınlanıyor.
+
+Bugün ek bir risk değil — API'ler zaten açık ve yayınlanan DTO'lar bir GET'in döndürdüğünün
+aynısı. **Ama organizasyon bazlı kapsamlama soket üzerinden uygulanamaz**: Adım 16 HTTP'yi
+kapatsa bile, hub'a bağlanan herkes her organizasyonun olayını almaya devam eder. Yani hub
+grupları Adım 16'nın *içinde* yapılacak bir iş, sonrasına bırakılacak bir iyileştirme değil.
+
+- Yapılacak: `OnConnectedAsync`'te org claim'inden gruba katılma + `Clients.Group(...)` ile
+  yayın + hub'lara `[Authorize]`.
+
 ### 🔴 Hiçbir API'de kimlik doğrulama yok
 
 Dört servisin tüm uçları kimliksiz erişime açık. Bu, incident verisini okumak, entegrasyon
@@ -107,6 +122,10 @@ GHSA-v5pm-xwqc-g5wc (yüksek önem). `Microsoft.AspNetCore.OpenApi` 10.0.7 trans
 
 - `POST /api/dev/webhook-echo` (NotificationService) — `IsDevelopment()` dışında 404 döner.
   Korumalı, ama üretim imajında bulunmaması daha temiz.
+- `POST /api/dev/seed-demo-incidents` (IncidentService, Adım 20 Parça 3) — geriye dönük tarihli
+  demo incident'ları basar. `IsDevelopment()` dışında 404, idempotent, satırlar açıklamada
+  `[demo-seed]` işareti taşır. **Gerçek veritabanına yazar**; üretim imajında bulunmamalı ve
+  silme karşılığı bilinçli olarak yok.
 - `POST /api/analyses/reindex` (AgentOrchestrator) — **bilinçli bırakıldı**, operasyonel
   (mapping değişimi / ES yeniden inşası). Yetkilendirme geldiğinde admin rolüne bağlanmalı.
 

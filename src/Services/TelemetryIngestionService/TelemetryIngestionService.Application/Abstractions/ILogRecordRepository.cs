@@ -67,5 +67,13 @@ public interface ILogRecordRepository
         CancellationToken cancellationToken = default
     );
 
+    // The log side of the funnel: totals and categorical splits, counted in the database. No rows
+    // come back, so the width of the window does not decide the cost of the read.
+    Task<LogWindowSummary> GetWindowSummaryAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

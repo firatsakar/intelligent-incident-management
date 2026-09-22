@@ -1,4 +1,14 @@
-import { ActivityIcon, MenuIcon, ScrollTextIcon, SettingsIcon, SirenIcon } from 'lucide-react'
+import {
+  ActivityIcon,
+  FunnelIcon,
+  LayoutDashboardIcon,
+  MenuIcon,
+  ScrollTextIcon,
+  SendIcon,
+  ServerIcon,
+  SettingsIcon,
+  SirenIcon,
+} from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
@@ -24,6 +34,13 @@ interface NavItem {
   to: string
   label: string
   icon: LucideIcon
+  /**
+   * Match this path exactly. Only the dashboard needs it: it sits at `/`, which is a prefix of
+   * every other URL in the console, so without it the rail marks Dashboard as the current section
+   * from every screen at once. The others want the prefix match — `/incidents/:id` is still
+   * Incidents.
+   */
+  end?: boolean
 }
 
 interface NavGroup {
@@ -40,13 +57,35 @@ interface NavGroup {
 // work" from "the setup", which is the distinction the headings were drawing; the heading itself
 // is gone because a heading reading "Settings" over a single row reading "Settings" is the same
 // hierarchy printed twice, and printing it twice is precisely what this change removes.
+//
+// The three aggregate screens are a group of their own rather than three more rows under
+// Operations. Operations answers "what is broken and what do I do about it", one incident at a
+// time; Pipeline answers "is the machine doing its job" — what the gate filtered, which service is
+// producing it, and whether anybody was actually told. Different question, asked at a different
+// hour, by a reader in a different posture. Seven rows under one heading would have made every one
+// of them look equally likely to be the one you want at 3am, which is the opposite of what a rail
+// is for.
+//
+// Inside the group, Funnel leads because it is the product's own claim stated as a number; the
+// other two are where you go when it raises a question — which service, and did anyone hear.
 const navigation: NavGroup[] = [
   {
     label: 'Operations',
     items: [
+      // First, and in this group rather than above it: it is a view of the same work, not a
+      // different kind of destination, and a heading over one row is hierarchy printed twice.
+      { to: '/', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
       { to: '/incidents', label: 'Incidents', icon: SirenIcon },
       { to: '/signals', label: 'Signals', icon: ActivityIcon },
       { to: '/evidence', label: 'Evidence', icon: ScrollTextIcon },
+    ],
+  },
+  {
+    label: 'Pipeline',
+    items: [
+      { to: '/funnel', label: 'Funnel', icon: FunnelIcon },
+      { to: '/services', label: 'Services', icon: ServerIcon },
+      { to: '/deliveries', label: 'Deliveries', icon: SendIcon },
     ],
   },
   {
@@ -93,6 +132,7 @@ function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: bool
               <li key={item.to}>
                 <NavLink
                   to={item.to}
+                  end={item.end}
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
@@ -145,7 +185,7 @@ export function AppLayout() {
             with the header bar, which was never a visible edge — there is no rule under it. */}
         <div className="flex h-14 shrink-0 items-center px-4">
           <NavLink
-            to="/incidents"
+            to="/"
             className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
           >
             <Brand organization={organization?.name} />

@@ -27,6 +27,7 @@ public sealed class PollTelemetrySourceCommandHandler
     private readonly IErrorSignatureRepository _signatures;
     private readonly ITelemetrySourceConnectorResolver _connectors;
     private readonly ISender _sender;
+    private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<PollTelemetrySourceCommandHandler> _logger;
 
     public PollTelemetrySourceCommandHandler(
@@ -36,6 +37,7 @@ public sealed class PollTelemetrySourceCommandHandler
         IErrorSignatureRepository signatures,
         ITelemetrySourceConnectorResolver connectors,
         ISender sender,
+        IRealtimeNotifier realtime,
         ILogger<PollTelemetrySourceCommandHandler> logger
     )
     {
@@ -45,6 +47,7 @@ public sealed class PollTelemetrySourceCommandHandler
         _signatures = signatures;
         _connectors = connectors;
         _sender = sender;
+        _realtime = realtime;
         _logger = logger;
     }
 
@@ -84,6 +87,28 @@ public sealed class PollTelemetrySourceCommandHandler
 
         cursor.Advance(fetch.NextPosition, fetch.LastEventTimestamp);
         await _cursors.SaveChangesAsync(cancellationToken);
+
+        // One message for the cycle, carrying counts rather than rows. A poll writes up to two
+        // hundred records, so a row-level push would be around forty messages a second at the
+        // configured floor, fanned to every connected client because the hubs have no groups.
+        // A screen does not need the rows to know its window is out of date.
+        //
+        // Nothing is announced when nothing arrived: the steady state of a healthy system is an
+        // empty poll every few seconds, and a heartbeat nobody can act on is noise.
+        if (stored.Stored > 0)
+        {
+            await _realtime.IngestionCompletedAsync(
+                new IngestionTickDto
+                {
+                    TelemetrySourceId = source.Id,
+                    NewRecords = stored.Stored,
+                    TouchedSignatures = stored.SignaturesTouched,
+                    LatestEventAt = fetch.LastEventTimestamp,
+                    CompletedAt = DateTime.UtcNow,
+                },
+                cancellationToken
+            );
+        }
 
         return stored;
     }

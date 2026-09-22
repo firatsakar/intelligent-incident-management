@@ -48,10 +48,13 @@ public sealed class CreateIncidentCommandHandler
             Source = incident.Source.ToString()
         }, cancellationToken);
 
-        // Only the id: whether this incident belongs on the first page of whatever filter someone
-        // has open is the server's call, so the client asks rather than guesses.
-        await _realtime.IncidentCreatedAsync(incident.Id, cancellationToken);
+        // The DTO was already being built on the next line for the HTTP response, so carrying it
+        // costs nothing. The client still re-reads the list — whether this incident belongs on
+        // the first page of whatever filter someone has open is the server's call — but it can
+        // fill the detail cache from this, so opening the row that just appeared is free.
+        var dto = IncidentDto.FromDomain(incident);
+        await _realtime.IncidentCreatedAsync(dto, cancellationToken);
 
-        return IncidentDto.FromDomain(incident);
+        return dto;
     }
 }

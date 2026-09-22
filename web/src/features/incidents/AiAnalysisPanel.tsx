@@ -28,6 +28,43 @@ import type { Incident } from '@/types/api'
  * never the only channel — here by not asking colour to carry anything at all.
  */
 export function AiAnalysisPanel({ incident }: { incident: Incident }) {
+  // Three states, not two. "Not analysed yet" resolves itself in seconds; "analysis failed"
+  // never does, because the thing that would have resolved it is what failed. Rendering both as
+  // "waiting" leaves an operator watching for enrichment that is not coming — which is exactly
+  // the state the backend gained a field for, and the screen has to spend it.
+  if (incident.aiAnalysisError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>AI analysis</CardTitle>
+          <CardDescription>
+            The analysis ran and did not produce a result. Nothing further is coming on its own —
+            the priority and category below are the ones detection set.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {/* Alarm ink on a tint rather than the solid fill. The solid one is reserved for a
+              verdict the system reached about the customer's system; this is the platform
+              reporting its own shortfall, which is worth seeing and is not an escalation. */}
+          <div className="bg-alarm/10 border-alarm-border/40 rounded-md border p-3">
+            <p className="text-alarm-ink text-sm font-medium">Analysis failed</p>
+            {/* The provider's own words, unclamped. "Rate limit exceeded" and "invalid API key"
+                call for different actions, and a shortened or categorised message hides that
+                from the one person who has to choose between them. */}
+            <p className="mt-1 text-sm leading-relaxed break-words whitespace-pre-wrap">
+              {incident.aiAnalysisError}
+            </p>
+          </div>
+
+          <p className="text-muted-foreground mt-3 text-xs">
+            A later attempt that succeeds clears this and fills the panel in.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (!incident.isAiAnalyzed) {
     return (
       <Card>

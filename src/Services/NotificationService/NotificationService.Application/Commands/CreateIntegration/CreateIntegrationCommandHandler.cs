@@ -9,10 +9,15 @@ public sealed class CreateIntegrationCommandHandler
     : IRequestHandler<CreateIntegrationCommand, IntegrationDto>
 {
     private readonly IIntegrationRepository _integrations;
+    private readonly IRealtimeNotifier _realtime;
 
-    public CreateIntegrationCommandHandler(IIntegrationRepository integrations)
+    public CreateIntegrationCommandHandler(
+        IIntegrationRepository integrations,
+        IRealtimeNotifier realtime
+    )
     {
         _integrations = integrations;
+        _realtime = realtime;
     }
 
     public async Task<IntegrationDto> Handle(
@@ -32,6 +37,10 @@ public sealed class CreateIntegrationCommandHandler
         await _integrations.AddAsync(integration, cancellationToken);
         await _integrations.SaveChangesAsync(cancellationToken);
 
-        return IntegrationDto.FromDomain(integration);
+        // After the save, never before: what is broadcast has to be what is stored.
+        var dto = IntegrationDto.FromDomain(integration);
+        await _realtime.IntegrationChangedAsync(dto, cancellationToken);
+
+        return dto;
     }
 }

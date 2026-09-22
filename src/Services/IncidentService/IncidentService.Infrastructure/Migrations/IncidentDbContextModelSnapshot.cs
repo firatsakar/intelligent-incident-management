@@ -28,6 +28,9 @@ namespace IncidentService.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AiAnalysisError")
+                        .HasColumnType("text");
+
                     b.Property<double?>("AiConfidence")
                         .HasColumnType("double precision");
 

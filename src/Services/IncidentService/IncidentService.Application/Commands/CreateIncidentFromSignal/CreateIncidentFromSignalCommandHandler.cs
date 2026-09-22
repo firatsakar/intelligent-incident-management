@@ -1,6 +1,7 @@
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Abstractions;
+using IncidentService.Application.DTOs;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using MediatR;
@@ -78,7 +79,10 @@ public sealed class CreateIncidentFromSignalCommandHandler
         // The redelivery guard above matters here too: a second arrival returns early and never
         // reaches this, so a duplicated promotion cannot make the same incident appear twice on
         // an open screen.
-        await _realtime.IncidentCreatedAsync(incident.Id, cancellationToken);
+        await _realtime.IncidentCreatedAsync(
+            IncidentDto.FromDomain(incident),
+            cancellationToken
+        );
 
         _logger.LogInformation(
             "Opened incident {IncidentId} from a telemetry signal, detected at {DetectedAt:u}.",

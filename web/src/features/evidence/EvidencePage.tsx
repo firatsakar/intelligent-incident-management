@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { skipToken, useQuery } from '@tanstack/react-query'
 import { XIcon } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 
 import { telemetryApi } from '@/api/endpoints'
+import { ingestionKey } from '@/app/realtime'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
@@ -25,7 +27,7 @@ import {
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { defaultWindow, resolveWindow, windowLabel, windowPresets } from '@/lib/window'
-import type { ErrorSignature, LogRecord, Signal } from '@/types/api'
+import type { ErrorSignature, IngestionTick, LogRecord, Signal } from '@/types/api'
 
 /**
  * The raw material, in the three shapes it passes through: log lines, the signatures they roll up
@@ -49,6 +51,30 @@ export function EvidencePage() {
         service: service || undefined,
       }),
   })
+
+  /**
+   * What ingestion has written since this window was read.
+   *
+   * `skipToken` rather than a query function: nothing fetches this key. The signal hub writes
+   * into it when a poll finishes, and this is only a subscription to that — no request on mount,
+   * none on a window change, none ever.
+   */
+  const ticks =
+    useQuery<IngestionTick[]>({ queryKey: ingestionKey, queryFn: skipToken }).data ?? []
+
+  // Ticks older than this screen's own data are already in it. `dataUpdatedAt` moves on every
+  // refetch, so the count clears itself when the operator re-reads and needs no state of its own.
+  const windowStart = Date.parse(range.from)
+
+  const arrived = query.isSuccess
+    ? ticks.filter(
+        (tick) =>
+          Date.parse(tick.completedAt) > query.dataUpdatedAt &&
+          (tick.latestEventAt === null || Date.parse(tick.latestEventAt) >= windowStart),
+      )
+    : []
+
+  const arrivedRecords = arrived.reduce((sum, tick) => sum + tick.newRecords, 0)
 
   function setParam(key: string, value: string | null | undefined) {
     const next = new URLSearchParams(params)
@@ -125,6 +151,16 @@ export function EvidencePage() {
         </Card>
       )}
 
+      {arrivedRecords > 0 && (
+        <Arrivals
+          records={arrivedRecords}
+          polls={arrived.length}
+          service={service}
+          refreshing={query.isFetching}
+          onRefresh={() => void query.refetch()}
+        />
+      )}
+
       {query.isSuccess && (
         <div className="grid gap-6 lg:grid-cols-3">
           {/* min-w-0 for the same reason as the incident screen: a grid item's default min-width
@@ -154,7 +190,19 @@ export function EvidencePage() {
                   }
                 />
               ) : (
-                <ul className="divide-border/60 -my-1 divide-y text-sm">
+                // Two hundred fixed-height rows is about three screens of document, and the two
+                // panels beside this one end up floating next to whitespace. Its own scroll
+                // container keeps the three collections readable against each other, which is the
+                // comparison this screen is for.
+                //
+                // Focusable itself because, unlike the signal list, nothing inside a log line is:
+                // without this the box could be read by a mouse and by nothing else.
+                <ul
+                  tabIndex={0}
+                  role="group"
+                  aria-label="Log records in this window"
+                  className="divide-border/60 focus-visible:ring-ring/50 -my-1 max-h-[36rem] divide-y overflow-y-auto rounded-sm text-sm outline-none focus-visible:ring-[3px]"
+                >
                   {query.data.logRecords.map((record) => (
                     // With a service pinned, its column is the same word on all two hundred rows.
                     // Dropping it there gives the message the width instead, which is the only
@@ -170,9 +218,15 @@ export function EvidencePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Signatures</CardTitle>
+                {/* The one collection here whose count is not a cap being hit. It is derived from
+                    the signals panel below — the distinct signatures those signals point at — so
+                    when the signals are truncated this list is truncated with them, and saying
+                    "12 in this window" would be claiming a completeness the response never had. */}
                 <CardDescription>
-                  Distinct errors behind those lines, with their running counters. The counters span
-                  all time, not this window.
+                  {query.data.totalSignatures} distinct error(s) behind the signals below
+                  {query.data.signals.length < query.data.totalSignals &&
+                    ' — behind the ones shown, not behind the whole window'}
+                  . The counters on each span all time, not this window.
                 </CardDescription>
               </CardHeader>
 
@@ -183,7 +237,12 @@ export function EvidencePage() {
                     detail="A signature is created the first time an error is normalised, so an empty list means nothing in the window was an error."
                   />
                 ) : (
-                  <ul className="divide-border -my-2.5 divide-y">
+                  <ul
+                    tabIndex={0}
+                    role="group"
+                    aria-label="Signatures behind the signals in this window"
+                    className="divide-border focus-visible:ring-ring/50 -my-2.5 max-h-[28rem] divide-y overflow-y-auto rounded-sm outline-none focus-visible:ring-[3px]"
+                  >
                     {query.data.signatures.map((signature) => (
                       <SignatureRow key={signature.id} signature={signature} />
                     ))}
@@ -195,8 +254,14 @@ export function EvidencePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Signals</CardTitle>
+                {/* Signals were the collection here that never had a cap, so this panel used to
+                    be the only one that could not lie about its own size. Now that it has one, it
+                    gets the same sentence the log records have had all along. */}
                 <CardDescription>
-                  What the gate made of those signatures in this window.
+                  What the gate made of those signatures in this window ·{' '}
+                  {query.data.signals.length < query.data.totalSignals
+                    ? `the most recent ${query.data.signals.length} of ${query.data.totalSignals}`
+                    : `${query.data.totalSignals} in this window`}
                 </CardDescription>
               </CardHeader>
 
@@ -207,7 +272,12 @@ export function EvidencePage() {
                     detail="Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide."
                   />
                 ) : (
-                  <ul className="divide-border -my-2.5 divide-y">
+                  <ul
+                    tabIndex={0}
+                    role="group"
+                    aria-label="Signals in this window"
+                    className="divide-border focus-visible:ring-ring/50 -my-2.5 max-h-[28rem] divide-y overflow-y-auto rounded-sm outline-none focus-visible:ring-[3px]"
+                  >
                     {query.data.signals.map((signal) => (
                       <SignalSummary key={signal.id} signal={signal} />
                     ))}
@@ -218,6 +288,59 @@ export function EvidencePage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * What has landed since this window was read, and nothing more.
+ *
+ * The hub sends one summary per poll cycle rather than one message per row, and this screen
+ * deliberately stops at showing it. Refetching on arrival would put back exactly the traffic that
+ * design removed — a poll writes up to two hundred records every few seconds, per source, and
+ * every open client would ask for the window again each time. So the count sits here and the
+ * operator decides, which is also the only behaviour that does not move a log line out from under
+ * somebody in the middle of reading it.
+ *
+ * Not a toast: a toast is gone in four seconds and this is a standing fact about the screen.
+ */
+function Arrivals({
+  records,
+  polls,
+  service,
+  refreshing,
+  onRefresh,
+}: {
+  records: number
+  polls: number
+  service: string
+  refreshing: boolean
+  onRefresh: () => void
+}) {
+  return (
+    <div
+      // Assertive would interrupt; this is news that can wait for a pause.
+      aria-live="polite"
+      className="bg-info border-info-border text-info-foreground flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 text-sm"
+    >
+      <span className="min-w-0 tabular-nums">
+        {records} new log record(s) ingested since this window was read
+        {polls > 1 && `, across ${polls} polls`}.
+        {/* The tick counts records, not records matching a filter: the summary is per source, and
+            the service a record belongs to is not in it. Saying so beats a number that silently
+            means something else than the panel below it. */}
+        {service && ' Counted across all services, not just the one filtered here.'}
+      </span>
+
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={refreshing}
+        onClick={onRefresh}
+        className="ml-auto"
+      >
+        {refreshing ? 'Re-reading…' : 'Re-read the window'}
+      </Button>
     </div>
   )
 }

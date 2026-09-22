@@ -1,6 +1,7 @@
-using BuildingBlocks.Contracts;
+﻿using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Abstractions;
+using IncidentService.Application.DTOs;
 using IncidentService.Application.Commands.CreateIncidentFromSignal;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
@@ -91,7 +92,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         // Nor a second row sliding into an open list.
         await _realtime
             .DidNotReceive()
-            .IncidentCreatedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+            .IncidentCreatedAsync(Arg.Any<IncidentDto>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -99,9 +100,15 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
     {
         await Handle();
 
-        // Only the id: whether this incident belongs on the first page of whatever filter someone
-        // has open is a question only the server can answer.
-        await _realtime.Received(1).IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+        // The payload travels now, so a client can fill its detail cache without asking. The
+        // list still re-reads: whether this incident belongs on the first page of whatever filter
+        // someone has open is a question only the server can answer.
+        await _realtime
+            .Received(1)
+            .IncidentCreatedAsync(
+                Arg.Is<IncidentDto>(dto => dto.Id == IncidentId),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -113,7 +120,10 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         Received.InOrder(() =>
         {
             _repository.SaveChangesAsync(Arg.Any<CancellationToken>());
-            _realtime.IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+            _realtime.IncidentCreatedAsync(
+                Arg.Any<IncidentDto>(),
+                Arg.Any<CancellationToken>()
+            );
         });
     }
 

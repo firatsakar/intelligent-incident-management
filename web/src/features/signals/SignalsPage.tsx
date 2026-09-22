@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 import { telemetryApi } from '@/api/endpoints'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardAction,
@@ -42,23 +43,70 @@ import { SignalHeatMap } from './SignalHeatMap'
  */
 const describeErrorKey = (key: string) => (key === otherKey ? 'other signatures' : key)
 
+/**
+ * How much of the window the screen holds, and how it grows.
+ *
+ * Not infinite scroll. The operator's place in a list is state, and scroll position is the one
+ * kind of state this console cannot put in the URL — a shared link would land somebody at the top
+ * of a list they were sent the bottom of, and a back button would lose the place entirely.
+ *
+ * And not an offset page either, which is the other obvious reading of an endpoint that takes
+ * one. Two things on this screen are built from the whole loaded array rather than from a page of
+ * it: the heat map aggregates it, and the tile filter cuts it. Paging would leave the map drawn
+ * from page one while the list showed page three, which is a map and a list disagreeing about
+ * what window they are looking at. A pushed signal makes it worse — it prepends, so every offset
+ * boundary below it shifts by one.
+ *
+ * So the page *grows*. One request per press, at most four presses, and the map and the list are
+ * always built from the same array. 200 is the server's own ceiling, so the last press is also
+ * the last thing this endpoint will hand over — past that the honest answer is a shorter window,
+ * and the screen says so.
+ */
+const pageStep = 50
+const maxPage = 200
+
+const resolvePageSize = (value: string | null) => {
+  const parsed = Number(value)
+
+  if (!Number.isFinite(parsed)) return pageStep
+
+  // Rounded to a step rather than taken literally: the URL is writable by anyone, and an
+  // arbitrary number here would mint a cache entry per typo.
+  return Math.min(maxPage, Math.max(pageStep, Math.ceil(parsed / pageStep) * pageStep))
+}
+
 export function SignalsPage() {
   const [params, setParams] = useSearchParams()
 
   const preset = params.get('window') ?? defaultWindow
   const service = params.get('service')
   const errorKey = params.get('error')
+  const pageSize = resolvePageSize(params.get('show'))
 
   // Resolved once per render from the preset. The query key carries the resolved instants so a
   // window change is a different key, and a pushed signal writes into the current one.
   const range = resolveWindow(preset)
 
   const query = useQuery({
-    queryKey: ['signals', { window: preset }],
-    queryFn: () => telemetryApi.signals({ from: range.from, to: range.to }),
+    queryKey: ['signals', { window: preset, show: pageSize }],
+    queryFn: () => telemetryApi.signals({ from: range.from, to: range.to, limit: pageSize }),
   })
 
-  const signals = query.data ?? []
+  // An envelope: a capped page plus the count it was cut from. `items` can outgrow `pageSize`
+  // while the screen is open, because a pushed signal is prepended to it — so what is loaded is
+  // the array's own length, never the number that was asked for.
+  const signals = query.data?.items ?? []
+  const total = Math.max(query.data?.totalCount ?? 0, signals.length)
+
+  const canLoadMore = signals.length < total && pageSize < maxPage
+  const atCeiling = signals.length < total && pageSize >= maxPage
+
+  function loadMore() {
+    const next = new URLSearchParams(params)
+    next.set('show', String(Math.min(maxPage, pageSize + pageStep)))
+
+    setParams(next)
+  }
 
   const selected = service && errorKey ? { service, errorKey } : null
 
@@ -136,7 +184,13 @@ export function SignalsPage() {
 
       {query.isSuccess && (
         <>
-          <SignalHeatMap map={map} selected={selected} onSelect={select} />
+          <SignalHeatMap
+            map={map}
+            scope={preset}
+            coverage={{ loaded: signals.length, total }}
+            selected={selected}
+            onSelect={select}
+          />
 
           <Card>
             <CardHeader>
@@ -146,13 +200,17 @@ export function SignalsPage() {
                   : 'All signals'}
               </CardTitle>
 
-              {/* Stated rather than hidden behind a tooltip on each chip: the component names are
-                  the gate's own arithmetic and the operator needs to know that before the numbers
-                  mean anything. The per-term glossary is on the incident, where the breakdown is
-                  the headline rather than a summary. */}
+              {/* Three numbers where there used to be two, because there are three facts: what
+                  the tile filter left, what the screen holds, and what the window actually
+                  contains. Collapsing the last two was the screen saying "12 of 50" about a
+                  window holding 431. */}
               <CardDescription className="tabular-nums">
-                {visible.length} of {signals.length} in this window · the chips are the gate's
-                score components, and the confidence is what they add up to
+                {selected && `${visible.length} shown · `}
+                {signals.length === total
+                  ? `${total} in this window`
+                  : `${signals.length} of ${total} loaded`}{' '}
+                · the chips are the gate's score components, and the confidence is what they add
+                up to
               </CardDescription>
 
               {selected && (
@@ -184,7 +242,11 @@ export function SignalsPage() {
                   </p>
                 </div>
               ) : (
-                <ul className="divide-border -my-2 divide-y">
+                // Its own scroll container rather than two hundred rows running off the bottom of
+                // the document: the map above it is the index into this list, and an index you
+                // have to scroll away from to use is not one. Every row carries a link, so the
+                // box is reachable and scrollable from the keyboard through its own contents.
+                <ul className="divide-border -my-2 max-h-[34rem] divide-y overflow-y-auto">
                   {visible
                     .slice()
                     .sort((a, b) => (a.detectedAt < b.detectedAt ? 1 : -1))
@@ -194,6 +256,30 @@ export function SignalsPage() {
                 </ul>
               )}
             </CardContent>
+
+            {(canLoadMore || atCeiling) && (
+              // Outside the scroll container on purpose: a control that moves away as you read
+              // the thing it acts on is a control nobody finds.
+              <CardContent className="border-t pt-4">
+                {canLoadMore ? (
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                    <Button variant="outline" size="sm" onClick={loadMore}>
+                      Load {Math.min(pageStep, total - signals.length)} more
+                    </Button>
+                    <span className="text-muted-foreground text-sm tabular-nums">
+                      {total - signals.length} older signal(s) in this window are not loaded, so
+                      the map above does not count them.
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm tabular-nums">
+                    {maxPage} is as much as this endpoint will hand over at once, and this window
+                    holds {total}. A shorter window is the way to see the rest — the remaining{' '}
+                    {total - signals.length} are older than everything above.
+                  </p>
+                )}
+              </CardContent>
+            )}
           </Card>
         </>
       )}

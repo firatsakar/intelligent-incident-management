@@ -1,4 +1,4 @@
-import { FilterXIcon } from 'lucide-react'
+﻿import { FilterXIcon } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
@@ -265,9 +265,13 @@ export function IncidentListPage() {
  * table into a horizontal scroll. Nothing is dropped; the same fields arrive in one place.
  */
 function IncidentRow({ incident }: { incident: Incident }) {
-  const analysis = incident.isAiAnalyzed
-    ? `${incident.aiSuggestedCategory ?? 'analysed'} · ${formatConfidence(incident.aiConfidence)}`
-    : 'awaiting analysis'
+  // "Failed" is its own answer, not a slower kind of "awaiting". One of those resolves itself
+  // and the other never will, and a scan down this column has to be able to tell them apart.
+  const analysis = incident.aiAnalysisError
+    ? 'analysis failed'
+    : incident.isAiAnalyzed
+      ? `${incident.aiSuggestedCategory ?? 'analysed'} · ${formatConfidence(incident.aiConfidence)}`
+      : 'awaiting analysis'
 
   return (
     <TableRow className="group">
@@ -309,7 +313,12 @@ function IncidentRow({ incident }: { incident: Incident }) {
       </TableCell>
 
       <TableCell className="hidden max-w-44 align-top text-sm md:table-cell">
-        {incident.isAiAnalyzed ? (
+        {incident.aiAnalysisError ? (
+          // Ink, not a badge. The row already carries a priority badge that means a verdict about
+          // the customer's system; this is the platform reporting its own shortfall, and giving
+          // it the same weight would read as a second severity.
+          <span className="text-alarm-ink">analysis failed</span>
+        ) : incident.isAiAnalyzed ? (
           <>
             <span className="block truncate">{incident.aiSuggestedCategory ?? 'analysed'}</span>
             {/* formatConfidence renders a null as "not given". It must never become 0% — the

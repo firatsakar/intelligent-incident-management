@@ -83,6 +83,21 @@
     --color-inert-border: var(--inert-border);
     --color-dim-foreground: var(--dim-foreground);
 
+    /* Priority as an area fill, for the charts.
+
+       The tiers above cannot do this job. A tier is a badge: a pale tint with an ink on top, and a
+       bar drawn in `--elevated` is very nearly the card it sits on. These are the same four hues at
+       the weight a filled area needs, so a Critical segment is still the alarm red and the chart
+       has not invented a second priority vocabulary.
+
+       Low is the only achromatic step, and that is its channel. A fourth hue in a warm ramp is a
+       hue nobody can name, and the three that are left run red -> orange -> amber, which is the one
+       ordering every operator already reads as severity. */
+    --color-priority-critical: var(--priority-critical);
+    --color-priority-high: var(--priority-high);
+    --color-priority-medium: var(--priority-medium);
+    --color-priority-low: var(--priority-low);
+
     /* Log severity is drawn as bare text inside a dense log line, so these are tuned against the
        page rather than against a tint — a different contrast problem from the tiers above. */
     --color-severity-fatal: var(--severity-fatal);
@@ -184,6 +199,19 @@
     /* One step quieter than --inert-foreground, for the states the gate deliberately silenced. */
     --dim-foreground: oklch(0.548 0.017 264);
 
+    /* Critical is the alarm red exactly; High and Medium carry on up the warm ramp; Low steps off
+       it into grey.
+
+       Measured against the card, not eyeballed: 5.5, 3.4, 1.9 and 3.1 to one. Medium is the one
+       that misses 3:1, and it misses because amber on white cannot reach it without becoming a
+       brown that stops meaning amber — the same trade `--heat-1` already makes two blocks up, and
+       at nearly twice its contrast. Every neighbouring pair clears 1.6:1, which is the number that
+       actually matters in a stack, and the segments are separated by a hairline besides. */
+    --priority-critical: oklch(0.545 0.212 26);
+    --priority-high: oklch(0.652 0.168 52);
+    --priority-medium: oklch(0.800 0.148 88);
+    --priority-low: oklch(0.660 0.017 264);
+
     --severity-fatal: oklch(0.480 0.190 26);
     --severity-error: oklch(0.520 0.196 27);
     --severity-warning: oklch(0.520 0.108 72);
@@ -196,6 +224,13 @@
     --heat-5: oklch(0.648 0.196 28);
     --heat-foreground: oklch(0.205 0.045 40);
     --heat-empty: oklch(0.941 0.005 264);
+
+    /* Recency on the signal map: the edge a tile draws when it has just been written to.
+       Deliberately cool against a ramp that is entirely warm, because colour on that map already
+       means occurrence count and a second warm value would land on the same channel. Dark rather
+       than light because the ramp runs pale yellow to red and nothing light reads on its top end:
+       measured against every step, this clears 3:1 on --heat-5 and 7:1 on --heat-1. */
+    --heat-flash: oklch(0.300 0.125 268);
 }
 
 .dark {
@@ -266,6 +301,14 @@
     --inert-border: oklch(0.382 0.016 264);
     --dim-foreground: oklch(0.645 0.016 264);
 
+    /* The three chromatic steps barely move: they encode the same four priorities in both themes
+       and a bar that changes hue with the theme is a different reading of the same day. Low is the
+       exception and has to invert — grey is "closest to the ground", and the ground moved. */
+    --priority-critical: oklch(0.585 0.215 26);
+    --priority-high: oklch(0.690 0.165 52);
+    --priority-medium: oklch(0.815 0.140 88);
+    --priority-low: oklch(0.545 0.018 264);
+
     --severity-fatal: oklch(0.720 0.170 26);
     --severity-error: oklch(0.745 0.150 27);
     --severity-warning: oklch(0.828 0.135 84);
@@ -280,6 +323,11 @@
     --heat-5: oklch(0.632 0.193 28);
     --heat-foreground: oklch(0.190 0.040 40);
     --heat-empty: oklch(0.242 0.013 264);
+
+    /* The same value as the light theme, and for the same reason the ramp barely moves: this is
+       drawn on the ramp, not on the page, so what it has to clear is identical in both themes.
+       It is written out rather than inherited so the pair reads as a decision. */
+    --heat-flash: oklch(0.300 0.125 268);
 }
 
 @layer base {
@@ -313,5 +361,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * "This tile was just written to", on the signal map.
+ *
+ * The only rule in this file that animates something the operator did not cause, so it is written
+ * here where the reduced-motion rule above it is visible rather than hidden in a component.
+ *
+ * The *static* ring is the base state and the animation is only what takes it away. That
+ * inversion is what makes the three cases one element: the fade runs normally; under reduced
+ * motion `animation-name: none` leaves the ring standing, so the information survives without the
+ * motion; and the same switch is thrown from JavaScript when the map has been changing long
+ * enough that animating it would be a strobe. Written the obvious way round — opacity 0 at rest,
+ * animated up and back — the reduced-motion case would show nothing at all, because the rule
+ * above collapses the duration rather than removing the animation.
+ *
+ * An edge rather than a fill: the fill is the occurrence ramp, and a quantity and a recency on one
+ * channel is the collapse this map exists to avoid. The outer hairline in the page colour is what
+ * separates it from the neighbouring tile's own edge on a map with no gutters.
+ */
+.heat-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px var(--background),
+    inset 0 0 0 3px var(--heat-flash);
+  animation: heat-flash-fade 900ms ease-out forwards;
+}
+
+/* Later in the file than the rule above, which is what lets a single class turn the fade off. */
+.heat-flash-static {
+  animation-name: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-flash {
+    animation-name: none;
+  }
+}
+
+@keyframes heat-flash-fade {
+  to {
+    opacity: 0;
   }
 }
