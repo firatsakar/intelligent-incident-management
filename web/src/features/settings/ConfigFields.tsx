@@ -81,3 +81,37 @@ export function buildConfig(
 
   return config
 }
+
+/**
+ * The schema, plus whatever else is actually stored on the record being edited.
+ *
+ * `buildConfig` only emits keys it was given a field for, and the config bag is free-form on both
+ * services — `Header:<name>` is how a customer passes a signing token, `InitialLookbackMinutes` is
+ * read by the Seq connector — so no static list can enumerate it. A stored key with no field is
+ * therefore a key the form deletes on save, and for a masked one that means deleting a credential
+ * nobody can retype, because nobody is allowed to read it back.
+ *
+ * Appending the strays as real fields fixes that without touching the masking rule: they go through
+ * exactly the same audited path as every declared field, and a stray that reads back as the mask is
+ * marked secret, so `buildConfig` sends the mask and the server restores the value.
+ *
+ * Pure, so callers keep it inside their own `useMemo` rather than this file owning a hook.
+ */
+export function withStrayFields(
+  declared: ConfigField[],
+  stored: Record<string, string> | null,
+  hint: string,
+): ConfigField[] {
+  if (!stored) return declared
+
+  const strays = Object.keys(stored)
+    .filter((key) => !declared.some((field) => field.key === key))
+    .map<ConfigField>((key) => ({
+      key,
+      label: key,
+      secret: stored[key] === maskedValue,
+      hint,
+    }))
+
+  return strays.length > 0 ? [...declared, ...strays] : declared
+}

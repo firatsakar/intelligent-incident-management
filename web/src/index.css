@@ -5,6 +5,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * The visual system for the console.
+ *
+ * Three ideas hold it together:
+ *
+ * 1. The neutral ramp is cool (hue 264) and carries almost the whole screen. It is not pure grey:
+ *    a trace of chroma keeps large light areas from looking like unset defaults, and a cool ground
+ *    is what makes the warm status colours read as warm.
+ * 2. The accent (hue 274, indigo-violet) means "interaction and identity" and never means status.
+ *    That is why it is not red, amber or green — every one of those is already spoken for by a
+ *    verdict, and an accent that collides with a verdict teaches the operator to ignore both.
+ * 3. Status is a small tier vocabulary, not one colour per enum value. Priority, severity,
+ *    delivery and signal band all resolve onto the same six tiers, so a red means the same thing
+ *    on every screen. Only `alarm` is a solid fill — that is the whole "loud where the system
+ *    committed" rule, expressed in one decision.
+ *
+ * Every pair below was checked as oklch -> sRGB -> WCAG luminance in both themes, and every value
+ * sits inside sRGB so nothing depends on the browser's gamut mapping.
+ */
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;
@@ -39,6 +59,49 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+
+    /* Status tiers. `-foreground` is legible both on the tier's own fill and on card/page, so one
+       ink serves a badge and a bare label without a second token. */
+    --color-alarm: var(--alarm);
+    --color-alarm-foreground: var(--alarm-foreground);
+    --color-alarm-border: var(--alarm-border);
+    --color-alarm-ink: var(--alarm-ink);
+    --color-elevated: var(--elevated);
+    --color-elevated-foreground: var(--elevated-foreground);
+    --color-elevated-border: var(--elevated-border);
+    --color-caution: var(--caution);
+    --color-caution-foreground: var(--caution-foreground);
+    --color-caution-border: var(--caution-border);
+    --color-nominal: var(--nominal);
+    --color-nominal-foreground: var(--nominal-foreground);
+    --color-nominal-border: var(--nominal-border);
+    --color-info: var(--info);
+    --color-info-foreground: var(--info-foreground);
+    --color-info-border: var(--info-border);
+    --color-inert: var(--inert);
+    --color-inert-foreground: var(--inert-foreground);
+    --color-inert-border: var(--inert-border);
+    --color-dim-foreground: var(--dim-foreground);
+
+    /* Log severity is drawn as bare text inside a dense log line, so these are tuned against the
+       page rather than against a tint — a different contrast problem from the tiers above. */
+    --color-severity-fatal: var(--severity-fatal);
+    --color-severity-error: var(--severity-error);
+    --color-severity-warning: var(--severity-warning);
+    --color-severity-info: var(--severity-info);
+
+    /* Occurrence ramp for the signal map: yellow at the bottom, red at the top, five steps that
+       stay apart at treemap-tile size. `--heat-foreground` is dark in both themes because counts
+       are printed on the fill, and nothing readable on a yellow tile is also readable on a red one
+       unless the ink stays dark throughout. */
+    --color-heat-1: var(--heat-1);
+    --color-heat-2: var(--heat-2);
+    --color-heat-3: var(--heat-3);
+    --color-heat-4: var(--heat-4);
+    --color-heat-5: var(--heat-5);
+    --color-heat-foreground: var(--heat-foreground);
+    --color-heat-empty: var(--heat-empty);
+
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -49,72 +112,174 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    color-scheme: light;
+
+    /* The page is faintly off-white and cards are pure white, so a panel reads as a panel without
+       needing a heavy border. Inverting that (white page, grey cards) makes every card look
+       disabled. */
+    --background: oklch(0.982 0.003 264);
+    --foreground: oklch(0.205 0.016 264);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.205 0.016 264);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --popover-foreground: oklch(0.205 0.016 264);
+    --primary: oklch(0.495 0.192 274);
+    --primary-foreground: oklch(0.985 0.006 274);
+    --secondary: oklch(0.955 0.005 264);
+    --secondary-foreground: oklch(0.255 0.017 264);
+    --muted: oklch(0.961 0.005 264);
+    --muted-foreground: oklch(0.505 0.018 264);
+    --accent: oklch(0.945 0.009 264);
+    --accent-foreground: oklch(0.235 0.017 264);
+    --destructive: oklch(0.505 0.196 26);
+    --border: oklch(0.903 0.007 264);
+    /* Darker than --border: a field has to read as something you can type into, and a divider
+       does not. */
+    --input: oklch(0.845 0.012 264);
+    --ring: oklch(0.555 0.170 274);
+
+    --chart-1: oklch(0.560 0.185 268);
+    --chart-2: oklch(0.620 0.104 192);
+    --chart-3: oklch(0.662 0.138 74);
+    --chart-4: oklch(0.625 0.205 12);
+    --chart-5: oklch(0.660 0.175 310);
+
+    --radius: 0.5rem;
+
+    --sidebar: oklch(0.969 0.004 264);
+    --sidebar-foreground: oklch(0.205 0.016 264);
+    --sidebar-primary: oklch(0.495 0.192 274);
+    --sidebar-primary-foreground: oklch(0.985 0.006 274);
+    --sidebar-accent: oklch(0.932 0.009 264);
+    --sidebar-accent-foreground: oklch(0.235 0.017 264);
+    --sidebar-border: oklch(0.897 0.007 264);
+    --sidebar-ring: oklch(0.555 0.170 274);
+
+    /* alarm is the only solid tier. Critical, Failed and Promoted are the three places the system
+       has actually committed to a verdict, and they are the only ones allowed to shout. */
+    --alarm: oklch(0.545 0.212 26);
+    --alarm-foreground: oklch(0.985 0.006 26);
+    --alarm-border: oklch(0.480 0.190 26);
+    --alarm-ink: oklch(0.505 0.196 26);
+
+    --elevated: oklch(0.953 0.028 62);
+    --elevated-foreground: oklch(0.495 0.125 52);
+    --elevated-border: oklch(0.856 0.090 62);
+
+    --caution: oklch(0.960 0.045 92);
+    --caution-foreground: oklch(0.485 0.098 78);
+    --caution-border: oklch(0.872 0.100 88);
+
+    --nominal: oklch(0.957 0.040 160);
+    --nominal-foreground: oklch(0.470 0.110 156);
+    --nominal-border: oklch(0.856 0.086 158);
+
+    --info: oklch(0.953 0.023 240);
+    --info-foreground: oklch(0.490 0.118 244);
+    --info-border: oklch(0.855 0.070 240);
+
+    --inert: oklch(0.951 0.006 264);
+    --inert-foreground: oklch(0.455 0.020 264);
+    --inert-border: oklch(0.876 0.009 264);
+    /* One step quieter than --inert-foreground, for the states the gate deliberately silenced. */
+    --dim-foreground: oklch(0.548 0.017 264);
+
+    --severity-fatal: oklch(0.480 0.190 26);
+    --severity-error: oklch(0.520 0.196 27);
+    --severity-warning: oklch(0.520 0.108 72);
+    --severity-info: oklch(0.510 0.122 244);
+
+    --heat-1: oklch(0.893 0.138 97);
+    --heat-2: oklch(0.838 0.150 79);
+    --heat-3: oklch(0.778 0.153 59);
+    --heat-4: oklch(0.714 0.183 41);
+    --heat-5: oklch(0.648 0.196 28);
+    --heat-foreground: oklch(0.205 0.045 40);
+    --heat-empty: oklch(0.941 0.005 264);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    color-scheme: dark;
+
+    /* A deep cool charcoal rather than black. At 3am, white text on true black haloes; lifting the
+       page to 0.168 and the card to 0.208 keeps the panel separation without that. */
+    --background: oklch(0.168 0.012 264);
+    --foreground: oklch(0.955 0.004 264);
+    --card: oklch(0.208 0.014 264);
+    --card-foreground: oklch(0.955 0.004 264);
+    --popover: oklch(0.225 0.014 264);
+    --popover-foreground: oklch(0.955 0.004 264);
+    --primary: oklch(0.650 0.178 274);
+    --primary-foreground: oklch(0.170 0.035 274);
+    --secondary: oklch(0.272 0.014 264);
+    --secondary-foreground: oklch(0.950 0.005 264);
+    --muted: oklch(0.262 0.014 264);
+    --muted-foreground: oklch(0.720 0.018 264);
+    --accent: oklch(0.288 0.016 264);
+    --accent-foreground: oklch(0.960 0.005 264);
+    --destructive: oklch(0.735 0.158 26);
+    /* Opaque rather than white-with-alpha: these tokens sit on three different surfaces (page,
+       card, popover) and an alpha border changes value on each one, which makes a divider look
+       like an error on exactly one of them. */
+    --border: oklch(0.295 0.015 264);
+    --input: oklch(0.420 0.018 264);
+    --ring: oklch(0.650 0.160 274);
+
+    --chart-1: oklch(0.660 0.170 268);
+    --chart-2: oklch(0.760 0.110 192);
+    --chart-3: oklch(0.828 0.130 78);
+    --chart-4: oklch(0.688 0.190 12);
+    --chart-5: oklch(0.730 0.155 310);
+
+    --sidebar: oklch(0.192 0.013 264);
+    --sidebar-foreground: oklch(0.955 0.004 264);
+    --sidebar-primary: oklch(0.650 0.178 274);
+    --sidebar-primary-foreground: oklch(0.170 0.035 274);
+    --sidebar-accent: oklch(0.278 0.016 264);
+    --sidebar-accent-foreground: oklch(0.960 0.005 264);
+    --sidebar-border: oklch(0.288 0.015 264);
+    --sidebar-ring: oklch(0.650 0.160 274);
+
+    --alarm: oklch(0.560 0.215 26);
+    --alarm-foreground: oklch(0.985 0.006 26);
+    --alarm-border: oklch(0.640 0.200 26);
+    --alarm-ink: oklch(0.735 0.158 26);
+
+    --elevated: oklch(0.288 0.058 58);
+    --elevated-foreground: oklch(0.812 0.125 66);
+    --elevated-border: oklch(0.408 0.098 58);
+
+    --caution: oklch(0.292 0.053 86);
+    --caution-foreground: oklch(0.855 0.135 90);
+    --caution-border: oklch(0.412 0.082 86);
+
+    --nominal: oklch(0.288 0.052 160);
+    --nominal-foreground: oklch(0.815 0.125 160);
+    --nominal-border: oklch(0.405 0.085 160);
+
+    --info: oklch(0.288 0.050 240);
+    --info-foreground: oklch(0.795 0.105 232);
+    --info-border: oklch(0.408 0.085 240);
+
+    --inert: oklch(0.278 0.014 264);
+    --inert-foreground: oklch(0.790 0.016 264);
+    --inert-border: oklch(0.382 0.016 264);
+    --dim-foreground: oklch(0.645 0.016 264);
+
+    --severity-fatal: oklch(0.720 0.170 26);
+    --severity-error: oklch(0.745 0.150 27);
+    --severity-warning: oklch(0.828 0.135 84);
+    --severity-info: oklch(0.782 0.108 235);
+
+    /* The ramp barely moves between themes. It encodes a quantity, and a quantity that changes
+       colour when the operator flips the theme is a different reading of the same data. */
+    --heat-1: oklch(0.862 0.132 97);
+    --heat-2: oklch(0.810 0.148 79);
+    --heat-3: oklch(0.754 0.160 59);
+    --heat-4: oklch(0.694 0.179 41);
+    --heat-5: oklch(0.632 0.193 28);
+    --heat-foreground: oklch(0.190 0.040 40);
+    --heat-empty: oklch(0.242 0.013 264);
 }
 
 @layer base {
@@ -123,8 +288,30 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* Geist at console weights renders heavy without this, and the difference is most visible in
+       dark mode where the stems bloom. */
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
     }
   html {
     @apply font-sans;
     }
+  /* Counts, scores and latencies are read down a column, which only works if the digits are the
+     same width. Applying it at the table level beats remembering it per cell. */
+  table {
+    font-variant-numeric: tabular-nums;
+    }
+}
+
+/* Motion is confirmation of something the operator did. Under reduced motion there is nothing to
+   confirm, so everything resolves immediately rather than merely faster. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
 }

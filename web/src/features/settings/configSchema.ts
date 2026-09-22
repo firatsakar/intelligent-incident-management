@@ -39,6 +39,9 @@ export const integrationFields: Record<NotificationChannelType, ConfigField[]> =
     { key: 'ProjectKey', label: 'Project key', placeholder: 'OPS', required: true },
     { key: 'Email', label: 'Account email', required: true },
     { key: 'ApiToken', label: 'API token', required: true, secret: true },
+    // Optional on the server, which falls back to Task. Absent from this list the form would drop
+    // it on every edit, and the customer's chosen issue type would quietly revert.
+    { key: 'IssueType', label: 'Issue type', placeholder: 'Task' },
   ],
 }
 
@@ -49,9 +52,28 @@ export const telemetrySourceFields: Record<TelemetrySourceKind, ConfigField[]> =
       key: 'ApiKey',
       label: 'API key',
       secret: true,
-      hint: 'Only needed when the Seq instance has authentication enabled.',
+      hint: 'Only needed when the Seq instance has authentication enabled. The key needs Read permission.',
     },
-    { key: 'Filter', label: 'Filter', hint: 'Optional Seq filter expression.' },
-    { key: 'ServiceProperty', label: 'Service property', placeholder: 'Service' },
+    {
+      key: 'Filter',
+      label: 'Filter',
+      placeholder: "@Level in ['Error','Fatal']",
+      hint: 'Seq filter expression. Left blank, the connector reads errors and fatals.',
+    },
+    {
+      key: 'ServiceProperty',
+      label: 'Service property',
+      placeholder: 'Service',
+      hint: 'Which event property names the service a log line came from.',
+    },
+    // Optional on the connector, which falls back to 15. Absent from this list the form would drop
+    // it on every edit — the same trap IssueType is in above, and the one this project's demo
+    // source is already sitting on.
+    {
+      key: 'InitialLookbackMinutes',
+      label: 'Initial lookback (minutes)',
+      placeholder: '15',
+      hint: 'How far back the first poll reads. Later polls resume from where the last one stopped.',
+    },
   ],
 }

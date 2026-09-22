@@ -60,6 +60,22 @@ oluşturmak ve silmek dahil her şeyi kapsar.
   güvenlik işidir.
 - Ara önlem: servisleri dış ağa açmamak, yalnızca küme içinden erişilebilir tutmak.
 
+### 🔴 Frontend'deki giriş ekranı **kozmetiktir — sıfır güvenlik sağlar**
+
+Adım 19.5 Parça 5 (`IIM-51`, 2026-09-22) `/login` ekranını, oturum kapatmayı ve rota
+korumasını ekledi. **Hiçbiri bir güvenlik sınırı değildir.** Oturum tarayıcıda uyduruluyor:
+parola sorulmuyor, gönderilmiyor, doğrulanmıyor. Koruma yalnızca React router seviyesinde;
+tarayıcıyı atlayıp servisleri doğrudan çağıran herkes her satıra ulaşır — yukarıdaki madde
+aynen geçerli.
+
+Bu bilinçli bir sıra kararıydı: ekranlar Adım 16'nın önüne alındı ki auth geldiğinde
+değişmesi gereken tek şey `web/src/features/auth/session.ts` olsun. O dosyanın başındaki
+yorum aynı uyarıyı taşıyor ve giriş kartının kendisi kullanıcıya da açıkça söylüyor
+("No password, because nothing would check it").
+
+- **Kapatan:** Adım 15 (gateway) + Adım 16 (JWT + organizasyon bazlı sorgular).
+- **Yanlış anlaşılma riski:** bir ekran görüp "auth var" sanmak. Bu maddenin var olma sebebi.
+
 ### 🔴 `seq-demo` kimlik doğrulaması kapalı — üretime asla gitmemeli
 
 `docker-compose.yml`'deki `seq-demo` servisi `SEQ_FIRSTRUN_NOAUTHENTICATION=true` ile çalışıyor.

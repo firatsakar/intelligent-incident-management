@@ -1,54 +1,209 @@
+import { ActivityIcon, MenuIcon, ScrollTextIcon, SettingsIcon, SirenIcon } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { BrandMark } from '@/components/BrandMark'
+import { Button } from '@/components/ui/button'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
 import { RealtimeIndicator } from './RealtimeIndicator'
+import { ThemeToggle } from './ThemeToggle'
+import { UserMenu } from './UserMenu'
 
-const navigation = [
-  { to: '/incidents', label: 'Incidents' },
-  { to: '/signals', label: 'Signals' },
-  { to: '/evidence', label: 'Evidence' },
-  { to: '/settings/integrations', label: 'Integrations' },
-  { to: '/settings/telemetry-sources', label: 'Sources' },
+interface NavItem {
+  to: string
+  label: string
+  icon: LucideIcon
+}
+
+interface NavGroup {
+  /** Omitted for a group whose only entry already says what the heading would have said. */
+  label?: string
+  items: NavItem[]
+}
+
+// The collapse this array was grouped in anticipation of: Settings is now one destination that
+// holds Profile, Telemetry and Integrations as sub-navigation, so the rail carries one entry for
+// it instead of a heading over two.
+//
+// That entry keeps its own group rather than joining Operations. The gap is what separates "the
+// work" from "the setup", which is the distinction the headings were drawing; the heading itself
+// is gone because a heading reading "Settings" over a single row reading "Settings" is the same
+// hierarchy printed twice, and printing it twice is precisely what this change removes.
+const navigation: NavGroup[] = [
+  {
+    label: 'Operations',
+    items: [
+      { to: '/incidents', label: 'Incidents', icon: SirenIcon },
+      { to: '/signals', label: 'Signals', icon: ActivityIcon },
+      { to: '/evidence', label: 'Evidence', icon: ScrollTextIcon },
+    ],
+  },
+  {
+    items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
+  },
 ]
 
-export function AppLayout() {
+/**
+ * The organisation rides under the product name wherever there is a second line for it — the rail
+ * and the drawer, not the phone header. It is the scope of every number on every screen, so it
+ * belongs somewhere permanently visible rather than behind a click in the account menu; and it
+ * sits here, in the one block that is about identity rather than navigation, so that the day there
+ * is more than one organisation the switch has an obvious home.
+ */
+function Brand({ className, organization }: { className?: string; organization?: string }) {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-6 px-4">
-          <NavLink to="/incidents" className="font-semibold tracking-tight">
-            Incident Management
-          </NavLink>
+    <span className={cn('flex items-center gap-2.5', className)}>
+      <BrandMark />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold tracking-tight">
+          Incident Management
+        </span>
+        {organization && (
+          <span className="text-muted-foreground block truncate text-xs">{organization}</span>
+        )}
+      </span>
+    </span>
+  )
+}
 
-          <nav className="flex items-center gap-1 text-sm">
-            {navigation.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'rounded-md px-3 py-1.5 transition-colors',
-                    isActive
-                      ? 'bg-secondary text-secondary-foreground'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )
+function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: boolean }) {
+  return (
+    <>
+      {navigation.map((group) => (
+        <div key={group.label ?? group.items[0].to} className="mb-5 last:mb-0">
+          {group.label && (
+            <p className="text-muted-foreground mb-1 px-2.5 text-[0.6875rem] font-medium tracking-wider uppercase">
+              {group.label}
+            </p>
+          )}
+
+          <ul className="space-y-0.5">
+            {group.items.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    cn(
+                      // The 2px inset bar on the left is the active marker. It is the accent's
+                      // whole job in the shell: where you are, never what the system found.
+                      'relative flex items-center gap-2.5 rounded-md pr-2.5 pl-3 text-sm transition-colors',
+                      // The drawer is the touch surface, so its rows get a 44px target; the rail
+                      // is pointer-only and stays at console density.
+                      touch ? 'h-11' : 'h-8',
+                      'before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:transition-colors',
+                      'focus-visible:ring-ring/50 outline-none focus-visible:ring-[3px]',
+                      isActive
+                        ? 'bg-sidebar-accent text-sidebar-accent-foreground before:bg-primary font-medium'
+                        : 'text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground before:bg-transparent',
+                    )
+                  }
+                >
+                  <item.icon className="size-4 shrink-0" />
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </>
+  )
+}
+
+export function AppLayout() {
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Never null in practice — RequireAuth is the only route that renders this — but the context is
+  // typed for the login screen too, where it is.
+  const { organization } = useAuth()
+
+  return (
+    <div className="bg-background text-foreground min-h-svh">
+      <a
+        href="#content"
+        className="bg-primary text-primary-foreground focus:ring-ring sr-only rounded-md px-3 py-2 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:ring-2"
+      >
+        Skip to content
+      </a>
+
+      {/* A rail rather than a top bar: the section list grows (Settings gains sub-navigation next
+          chunk), and a vertical list of five is muscle memory for someone who keeps this open all
+          day. The tables keep their width because the content column is capped anyway. */}
+      <aside className="bg-sidebar border-sidebar-border fixed inset-y-0 left-0 z-30 hidden w-56 flex-col border-r lg:flex">
+        {/* h-14 rather than h-12 now that the block carries two lines. The rail no longer lines up
+            with the header bar, which was never a visible edge — there is no rule under it. */}
+        <div className="flex h-14 shrink-0 items-center px-4">
+          <NavLink
+            to="/incidents"
+            className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
+          >
+            <Brand organization={organization?.name} />
+          </NavLink>
+        </div>
+
+        <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3 py-3">
+          <NavItems />
+        </nav>
+      </aside>
+
+      <div className="lg:pl-56">
+        <header className="bg-background/85 sticky top-0 z-20 border-b backdrop-blur-sm">
+          <div className="flex h-12 items-center gap-2 px-3 lg:px-6">
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="lg:hidden"
+                    aria-label="Open navigation"
+                  />
                 }
               >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
+                <MenuIcon />
+              </SheetTrigger>
 
-          <div className="ml-auto">
-            <RealtimeIndicator />
+              <SheetContent side="left" className="w-72 sm:max-w-none">
+                <SheetHeader className="h-14 justify-center px-4 py-0">
+                  <SheetTitle>
+                    <Brand organization={organization?.name} />
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Move between the console's sections.
+                  </SheetDescription>
+                </SheetHeader>
+
+                <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3 pb-4">
+                  <NavItems onNavigate={() => setMenuOpen(false)} touch />
+                </nav>
+              </SheetContent>
+            </Sheet>
+
+            <Brand className="lg:hidden" />
+
+            <div className="ml-auto flex items-center gap-1.5">
+              <RealtimeIndicator />
+              <ThemeToggle />
+              <UserMenu />
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="mx-auto max-w-[1400px] px-4 py-6">
-        <Outlet />
-      </main>
+        <main id="content" className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
