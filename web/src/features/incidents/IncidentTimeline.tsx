@@ -1,4 +1,4 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Incident, NotificationDelivery } from '@/types/api'
@@ -9,7 +9,7 @@ import type { Incident, NotificationDelivery } from '@/types/api'
  * "it happened and we know when", "it happened and the record does not keep when", "it has not
  * happened yet", and "it never will".
  */
-type StageState = 'reached' | 'untimed' | 'pending' | 'absent'
+type StageState = 'reached' | 'untimed' | 'failed' | 'pending' | 'absent'
 
 interface Stage {
   label: string
@@ -80,12 +80,22 @@ export function IncidentTimeline({
             ? `Categorised as ${incident.aiSuggestedCategory}, priority set to ${incident.priority}`
             : 'Applied.',
         }
-      : {
-          label: 'Analysis applied',
-          at: null,
-          state: 'pending',
-          detail: 'Waiting on the analysis service.',
-        },
+      : incident.aiAnalysisError
+        ? {
+            // Not 'pending'. A pending stage says "this has not happened yet", and on a spine
+            // whose whole argument is that the timestamps are real, a stage that will never
+            // happen must not sit there looking like one that still might.
+            label: 'Analysis applied',
+            at: null,
+            state: 'failed',
+            detail: 'The analysis ran and returned nothing. See the panel for the reason.',
+          }
+        : {
+            label: 'Analysis applied',
+            at: null,
+            state: 'pending',
+            detail: 'Waiting on the analysis service.',
+          },
     firstSentAt
       ? {
           label: 'People notified',
@@ -192,7 +202,7 @@ export function IncidentTimeline({
 }
 
 /**
- * Four markers, four shapes. Colour alone would leave "happened" and "never happened" as two
+ * Five markers, five shapes. Colour alone would leave "happened" and "never happened" as two
  * shades of the same dot, which is the one distinction on this card that actually matters.
  */
 function StageMarker({ state }: { state: StageState }) {
@@ -208,6 +218,13 @@ function StageMarker({ state }: { state: StageState }) {
         <span className="bg-primary size-1 rounded-full" />
       </span>
     )
+  }
+
+  // Tried and came back with nothing. A solid ring like 'reached', so it reads as a stage that
+  // ran, in alarm ink so it does not read as one that succeeded — and hollow, so it is not
+  // mistaken for a completed step at a glance.
+  if (state === 'failed') {
+    return <span className="border-alarm-ink bg-card size-3 shrink-0 rounded-full border-2" />
   }
 
   if (state === 'pending') {
