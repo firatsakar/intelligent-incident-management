@@ -1,15 +1,23 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Incident, NotificationDelivery } from '@/types/api'
 
+/**
+ * Where a stage got to. A discriminator rather than a pair of booleans, because the four states are
+ * genuinely different things and the marker has to tell them apart by shape as well as by weight —
+ * "it happened and we know when", "it happened and the record does not keep when", "it has not
+ * happened yet", and "it never will".
+ */
+type StageState = 'reached' | 'untimed' | 'pending' | 'absent'
+
 interface Stage {
   label: string
   at: string | null
+  state: StageState
   detail?: string
-  pending?: boolean
-  /** A stage that happened but whose exact moment the record does not keep. */
-  done?: boolean
+  /** Elapsed since the previous timed stage, which is what makes this read as a sequence. */
+  since?: string
 }
 
 /**
@@ -18,7 +26,9 @@ interface Stage {
  * landed, when people were told.
  *
  * The gap between the first two is detection latency, and it is the single clearest piece of
- * evidence that the platform noticed something on its own rather than being told about it.
+ * evidence that the platform noticed something on its own rather than being told about it. It is
+ * stated twice on purpose — as the headline strip at the top of the screen, and here in the place
+ * that proves it is a gap between two real recorded moments rather than a figure we assert.
  */
 export function IncidentTimeline({
   incident,
@@ -31,23 +41,31 @@ export function IncidentTimeline({
     .filter((delivery) => delivery.sentAt)
     .sort((a, b) => (a.sentAt! < b.sentAt! ? -1 : 1))
 
+  const firstSentAt = sent[0]?.sentAt ?? null
+
   const stages: Stage[] = [
     incident.detectedAt
       ? {
           label: 'Problem started',
           at: incident.detectedAt,
+          state: 'reached',
           detail: 'On the source clock, not ours.',
         }
       : {
           label: 'Problem started',
           at: null,
+          state: 'absent',
           detail: 'Not recorded — this incident was opened by hand.',
         },
     {
       label: 'Incident opened',
       at: incident.createdAt,
+      state: 'reached',
+      since: incident.detectedAt
+        ? `${formatDuration(incident.detectedAt, incident.createdAt)} to detect`
+        : undefined,
       detail: incident.detectedAt
-        ? `${formatDuration(incident.detectedAt, incident.createdAt)} after it started`
+        ? 'Our clock. The gap above is what detection cost.'
         : undefined,
     },
     // No timestamp, and deliberately so. The incident record does not store when the analysis
@@ -57,7 +75,7 @@ export function IncidentTimeline({
       ? {
           label: 'Analysis applied',
           at: null,
-          done: true,
+          state: 'untimed',
           detail: incident.aiSuggestedCategory
             ? `Categorised as ${incident.aiSuggestedCategory}, priority set to ${incident.priority}`
             : 'Applied.',
@@ -65,32 +83,37 @@ export function IncidentTimeline({
       : {
           label: 'Analysis applied',
           at: null,
-          pending: true,
+          state: 'pending',
           detail: 'Waiting on the analysis service.',
         },
-    sent.length > 0
+    firstSentAt
       ? {
           label: 'People notified',
-          at: sent[0]!.sentAt,
+          at: firstSentAt,
+          state: 'reached',
+          since: `${formatDuration(incident.createdAt, firstSentAt)} after opening`,
           detail: `${sent.length} of ${deliveries.length} channel(s) delivered`,
         }
       : {
           label: 'People notified',
           at: null,
-          pending: deliveries.length === 0,
+          state: deliveries.length === 0 ? 'pending' : 'absent',
           detail:
             deliveries.length === 0
               ? 'No delivery recorded yet.'
-              : 'Every configured channel failed — see below.',
+              : 'Every configured channel failed — see the notifications panel.',
         },
   ]
 
   if (incident.updatedAt) {
     // Honest about what updatedAt is: the last time anything about this incident changed, by a
-    // human or by the analysis. It is not the analysis timestamp.
+    // human or by the analysis. It is not the analysis timestamp, and it must never be moved up
+    // to sit beside one — an earlier version of this screen did exactly that and mis-stated the
+    // time on the first incident it was checked against.
     stages.push({
       label: 'Last changed',
       at: incident.updatedAt,
+      state: 'reached',
       detail: 'Any edit — status, team, or the analysis landing.',
     })
   }
@@ -98,45 +121,100 @@ export function IncidentTimeline({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Timeline</CardTitle>
+        <CardTitle>Timeline</CardTitle>
+        <CardDescription>
+          Five moments the services record separately. Where a time is missing, it is missing from
+          the record rather than from this screen.
+        </CardDescription>
       </CardHeader>
 
       <CardContent>
-        <ol className="relative space-y-6 border-l pl-6">
+        <ol className="space-y-4">
           {stages.map((stage) => (
-            <li key={stage.label} className="relative">
-              <span
-                className={cn(
-                  'absolute -left-[1.6875rem] top-1.5 size-3 rounded-full border-2',
-                  stage.at || stage.done
-                    ? 'bg-primary border-primary'
-                    : stage.pending
-                      ? 'bg-background border-muted-foreground/40'
-                      : 'bg-background border-muted-foreground/20',
+            <li
+              key={stage.label}
+              className="group/stage grid grid-cols-[auto_minmax(0,1fr)] gap-x-3"
+            >
+              {/* The rail is a flex child that fills whatever height the row turned out to be,
+                  rather than an absolutely positioned line at a hand-measured offset — the rows
+                  are different heights and the offsets would only be right on one of them. It is
+                  suppressed on the last stage so the line never runs past the final marker. */}
+              <span className="flex w-3 shrink-0 flex-col items-center pt-1.5" aria-hidden>
+                <StageMarker state={stage.state} />
+                <span className="bg-border mt-1 w-px flex-1 group-last/stage:hidden" />
+              </span>
+
+              <div className="min-w-0 pb-0.5">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <span
+                    className={cn(
+                      'text-sm font-medium',
+                      (stage.state === 'pending' || stage.state === 'absent') &&
+                        'text-muted-foreground',
+                    )}
+                  >
+                    {stage.label}
+                  </span>
+
+                  <span className="text-muted-foreground text-xs tabular-nums">
+                    {stage.at ? (
+                      formatDateTime(stage.at)
+                    ) : stage.state === 'untimed' ? (
+                      // "done" rather than a time, and said as a word so nobody reads an em dash
+                      // as "never happened".
+                      <span className="text-foreground">done · time not recorded</span>
+                    ) : stage.state === 'pending' ? (
+                      'not yet'
+                    ) : (
+                      '—'
+                    )}
+                  </span>
+                </div>
+
+                {stage.since && (
+                  <p className="text-foreground mt-0.5 text-xs font-medium tabular-nums">
+                    +{stage.since}
+                  </p>
                 )}
-              />
 
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span
-                  className={cn(
-                    'font-medium',
-                    !stage.at && !stage.done && 'text-muted-foreground',
-                  )}
-                >
-                  {stage.label}
-                </span>
-                <span className="text-muted-foreground text-sm tabular-nums">
-                  {stage.at ? formatDateTime(stage.at) : stage.done ? 'done' : '—'}
-                </span>
+                {stage.detail && (
+                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
+                    {stage.detail}
+                  </p>
+                )}
               </div>
-
-              {stage.detail && (
-                <p className="text-muted-foreground mt-0.5 text-sm">{stage.detail}</p>
-              )}
             </li>
           ))}
         </ol>
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * Four markers, four shapes. Colour alone would leave "happened" and "never happened" as two
+ * shades of the same dot, which is the one distinction on this card that actually matters.
+ */
+function StageMarker({ state }: { state: StageState }) {
+  if (state === 'reached') {
+    return <span className="bg-primary border-primary size-3 shrink-0 rounded-full border-2" />
+  }
+
+  // Happened, but the moment is unknown: a filled centre inside an open ring, so it reads as
+  // "reached" at a glance and as "not the same as the others" on a second look.
+  if (state === 'untimed') {
+    return (
+      <span className="border-primary bg-card grid size-3 shrink-0 place-items-center rounded-full border-2">
+        <span className="bg-primary size-1 rounded-full" />
+      </span>
+    )
+  }
+
+  if (state === 'pending') {
+    return <span className="border-input bg-card size-3 shrink-0 rounded-full border-2" />
+  }
+
+  return (
+    <span className="border-input bg-card size-3 shrink-0 rounded-full border-2 border-dashed" />
   )
 }

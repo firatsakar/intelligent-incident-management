@@ -54,10 +54,74 @@ export function formatConfidence(value: number | null | undefined): string {
   return value === null || value === undefined ? 'not given' : `${Math.round(value * 100)}%`
 }
 
+/**
+ * The confidence band as a word, so the figure is never carried by colour alone.
+ *
+ * Null stays null rather than becoming "low": the analysis declining to put a number on it says
+ * nothing about how sure it was, and a band invented here would be this file asserting something
+ * the model did not.
+ */
+export function confidenceBand(value: number | null | undefined): string | null {
+  if (value === null || value === undefined) return null
+  if (value >= 0.8) return 'high confidence'
+  if (value >= 0.5) return 'moderate confidence'
+
+  return 'low confidence'
+}
+
 export function formatScore(value: number): string {
   const rendered = value.toFixed(2)
 
   return value > 0 ? `+${rendered}` : rendered
+}
+
+// ---- the detection gate's score vocabulary ---------------------------------------------------
+//
+// SignalScoring emits its breakdown with the key names it uses internally, which are accurate and
+// meaningless to anybody who has not read that file. Two screens print those keys — the incident's
+// score panel and the signal list — so the translation lives here rather than in either of them.
+//
+// Kept as data, not prose in a component, because the set grows: the gate has eight terms today and
+// only five appear in a typical window, so a term nobody has seen yet must still render as words.
+
+export const scoreTermLabel: Record<string, string> = {
+  fatal: 'fatal error',
+  burstBase: 'burst base',
+  overThreshold: 'over threshold',
+  rateAnomaly: 'rate anomaly',
+  precedent: 'precedent',
+  blastRadius: 'blast radius',
+  falsePositivePrecedent: 'false-positive history',
+  muted: 'muted signature',
+}
+
+/**
+ * What each term actually measures — the gate's reasoning, in the operator's language.
+ *
+ * Deliberately says what the term *is* rather than what it is worth: the weights are constants in
+ * SignalScoring and a number copied into the frontend is a number that will quietly go stale.
+ */
+export const scoreTermHelp: Record<string, string> = {
+  fatal: 'The process crashed. A crash is not a judgement call, so it skips scoring entirely and goes straight through.',
+  burstBase: 'The starting score every burst gets for clearing its detection rule at all.',
+  overThreshold:
+    'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
+  rateAnomaly:
+    'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
+  precedent: 'This signature has produced a confirmed real incident before.',
+  blastRadius: 'Two or more services are raising it, not one.',
+  falsePositivePrecedent:
+    'This signature has been marked a false positive before, so the score is pulled down.',
+  muted: 'Somebody muted this signature. It is scored, and heavily penalised for being muted.',
+}
+
+/**
+ * A term the gate emits that this file has not been taught yet. Splitting the camel case is enough
+ * to keep it readable, and far better than printing a raw key or, worse, dropping the row — the
+ * arithmetic has to add up on screen.
+ */
+export function scoreTerm(key: string): string {
+  return scoreTermLabel[key] ?? key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
 }
 
 // ---- colour vocabulary ----------------------------------------------------------------------

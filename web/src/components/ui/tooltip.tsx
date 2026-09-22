@@ -3,8 +3,14 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 import { cn } from "cn"
 
+// 300ms rather than the shipped 0. At 0 every tooltip on the way to somewhere else opens, which on
+// a dense screen is a trail of popups the operator did not ask for; Base UI's own 600 is slow
+// enough to feel broken when you are deliberately inspecting something. Closing stays instant.
+//
+// The Provider is what makes the second tooltip in a group open immediately once the first has
+// been seen, so it is mounted once at the app root rather than per call site.
 function TooltipProvider({
-  delay = 0,
+  delay = 300,
   ...props
 }: TooltipPrimitive.Provider.Props) {
   return (

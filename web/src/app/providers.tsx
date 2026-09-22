@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes'
 import { useState, type ReactNode } from 'react'
 
 import { Toaster } from '@/components/ui/sonner'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 
 import { RealtimeProvider } from './RealtimeProvider'
@@ -44,12 +45,18 @@ export function Providers({ children }: { children: ReactNode }) {
       storageKey="iim-theme"
     >
       <QueryClientProvider client={client}>
-        {/* Auth above the router, not inside it: the login screen and the guard are both routes,
-            and a session that lived under one of them would be re-read on every navigation. Under
-            the query client, because signing in empties the cache. */}
-        <AuthProvider>
-          <RealtimeProvider>{children}</RealtimeProvider>
-        </AuthProvider>
+        {/* Base UI's tooltip needs its Provider mounted for the shared delay and the grouping to
+            work at all — without it each tooltip waits out its own timer, which is what made the
+            component look broken in Adım 19 and got it replaced with a native `title`. It holds no
+            state worth scoping to a route, so it wraps everything once. */}
+        <TooltipProvider>
+          {/* Auth above the router, not inside it: the login screen and the guard are both routes,
+              and a session that lived under one of them would be re-read on every navigation. Under
+              the query client, because signing in empties the cache. */}
+          <AuthProvider>
+            <RealtimeProvider>{children}</RealtimeProvider>
+          </AuthProvider>
+        </TooltipProvider>
         <Toaster position="bottom-right" />
       </QueryClientProvider>
     </ThemeProvider>

@@ -1,12 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
+import { ArrowLeftIcon, ArrowRightIcon, HandIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 import { integrationsApi } from '@/api/endpoints'
+import { InfoHint } from '@/components/InfoHint'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -16,9 +18,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { incidentStatusLabel, priorityClass } from '@/lib/format'
+import {
+  formatDateTime,
+  formatDuration,
+  formatRelative,
+  incidentStatusLabel,
+  priorityClass,
+} from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { incidentStatuses, type IncidentStatus } from '@/types/api'
+import { incidentStatuses, type Incident, type IncidentStatus } from '@/types/api'
 
 import { AiAnalysisPanel } from './AiAnalysisPanel'
 import { DeliveryStrip } from './DeliveryStrip'
@@ -26,6 +34,16 @@ import { IncidentTimeline } from './IncidentTimeline'
 import { ScoreBreakdownPanel } from './ScoreBreakdownPanel'
 import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './queries'
 
+/**
+ * One incident, read as a sequence rather than as a record.
+ *
+ * The screen is ordered by the question an operator asks at each step: what broke (description),
+ * why the gate raised it (the score), when each thing happened (the timeline), what the analysis
+ * concluded, and who was told. The detection latency comes before all of it, because it is the one
+ * number that distinguishes this platform from a log search with an email rule — and because it is
+ * derived from two timestamps the services deliberately keep apart, so it is the first thing that
+ * would quietly break if either were confused for the other.
+ */
 export function IncidentDetailPage() {
   const { id = '' } = useParams()
 
@@ -45,21 +63,28 @@ export function IncidentDetailPage() {
 
   if (incident.isPending) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-2/3" />
-        <Skeleton className="h-64 w-full" />
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-20 w-full" />
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Skeleton className="h-64 lg:col-span-2" />
+          <Skeleton className="h-64" />
+        </div>
       </div>
     )
   }
 
   if (incident.isError) {
     return (
-      <Alert variant="destructive">
-        <AlertTitle>Could not load this incident</AlertTitle>
-        <AlertDescription>
-          {incident.error instanceof Error ? incident.error.message : 'Unknown error'}
-        </AlertDescription>
-      </Alert>
+      <div className="space-y-4">
+        <BackLink />
+        <Alert variant="destructive">
+          <AlertTitle>Could not load this incident</AlertTitle>
+          <AlertDescription>
+            {incident.error instanceof Error ? incident.error.message : 'Unknown error'}
+          </AlertDescription>
+        </Alert>
+      </div>
     )
   }
 
@@ -67,34 +92,43 @@ export function IncidentDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <Link to="/incidents" className="text-muted-foreground text-sm hover:underline">
-          ← Incidents
-        </Link>
+      <div className="space-y-3">
+        <BackLink />
 
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">{data.title}</h1>
+        <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight break-words">{data.title}</h1>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
               <Badge variant="outline" className={cn('border', priorityClass[data.priority])}>
                 {data.priority}
               </Badge>
               <Badge variant="secondary">{incidentStatusLabel[data.status]}</Badge>
               <Badge variant="secondary">{data.source}</Badge>
+
               {data.assignedTeam && (
-                <span className="text-muted-foreground text-sm">· {data.assignedTeam}</span>
+                <span className="text-muted-foreground flex min-w-0 items-center gap-1">
+                  <UsersIcon className="size-3.5 shrink-0" aria-hidden />
+                  <span className="max-w-40 truncate">{data.assignedTeam}</span>
+                </span>
               )}
+
+              <span className="text-dim-foreground tabular-nums">
+                started {formatRelative(data.detectedAt ?? data.createdAt)}
+              </span>
             </div>
           </div>
 
+          {/* Two controls, kept compact and off to the side. This screen is a record of what
+              happened, and a pair of form fields given equal weight to the timeline would read as
+              though the point of opening it were to edit something. */}
           <div className="flex flex-wrap items-center gap-2">
             <Select
               value={data.status}
               onValueChange={(value) => updateStatus.mutate(value as IncidentStatus)}
               disabled={updateStatus.isPending}
             >
-              <SelectTrigger className="w-40">
+              <SelectTrigger className="w-36" aria-label="Incident status">
                 {/* Explicit for the same reason as the list filters: the trigger otherwise shows
                     the raw enum name. */}
                 <SelectValue>{incidentStatusLabel[data.status]}</SelectValue>
@@ -108,36 +142,61 @@ export function IncidentDetailPage() {
               </SelectContent>
             </Select>
 
-            <Input
-              value={team}
-              onChange={(event) => setTeam(event.target.value)}
-              placeholder={data.assignedTeam ?? 'Assign a team'}
-              className="w-44"
-            />
-            <Button
-              variant="outline"
-              disabled={!team.trim() || assignTeam.isPending}
-              onClick={() => {
-                assignTeam.mutate(team.trim())
-                setTeam('')
-              }}
-            >
-              Assign
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <Input
+                value={team}
+                onChange={(event) => setTeam(event.target.value)}
+                // The current team is on the identity row above, not in here as a placeholder: a
+                // placeholder is not a value, it vanishes the moment you type, and an operator
+                // who reads one as the current assignment will believe they cleared it.
+                placeholder={data.assignedTeam ? 'Reassign to…' : 'Assign a team'}
+                aria-label={data.assignedTeam ? 'Reassign to a different team' : 'Assign a team'}
+                className="w-40"
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' || !team.trim() || assignTeam.isPending) return
+
+                  assignTeam.mutate(team.trim())
+                  setTeam('')
+                }}
+              />
+              <Button
+                variant="outline"
+                disabled={!team.trim() || assignTeam.isPending}
+                onClick={() => {
+                  assignTeam.mutate(team.trim())
+                  setTeam('')
+                }}
+              >
+                {assignTeam.isPending ? 'Assigning…' : 'Assign'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
+      <DetectionStrip incident={data} />
+
+      {/* min-w-0 on both columns, or the page grows a horizontal scrollbar on a phone. A grid item
+          defaults to `min-width: auto`, which means min-content, and `break-words` does not reduce
+          a long token's min-content contribution — so one unbroken stack-trace frame in the
+          description was widening the whole document by the length of the longest file path. */}
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Description</CardTitle>
+              <CardTitle>What happened</CardTitle>
+              <CardDescription>
+                {data.source === 'Telemetry'
+                  ? 'Written by the detector from the log records themselves — this is the same text the analysis read.'
+                  : 'As entered when the incident was opened.'}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Telemetry writes a structured evidence summary in here, so the whitespace is
-                  meaningful and must not be collapsed. */}
-              <pre className="text-sm leading-relaxed whitespace-pre-wrap font-sans">
+                  meaningful and must not be collapsed. break-words rather than overflow: the
+                  summary ends in a stack trace whose frames carry absolute file paths, and a
+                  horizontal scrollbar hides the one line that says where the crash was. */}
+              <pre className="font-sans text-sm leading-relaxed break-words whitespace-pre-wrap">
                 {data.description}
               </pre>
             </CardContent>
@@ -148,7 +207,7 @@ export function IncidentDetailPage() {
           <IncidentTimeline incident={data} deliveries={deliveries.data ?? []} />
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <AiAnalysisPanel incident={data} />
 
           <DeliveryStrip
@@ -157,6 +216,116 @@ export function IncidentDetailPage() {
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+function BackLink() {
+  return (
+    <Link
+      to="/incidents"
+      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mx-1 inline-flex min-h-6 items-center gap-1.5 rounded-sm px-1 text-sm outline-none focus-visible:ring-[3px]"
+    >
+      <ArrowLeftIcon className="size-3.5" aria-hidden />
+      Incidents
+    </Link>
+  )
+}
+
+/**
+ * The headline: two clocks and the gap between them.
+ *
+ * `detectedAt` is when the problem started, on the source's clock; `createdAt` is when this record
+ * was filed, on ours. The services keep them apart precisely so this subtraction is possible, and
+ * the result is the clearest single proof that the platform noticed something rather than being
+ * told about it. It is therefore the first figure on the screen rather than a detail line inside
+ * the timeline.
+ *
+ * A hand-opened incident has no `detectedAt` at all, and gets a different strip saying so. That is
+ * not a degraded version of this one — it is the contrast that makes the number mean anything, and
+ * rendering a zero or an em dash there would imply the platform detected something instantly.
+ */
+function DetectionStrip({ incident }: { incident: Incident }) {
+  if (!incident.detectedAt) {
+    return (
+      <Card>
+        <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
+          <span className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
+            <HandIcon className="size-4 shrink-0" aria-hidden />
+            Opened by hand
+          </span>
+          <span className="text-sm tabular-nums">{formatDateTime(incident.createdAt)}</span>
+          <span className="text-muted-foreground basis-full text-xs leading-relaxed">
+            Nothing detected this, so there is no detection latency to measure — the platform was
+            told rather than noticing. The score breakdown below is absent for the same reason.
+          </span>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const latencyMs =
+    new Date(incident.createdAt).getTime() - new Date(incident.detectedAt).getTime()
+
+  return (
+    <Card>
+      <CardContent className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:gap-6">
+        <Moment
+          label="Problem started"
+          at={incident.detectedAt}
+          note="on the source's clock"
+        />
+
+        <ArrowRightIcon
+          className="text-muted-foreground hidden size-4 shrink-0 sm:block"
+          aria-hidden
+        />
+
+        <Moment label="Incident opened" at={incident.createdAt} note="on ours" />
+
+        <div className="sm:ml-auto sm:text-right">
+          <p className="text-muted-foreground flex items-center gap-0.5 text-xs font-medium tracking-wider uppercase sm:justify-end">
+            {latencyMs < 0 ? 'Clock disagreement' : 'Detection latency'}
+
+            <InfoHint
+              label="What detection latency measures"
+              // Below rather than beside: this hint sits at the top-right of the page, and a
+              // popup opening to its left lands squarely on top of the figure it is explaining.
+              side="bottom"
+              className="-my-1"
+            >
+              {latencyMs < 0
+                ? 'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.'
+                : 'From the first log line the source stamped to the moment this record was filed — the log store’s clock to ours. It covers the poll interval, the detection pass and the scoring, and it is the whole of what the platform spent noticing this by itself.'}
+            </InfoHint>
+          </p>
+
+          <p
+            className={cn(
+              'text-2xl font-semibold tabular-nums',
+              latencyMs < 0 && 'text-caution-foreground',
+            )}
+          >
+            {formatDuration(incident.detectedAt, incident.createdAt)}
+          </p>
+
+          <p className="text-dim-foreground text-xs">
+            {latencyMs < 0 ? 'source clock is ahead of ours' : 'noticed without being told'}
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function Moment({ label, at, note }: { label: string; at: string; note: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+        {label}
+      </p>
+      <p className="text-sm tabular-nums">{formatDateTime(at)}</p>
+      <p className="text-dim-foreground text-xs">{note}</p>
     </div>
   )
 }
