@@ -317,3 +317,22 @@ export interface SignalPage {
   items: Signal[]
   totalCount: number
 }
+
+/**
+ * What one poll of one source brought in.
+ *
+ * Deliberately not a per-row push. A poll writes up to two hundred log records per source, which
+ * at the configured floor is roughly forty messages a second fanned to every connected client —
+ * so the server sends one summary per cycle instead. A screen does not need the rows to know its
+ * window is out of date; it needs the number, and the operator decides whether to re-read.
+ */
+export interface IngestionTick {
+  telemetrySourceId: string
+  /** Records actually written, after the cursor's deliberate overlap was filtered out. */
+  newRecords: number
+  touchedSignatures: number
+  /** The newest event in the batch, so a screen can tell whether the arrival is inside its own
+   *  window rather than assuming it is. Null when the batch carried no timestamp. */
+  latestEventAt: string | null
+  completedAt: string
+}

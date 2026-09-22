@@ -20,9 +20,10 @@ export const defaultDeliveryWindow: WindowPreset = '7d'
  * Keyed by the preset, not by the instants it resolves to — `resolveWindow` reads the clock, and a
  * key built from its output would be a new key on every render.
  *
- * `['notification-stats']` is deliberately a reachable prefix. Nothing invalidates it yet; the
- * notification hub handler that should is Parça 6's, and adding a `refetchInterval` here instead
- * would put back exactly the traffic the sockets exist to remove.
+ * `['notification-stats']` is deliberately a reachable prefix. The notification hub invalidates it
+ * — coalesced — when a delivery is recorded, and writes a renamed or deleted integration's name
+ * straight into the rows. A `refetchInterval` here instead would put back exactly the traffic the
+ * sockets exist to remove.
  */
 export const notificationStatsKeys = {
   all: ['notification-stats'] as const,

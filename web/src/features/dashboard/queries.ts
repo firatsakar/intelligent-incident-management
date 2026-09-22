@@ -11,8 +11,12 @@ import { dayRange, type DayWindow } from './window'
  * its output would mint a new cache entry on every render and turn a dashboard into a request loop.
  * The instants go into the request; the window identifies it.
  *
- * Kept as a prefix the hubs can reach: `realtime.ts` invalidates `['incident-stats']` when an
- * incident is opened or changes, which is how these numbers stay current without a timer.
+ * Kept as a prefix the hubs can reach. `realtime.ts` writes the counters straight into every
+ * cached window when an incident arrives or moves — a new incident is +1 in its priority and in
+ * its own UTC day, which has one possible answer — and follows it with one coalesced invalidate
+ * for the parts that do not: the detection percentiles, and the window's own edges. So the
+ * dashboard moves at the instant of the push, and a storm costs one refetch rather than one per
+ * incident.
  */
 export const dashboardKeys = {
   stats: (days: DayWindow) => ['incident-stats', days] as const,

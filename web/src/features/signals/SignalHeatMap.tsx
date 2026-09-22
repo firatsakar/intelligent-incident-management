@@ -7,22 +7,25 @@ import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
 
-import { intensityBounds, intensityOf, otherKey, type HeatCell, type HeatMap } from './heatmap'
+import { cellKey, intensityBounds, intensityOf, otherKey, type HeatCell, type HeatMap } from './heatmap'
 import { layoutGroups, type Rect } from './treemap'
+import { useHeatChanges } from './useHeatChanges'
 
 // A market map, borrowed from the finance screens that do this better than any dashboard: tiles
 // tile the whole area, area is the magnitude, colour is the same magnitude on a ramp, and the eye
 // sweeps from the biggest tile top-left down to the tail. Nothing is spent on gutters.
 //
-// Two channels, deliberately independent:
+// Three channels, deliberately independent:
 //
 //   area + colour   how many times it fired
 //   corner mark     how far the detection gate took it
+//   edge            it was written to just now
 //
 // Colour alone cannot carry the band — the ramp is a quantity now, and a quantity and a verdict on
 // one channel is how a map stops answering "where did the noise turn into an incident". The mark is
 // a shape rather than a second hue for the same reason, and because one operator in twelve cannot
-// separate the hues anyway.
+// separate the hues anyway. Recency is the third, and it is an edge rather than a fill for exactly
+// the same argument: the fill is already spoken for.
 
 /** Indexed by `intensityOf`, which returns 0 only for an empty cell. */
 const heatFill = [
@@ -118,18 +121,34 @@ function toStyle(rect: Rect, box: { width: number; height: number }): CSSPropert
   }
 }
 
+/** What the map was built from, when that is less than the window holds. */
+export interface HeatCoverage {
+  loaded: number
+  total: number
+}
+
 export function SignalHeatMap({
   map,
+  scope,
+  coverage,
   selected,
   onSelect,
 }: {
   map: HeatMap
+  /** The window the map is drawn over. Only used to tell "the data moved" from "the question
+   *  changed", so that switching window does not light up every tile at once. */
+  scope: string
+  coverage?: HeatCoverage
   selected: { service: string; errorKey: string } | null
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
+  const changes = useHeatChanges(map, scope)
 
   const cells = [...map.cells.values()]
+
+  /** The coverage, but only when it is worth saying — a map built from everything says nothing. */
+  const partial = coverage && coverage.loaded < coverage.total ? coverage : null
 
   const byService = new Map<string, HeatCell[]>()
 
@@ -164,7 +183,17 @@ export function SignalHeatMap({
         <CardTitle>Where the errors are</CardTitle>
         <CardDescription>
           Every tile is one error signature. Size and colour are both how often it fired — biggest
-          and reddest top-left — and the corner mark is how far the gate took it.
+          and reddest top-left — the corner mark is how far the gate took it, and a tile outlines
+          itself when a signal for it has just arrived.{' '}
+          {partial && (
+            // Said on the map rather than only on the list below it. A treemap that claims to
+            // show where the errors are while covering a third of the window is the kind of quiet
+            // lie this screen exists not to tell.
+            <span className="text-foreground tabular-nums">
+              Built from the {partial.loaded} most recent of {partial.total} signals in this
+              window — Load more below widens it.
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
 
@@ -239,6 +268,11 @@ export function SignalHeatMap({
                       style={toStyle(tile.rect, size)}
                       max={map.max}
                       showService={group.header === null}
+                      // Looked up by cell key, which is the whole reason this survives a
+                      // re-layout: the tile below may be a different size and in a different
+                      // corner than it was a frame ago, and it is still the same cell.
+                      flash={changes.marks.get(cellKey(tile.data.service, tile.data.errorKey))}
+                      stormy={changes.storm}
                       selected={
                         selected?.service === tile.data.service &&
                         selected?.errorKey === tile.data.errorKey
@@ -264,6 +298,8 @@ function Tile({
   style,
   max,
   showService,
+  flash,
+  stormy,
   selected,
   onSelect,
 }: {
@@ -272,6 +308,10 @@ function Tile({
   style: CSSProperties
   max: number
   showService: boolean
+  /** Undefined when the cell has not changed lately; otherwise a number that changes on every
+   *  fresh hit, which is what remounts the overlay and restarts its animation. */
+  flash: number | undefined
+  stormy: boolean
   selected: boolean
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
@@ -279,7 +319,11 @@ function Tile({
   const detail = detailFor(rect)
   const panel = panelFor(rect)
 
-  const description = `${cell.service} · ${label} — ${cell.occurrences} occurrence(s) across ${cell.signalCount} signal(s) — ${bandTitle[cell.band]}`
+  // Colour is never the only channel, and neither is an animation. A mark that can only be seen
+  // by watching is a mark an operator who looked away has missed.
+  const description = `${cell.service} · ${label} — ${cell.occurrences} occurrence(s) across ${cell.signalCount} signal(s) — ${bandTitle[cell.band]}${
+    flash === undefined ? '' : ' — updated just now'
+  }`
 
   const markSize = detail === 'full' ? 10 : detail === 'compact' ? 9 : 7
   const showMark = rect.width >= 16 && rect.height >= 14
@@ -338,6 +382,18 @@ function Tile({
           <span className="text-[11px] font-medium tabular-nums">{cell.occurrences}</span>
         )}
       </button>
+
+      {/* After the button so it draws over the fill, before the panel so a hovered tile's readout
+          is never behind it. Keyed on the mark rather than on the cell: remounting is what makes a
+          second hit flash a second time, and this element is decorative, so remounting it costs
+          nothing an operator can notice. */}
+      {flash !== undefined && (
+        <span
+          key={flash}
+          aria-hidden
+          className={cn('heat-flash', stormy && 'heat-flash-static')}
+        />
+      )}
 
       {panel !== 'none' && (
         <div
@@ -431,6 +487,17 @@ function Legend({ map }: { map: HeatMap }) {
           </span>
         ))}
         <span className="text-dim-foreground">no mark — recorded only</span>
+
+        {/* The third channel gets a legend entry like the other two. A swatch rather than a live
+            example: the legend is read when nothing is happening, which is precisely when the
+            thing it explains is not on screen. */}
+        <span className="flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="bg-heat-2 size-2.5 shrink-0 shadow-[inset_0_0_0_2px_var(--heat-flash)]"
+          />
+          updated in the last few seconds
+        </span>
       </div>
 
       {map.unplaced > 0 && (

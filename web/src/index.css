@@ -224,6 +224,13 @@
     --heat-5: oklch(0.648 0.196 28);
     --heat-foreground: oklch(0.205 0.045 40);
     --heat-empty: oklch(0.941 0.005 264);
+
+    /* Recency on the signal map: the edge a tile draws when it has just been written to.
+       Deliberately cool against a ramp that is entirely warm, because colour on that map already
+       means occurrence count and a second warm value would land on the same channel. Dark rather
+       than light because the ramp runs pale yellow to red and nothing light reads on its top end:
+       measured against every step, this clears 3:1 on --heat-5 and 7:1 on --heat-1. */
+    --heat-flash: oklch(0.300 0.125 268);
 }
 
 .dark {
@@ -316,6 +323,11 @@
     --heat-5: oklch(0.632 0.193 28);
     --heat-foreground: oklch(0.190 0.040 40);
     --heat-empty: oklch(0.242 0.013 264);
+
+    /* The same value as the light theme, and for the same reason the ramp barely moves: this is
+       drawn on the ramp, not on the page, so what it has to clear is identical in both themes.
+       It is written out rather than inherited so the pair reads as a decision. */
+    --heat-flash: oklch(0.300 0.125 268);
 }
 
 @layer base {
@@ -349,5 +361,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * "This tile was just written to", on the signal map.
+ *
+ * The only rule in this file that animates something the operator did not cause, so it is written
+ * here where the reduced-motion rule above it is visible rather than hidden in a component.
+ *
+ * The *static* ring is the base state and the animation is only what takes it away. That
+ * inversion is what makes the three cases one element: the fade runs normally; under reduced
+ * motion `animation-name: none` leaves the ring standing, so the information survives without the
+ * motion; and the same switch is thrown from JavaScript when the map has been changing long
+ * enough that animating it would be a strobe. Written the obvious way round — opacity 0 at rest,
+ * animated up and back — the reduced-motion case would show nothing at all, because the rule
+ * above collapses the duration rather than removing the animation.
+ *
+ * An edge rather than a fill: the fill is the occurrence ramp, and a quantity and a recency on one
+ * channel is the collapse this map exists to avoid. The outer hairline in the page colour is what
+ * separates it from the neighbouring tile's own edge on a map with no gutters.
+ */
+.heat-flash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px var(--background),
+    inset 0 0 0 3px var(--heat-flash);
+  animation: heat-flash-fade 900ms ease-out forwards;
+}
+
+/* Later in the file than the rule above, which is what lets a single class turn the fade off. */
+.heat-flash-static {
+  animation-name: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heat-flash {
+    animation-name: none;
+  }
+}
+
+@keyframes heat-flash-fade {
+  to {
+    opacity: 0;
   }
 }

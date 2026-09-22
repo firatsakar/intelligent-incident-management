@@ -20,8 +20,10 @@ export const defaultStatsWindow: WindowPreset = '24h'
  * key built from its output would be a new key on every render and turn a dashboard into a request
  * loop. The instants go into the request; the preset identifies it.
  *
- * Kept as a reachable prefix: nothing invalidates `['telemetry-stats']` yet, and the signal hub's
- * handler that should is Parça 6's.
+ * Kept as a reachable prefix. The signal hub invalidates `['telemetry-stats']` when a signal is
+ * recorded or a poll finishes, coalesced — not patched, because this payload is a *ratio* between
+ * stages and only ingestion knows two of them. See the handler in `app/realtime.ts` for why half
+ * an aggregate would be worse than a refetch here.
  */
 export const telemetryStatsKeys = {
   all: ['telemetry-stats'] as const,
