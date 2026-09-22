@@ -19,9 +19,9 @@ public sealed class SignalRIncidentNotifier : IRealtimeNotifier
     }
 
     public Task IncidentCreatedAsync(
-        Guid incidentId,
+        IncidentDto incident,
         CancellationToken cancellationToken = default
-    ) => SendAsync("incidentCreated", incidentId, cancellationToken);
+    ) => SendAsync("incidentCreated", incident, cancellationToken);
 
     public Task IncidentChangedAsync(
         IncidentDto incident,

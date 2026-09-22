@@ -60,6 +60,15 @@ public sealed class IncidentAnalysis : AggregateRoot
     {
         ErrorMessage = errorMessage;
         Status = AnalysisStatus.Failed;
+
+        // Failure used to end here, which made it the one outcome that never left this service:
+        // no domain event, so no outbox row, so no write-back, so no push — and an incident that
+        // said "analysis pending" for the rest of its life. The state that most needs reporting
+        // was the only one that never was.
+        AddDomainEvent(
+            new IncidentAnalysisFailedDomainEvent(IncidentId, IncidentTitle, errorMessage)
+        );
+
         SetUpdatedAt();
     }
 }

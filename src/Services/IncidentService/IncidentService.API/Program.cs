@@ -38,6 +38,11 @@ builder.Services.AddScoped<
     SignalPromotedEventHandler
 >();
 
+builder.Services.AddScoped<
+    IIntegrationEventHandler<IncidentAnalysisFailedEvent>,
+    IncidentAnalysisFailedEventHandler
+>();
+
 builder.Services.AddHostedService<EventBusSubscriber>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

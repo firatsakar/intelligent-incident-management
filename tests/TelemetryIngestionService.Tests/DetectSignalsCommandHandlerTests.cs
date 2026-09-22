@@ -556,6 +556,47 @@ public sealed class DetectSignalsCommandHandlerTests
     }
 
     [Fact]
+    public async Task TheSignatureIsAnnouncedAlongsideTheSignal()
+    {
+        // The signature changed in the same transaction — it may have gained an incident, its
+        // counters moved — and broadcasting only the signal left the evidence screen's signature
+        // column going stale while signals were still arriving live on the very same push.
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenOrdinaryBaselineOf(mean: 6);
+        GivenWindow(occurrences: 6);
+
+        await Detect();
+
+        await _realtime
+            .Received(1)
+            .SignatureChangedAsync(
+                Arg.Any<ErrorSignatureDto>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NoSignalMeansNoSignatureAnnouncementEither()
+    {
+        // A signature that did not cross a rule was not written to, so announcing it would be a
+        // message about nothing — multiplied by every signature the detector looks at per poll.
+        GivenRules(Rule(threshold: 10));
+        GivenSignature();
+        GivenOrdinaryBaselineOf(mean: 2);
+        GivenWindow(occurrences: 2);
+
+        await Detect();
+
+        await _realtime
+            .DidNotReceive()
+            .SignatureChangedAsync(
+                Arg.Any<ErrorSignatureDto>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
     public async Task TheAnnouncementComesAfterTheBatchIsSaved()
     {
         GivenRules(Rule(threshold: 3));

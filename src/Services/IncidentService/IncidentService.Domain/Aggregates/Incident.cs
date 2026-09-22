@@ -23,6 +23,10 @@ public sealed class Incident : AggregateRoot
     // shown anywhere. Nullable because an analysis may decline to give one.
     public double? AiConfidence { get; private set; }
 
+    // Non-null means the analysis ran and failed. Distinct from IsAiAnalyzed being false, which
+    // means it has not run yet — one of those resolves itself and the other does not.
+    public string? AiAnalysisError { get; private set; }
+
     // When the problem started, as distinct from CreatedAt, which is when the record was filed.
     // An engineer opening an incident at 14:35 for something that began at 14:20 has the same
     // need as a telemetry promotion: correlating evidence against the wrong moment finds nothing.
@@ -87,6 +91,31 @@ public sealed class Incident : AggregateRoot
         AiReasoning = reasoning;
         AiConfidence = confidence;
         IsAiAnalyzed = true;
+
+        // A late success clears an earlier failure. Analysis is retried through redelivery, so an
+        // incident that failed once and then succeeded must not keep wearing the failure.
+        AiAnalysisError = null;
+
+        SetUpdatedAt();
+    }
+
+    /// <summary>
+    /// The analysis was attempted and produced nothing.
+    ///
+    /// This is not the same as <see cref="IsAiAnalyzed"/> being false, and that distinction is
+    /// the whole reason the field exists: "not analysed yet" is a state that resolves itself,
+    /// and "analysis failed" is one that does not. Until this was recorded, the two were
+    /// indistinguishable on screen and a failed incident waited for an enrichment that was never
+    /// coming.
+    ///
+    /// <see cref="IsAiAnalyzed"/> stays false, because no analysis was applied — the flag means
+    /// "these AI fields hold something", and here they do not.
+    /// </summary>
+    public void RecordAiAnalysisFailure(string error)
+    {
+        // Idempotent for the same reason ApplyAiAnalysis is: delivery is at-least-once, and a
+        // redelivered failure must not look like a second, different one.
+        AiAnalysisError = error;
         SetUpdatedAt();
     }
 }

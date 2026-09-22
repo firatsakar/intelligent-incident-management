@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         // The outbox mechanics are shared; only the routing is ours.
         services.AddScoped<IOutboxStore, AgentOutboxStore>();
         services.AddScoped<IOutboxMessageHandler, IncidentAnalysisCompletedOutboxHandler>();
+        services.AddScoped<IOutboxMessageHandler, IncidentAnalysisFailedOutboxHandler>();
 
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();

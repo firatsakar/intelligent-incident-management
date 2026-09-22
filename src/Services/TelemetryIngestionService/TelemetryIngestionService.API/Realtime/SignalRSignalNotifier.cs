@@ -18,24 +18,53 @@ public sealed class SignalRSignalNotifier : IRealtimeNotifier
         _logger = logger;
     }
 
-    public async Task SignalRecordedAsync(
+    public Task SignalRecordedAsync(
         SignalDto signal,
         CancellationToken cancellationToken = default
+    ) => SendAsync("signalRecorded", signal, signal.Id, cancellationToken);
+
+    public Task SignatureChangedAsync(
+        ErrorSignatureDto signature,
+        CancellationToken cancellationToken = default
+    ) => SendAsync("signatureChanged", signature, signature.Id, cancellationToken);
+
+    public Task SourceChangedAsync(
+        TelemetrySourceDto source,
+        CancellationToken cancellationToken = default
+    ) => SendAsync("sourceChanged", source, source.Id, cancellationToken);
+
+    public Task SourceDeletedAsync(Guid sourceId, CancellationToken cancellationToken = default) =>
+        SendAsync("sourceDeleted", sourceId, sourceId, cancellationToken);
+
+    public Task IngestionCompletedAsync(
+        IngestionTickDto tick,
+        CancellationToken cancellationToken = default
+    ) => SendAsync("ingestionCompleted", tick, tick.TelemetrySourceId, cancellationToken);
+
+    /// <summary>
+    /// Every broadcast in this service is best-effort. Detection has already committed by the
+    /// time any of these run, along with any promotion event the interceptor harvested into the
+    /// outbox; losing a broadcast costs a stale screen until the next read, while letting one
+    /// throw would cost the poll cycle.
+    /// </summary>
+    private async Task SendAsync(
+        string message,
+        object payload,
+        Guid id,
+        CancellationToken cancellationToken
     )
     {
         try
         {
-            await _hub.Clients.All.SendAsync("signalRecorded", signal, cancellationToken);
+            await _hub.Clients.All.SendAsync(message, payload, cancellationToken);
         }
         catch (Exception ex)
         {
-            // Detection has already committed, along with any promotion event the interceptor
-            // harvested into the outbox. Losing the broadcast costs a stale screen until the next
-            // read; letting it throw would cost the poll cycle.
             _logger.LogWarning(
                 ex,
-                "Failed to broadcast signal {SignalId} over the signal hub.",
-                signal.Id
+                "Failed to broadcast {Message} for {EntityId} over the signal hub.",
+                message,
+                id
             );
         }
     }

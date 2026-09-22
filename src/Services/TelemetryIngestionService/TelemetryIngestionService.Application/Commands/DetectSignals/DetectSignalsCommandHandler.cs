@@ -75,10 +75,20 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
 
         // Announced only once committed, and with the signature attached — a signal that cannot
         // say which service broke has nowhere to land on the heat map.
+        //
+        // The signature goes out too. It changed in the same transaction — it may have gained an
+        // incident, its occurrence and promotion counters moved — and broadcasting only the
+        // signal left the evidence screen's signature column going stale while signals were
+        // still arriving live on the very same push.
         foreach (var (signal, signature) in detected)
         {
             await _realtime.SignalRecordedAsync(
                 SignalDto.FromDomain(signal, signature),
+                cancellationToken
+            );
+
+            await _realtime.SignatureChangedAsync(
+                ErrorSignatureDto.FromDomain(signature),
                 cancellationToken
             );
         }
