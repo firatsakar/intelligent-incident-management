@@ -152,6 +152,43 @@ public sealed class LogRecordRepository : ILogRecordRepository
         return (records, total);
     }
 
+    public async Task<LogWindowSummary> GetWindowSummaryAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _context.LogRecords.AsNoTracking()
+            .Where(x => x.Timestamp >= from && x.Timestamp <= to);
+
+        // Three aggregates, three round trips, and no rows returned by any of them. The
+        // alternative — one pass in memory — would make the cost of drawing a funnel depend on
+        // how bad the customer's week was, which is precisely backwards.
+        var total = await query.CountAsync(cancellationToken);
+
+        var distinctFingerprints = await query
+            .Select(x => x.Fingerprint)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        var byService = await query
+            .GroupBy(x => x.Service)
+            .Select(g => new { Service = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        var bySeverity = await query
+            .GroupBy(x => x.Severity)
+            .Select(g => new { Severity = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return new LogWindowSummary(
+            total,
+            distinctFingerprints,
+            byService.ToDictionary(x => x.Service, x => x.Count),
+            bySeverity.ToDictionary(x => x.Severity, x => x.Count)
+        );
+    }
+
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         await _context.SaveChangesAsync(cancellationToken);

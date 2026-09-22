@@ -39,16 +39,50 @@ public sealed class SignalRepository : ISignalRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Signal>> GetRecentAsync(
+    public async Task<(IReadOnlyList<Signal> Items, int TotalCount)> GetRecentAsync(
+        DateTime from,
+        DateTime to,
+        int limit,
+        int offset,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var query = _context
+            .Signals.AsNoTracking()
+            .Where(x => x.DetectedAt >= from && x.DetectedAt <= to);
+
+        var total = await query.CountAsync(cancellationToken);
+
+        // Newest first, which is the opposite of what this method used to return. The caller
+        // shows a truncated list, and truncating a window means dropping its far end — so the end
+        // that gets dropped has to be the old one.
+        var items = await query
+            .OrderByDescending(x => x.DetectedAt)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return (items, total);
+    }
+
+    public async Task<IReadOnlyList<SignalStatsRow>> GetWindowStatsRowsAsync(
         DateTime from,
         DateTime to,
         CancellationToken cancellationToken = default
     )
     {
+        // Five scalars per signal and nothing else: no score breakdown dictionary, no reason
+        // string. Those are what make a Signal expensive and neither is counted here.
         return await _context
             .Signals.AsNoTracking()
             .Where(x => x.DetectedAt >= from && x.DetectedAt <= to)
-            .OrderBy(x => x.DetectedAt)
+            .Select(x => new SignalStatsRow(
+                x.ErrorSignatureId,
+                x.Status,
+                x.DetectedAt,
+                x.IncidentId,
+                x.OccurrenceCount
+            ))
             .ToListAsync(cancellationToken);
     }
 

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TelemetryIngestionService.Application.Queries.GetEvidence;
 using TelemetryIngestionService.Application.Queries.GetSignals;
+using TelemetryIngestionService.Application.Queries.GetTelemetryStats;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.API.Controllers;
@@ -51,6 +52,7 @@ public sealed class TelemetryController : ControllerBase
         [FromQuery] int limit = 50,
         [FromQuery] DateTime? from = null,
         [FromQuery] DateTime? to = null,
+        [FromQuery] int offset = 0,
         CancellationToken cancellationToken = default
     )
     {
@@ -62,7 +64,26 @@ public sealed class TelemetryController : ControllerBase
             return BadRequest(new { error = "'from' must be earlier than 'to'." });
 
         return Ok(
-            await _sender.Send(new GetSignalsQuery(status, limit, from, to), cancellationToken)
+            await _sender.Send(
+                new GetSignalsQuery(status, limit, from, to, offset),
+                cancellationToken
+            )
         );
+    }
+
+    // The detection gate's own story as numbers: how many log records folded into how many
+    // signatures, how many of those crossed a rule, and how many of those the gate deliberately
+    // did not raise. Plus the same rollup per service.
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (from.HasValue && to.HasValue && from >= to)
+            return BadRequest(new { error = "'from' must be earlier than 'to'." });
+
+        return Ok(await _sender.Send(new GetTelemetryStatsQuery(from, to), cancellationToken));
     }
 }

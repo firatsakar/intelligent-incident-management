@@ -4,6 +4,7 @@ using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
 using IncidentService.Application.Queries.GetIncidentById;
 using IncidentService.Application.Queries.GetIncidents;
+using IncidentService.Application.Queries.GetIncidentStats;
 using IncidentService.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -46,6 +47,25 @@ public sealed class IncidentsController : ControllerBase
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new GetIncidentByIdQuery(id), cancellationToken);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Arrival shape over time plus the current open picture, for the dashboard. The guid
+    /// constraint on GetById is what keeps "stats" from being read as an id.
+    /// </summary>
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (from.HasValue && to.HasValue && from >= to)
+            return BadRequest(new { error = "'from' must be earlier than 'to'." });
+
+        var result = await _sender.Send(new GetIncidentStatsQuery(from, to), cancellationToken);
+
         return Ok(result);
     }
 
