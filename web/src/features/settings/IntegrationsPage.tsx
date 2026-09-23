@@ -413,9 +413,9 @@ function InstanceRow({
         ) : (
           <>
             <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
-            {t.pausedNote}{' '}
-            {describeFilters(dictionary, integration.minPriority, integration.categoryFilter)}{' '}
-            {t.whenResumed}
+            {t.pausedNote(
+              describeFilters(dictionary, integration.minPriority, integration.categoryFilter),
+            )}
           </>
         )}
       </p>

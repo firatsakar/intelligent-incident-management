@@ -293,14 +293,14 @@ export const tr: Dictionary = {
       toDetect: (duration: string) => `tespit için +${duration}`,
       ourClockGap: 'Bizim saatimiz. Yukarıdaki aralık tespitin maliyeti.',
 
-      analysisApplied: 'Analiz uygulandı',
+      analysisApplied: 'Analiz işlendi',
       categorised: (category: string, priority: string) =>
         `${category} olarak sınıflandı, öncelik ${priority} yapıldı`,
-      applied: 'Uygulandı.',
+      applied: 'İşlendi.',
       analysisFailed: 'Analiz çalıştı ve hiçbir şey döndürmedi. Sebebi için panele bakın.',
       analysisWaiting: 'Analiz servisi bekleniyor.',
 
-      peopleNotified: 'İnsanlara haber verildi',
+      peopleNotified: 'Bildirimler gönderildi',
       afterOpening: (duration: string) => `açılıştan +${duration} sonra`,
       channelsDelivered: (sent: number, total: number) =>
         `${total} kanaldan ${sent} tanesi ulaştı`,
@@ -581,7 +581,7 @@ export const tr: Dictionary = {
       burstingWider:
         ' Bir imza birden fazla kez tetiklenebilir; bu aşamanın üstündekinden dar değil geniş olmasının sebebi bu.',
 
-      whatArrived: 'Ne geldi',
+      whatArrived: 'Gelenler',
       noLogRecord: 'Bu pencereye hiç log kaydı gelmedi.',
 
       verdictsTitle: 'Kapı nasıl karar verdi',
@@ -710,7 +710,7 @@ export const tr: Dictionary = {
       caption: 'UTC günü başına açılan olaylar, önceliğe göre.',
       columnDay: 'Gün (UTC)',
       columnTotal: 'Toplam',
-      legendNote: 'Kritik her çubuğun tabanında',
+      legendNote: 'Kritik, her çubuğun tabanında',
     },
   },
 
@@ -911,8 +911,8 @@ export const tr: Dictionary = {
       sends: (parts: string) => `Gönderir: ${parts}`,
       sendsEverything: 'Her olayı gönderir — filtre ayarlanmamış',
       category: (value: string) => `kategori ${value}`,
-      pausedNote: '— buraya bir şey gönderilmiyor.',
-      whenResumed: 'devam ettirildiğinde.',
+      pausedNote: (filters: string) =>
+        `— buraya bir şey gönderilmiyor; devam ettirilirse: ${filters}.`,
     },
 
     telemetry: {
@@ -976,8 +976,8 @@ export const tr: Dictionary = {
         `${what} için her ${seconds} saniyede bir bakıyor`,
       matching: (filter: string) => `${filter} ile eşleşen kayıtlar`,
       defaultFilter: 'hata ve ölümcül kayıtlar',
-      pausedNote: '— buradan bir şey okunmuyor.',
-      whenResumed: 'devam ettirildiğinde.',
+      pausedNote: (schedule: string) =>
+        `— buradan bir şey okunmuyor; devam ettirilirse: ${schedule}.`,
     },
   },
 

@@ -65,6 +65,40 @@ propose deleting them without arguing against the specific failure they prevent:
 - "Here you can…", "This page shows…", "Use this to…" in any language.
 - A qualifier that applies to the whole product, repeated on one screen.
 
+## The second judgement: does a label sound like a label
+
+The question above is about whether a sentence should exist. It is the wrong question
+to ask of a **label** — two or three words on a badge, a timeline stage, a table
+header, a nav entry, a button. Those always earn their place. What they can fail at is
+sounding like something an operator would actually say.
+
+**Audit every short label in its own pass, in every language, and read it aloud.** A
+label can be a correct translation and still be wrong:
+
+> `peopleNotified` — en "People notified", tr **"İnsanlara haber verildi"**.
+> Word-perfect, and nobody labels a timeline stage that way. "Bildirimler gönderildi".
+
+That one shipped, because an earlier version of this brief framed the whole audit as a
+keep/delete judgement about prose and never named labels as a class. They are a class.
+Go through them deliberately.
+
+What to look for:
+
+- **A verb calqued from English into the wrong register.** "Analysis applied" →
+  "Analiz uygulandı" is what you do to a treatment; the analysis was *written onto*
+  the incident.
+- **A heading that is a question when the language wants a noun.** "What arrived" →
+  "Ne geldi" reads as a question; "Gelenler" reads as a label.
+- **A sentence assembled by the component rather than by the dictionary.** If a screen
+  renders `{a} {b} {detail} {c}`, that order is somebody's grammar and it will break in
+  the next language. Flag it and propose one entry that takes the detail and lets each
+  language build its own sentence around it. This has now happened twice — `+{since}`
+  on the incident timeline, and the paused row on both settings screens.
+- **Missing punctuation that changes the parse.** "Kritik her çubuğun tabanında" is one
+  noun phrase; "Kritik, her çubuğun tabanında" is the sentence that was meant.
+- **Two labels a user sees together that collapse to the same word** in one language
+  while staying distinct in the other.
+
 ## The register you are writing in
 
 **Calm by default, loud only where the system committed to something.** A console that

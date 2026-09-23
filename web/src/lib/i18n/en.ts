@@ -1025,8 +1025,7 @@ export const en = {
       sends: (parts: string) => `Sends ${parts}`,
       sendsEverything: 'Sends every incident — no filters set',
       category: (value: string) => `category ${value}`,
-      pausedNote: '— nothing is sent here.',
-      whenResumed: 'when resumed.',
+      pausedNote: (filters: string) => `— nothing is sent here. ${filters} when resumed.`,
     },
 
     telemetry: {
@@ -1094,8 +1093,7 @@ export const en = {
       polls: (seconds: number, what: string) => `Polls every ${seconds}s for ${what}`,
       matching: (filter: string) => `events matching ${filter}`,
       defaultFilter: 'errors and fatals',
-      pausedNote: '— nothing is read from here.',
-      whenResumed: 'when resumed.',
+      pausedNote: (schedule: string) => `— nothing is read from here. ${schedule} when resumed.`,
     },
   },
 

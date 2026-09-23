@@ -419,7 +419,7 @@ function SourceRow({
         ) : (
           <>
             <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
-            {t.pausedNote} {describeSchedule(dictionary, source)} {t.whenResumed}
+            {t.pausedNote(describeSchedule(dictionary, source))}
           </>
         )}
       </p>
