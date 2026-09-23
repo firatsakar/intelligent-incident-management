@@ -206,8 +206,8 @@ export const tr: Dictionary = {
       matching: (count: number) => `${count} olay bu filtrelere uyuyor`,
       onRecord: (count: number) => `Kayıtta ${count} olay`,
 
-      filterStatus: 'Duruma göre süz',
-      filterPriority: 'Önceliğe göre süz',
+      filterStatus: 'Durum filtresi',
+      filterPriority: 'Öncelik filtresi',
       anyStatus: 'Her durum',
       anyPriority: 'Her öncelik',
       clear: 'Temizle',
@@ -464,7 +464,7 @@ export const tr: Dictionary = {
       ) => `${service} · ${label} — ${signals} sinyalde ${occurrences} kez — ${band}`,
       justUpdated: ' — az önce güncellendi',
 
-      panelCounts: (_occurrences: number, signals: number) => `kez · ${signals} sinyal`,
+      panelCounts: '{occurrences} kez · {signals} sinyal',
       incidentLink: 'Olay →',
 
       legendOccurrences: 'görülme sayısı',
@@ -478,7 +478,7 @@ export const tr: Dictionary = {
       title: 'Kanıt',
       loadError: 'Kanıt yüklenemedi',
 
-      filterService: 'Servise göre süz',
+      filterService: 'Servis filtresi',
       clearService: 'Servis filtresini temizle',
 
       logRecords: 'Log kayıtları',
@@ -494,9 +494,10 @@ export const tr: Dictionary = {
 
       signatures: 'İmzalar',
       signaturesCount: (count: number) =>
-        `Aşağıdaki sinyallerin arkasındaki ${count} ayrı hata`,
-      signaturesTruncated: ' (pencerenin tamamı değil, yalnızca gösterilen sinyaller)',
-      signaturesAllTime: '. Her birinin sayaçları bu pencereyi değil tüm zamanı kapsıyor.',
+        `Aşağıdaki sinyallerin arkasındaki ${count} ayrı hata.`,
+      signaturesCountTruncated: (count: number) =>
+        `Gösterilen sinyallerin arkasındaki ${count} ayrı hata — pencerenin tamamının değil.`,
+      signaturesAllTime: 'Her birinin sayaçları bu pencereyi değil tüm zamanı kapsıyor.',
       signaturesListLabel: 'Bu penceredeki sinyallerin arkasındaki imzalar',
       emptySignaturesTitle: 'Burada imza yok.',
       emptySignatures:
@@ -599,7 +600,7 @@ export const tr: Dictionary = {
 
       verdict: {
         Promoted: 'Eşiği aştı ve kapı onun için bir olay açtı.',
-        Deduplicated: 'Zaten açık olan bir olaya katlandı. Birisi uyandırıldı — daha önce.',
+        Deduplicated: 'Zaten açık olan bir olaya katlandı. Biri uyandırıldı — daha önce.',
         Weak:
           'Puanlandı — ve eşiğin altında puanlandı. Görebileceğiniz yerde tutuldu; kimse aranmadı.',
         Recorded: 'Kayıt için tutuldu, fazlası değil.',
@@ -711,6 +712,9 @@ export const tr: Dictionary = {
       ariaLabel: (days: number) =>
         `${days} gün boyunca UTC günü başına açılan olaylar. Günleri tek tek okumak için ok tuşlarını kullanın.`,
       emptyPlot: 'Bu pencerede hiçbir şey açılmadı. İçindeki her gün boş.',
+      dayReadout: '{day} · {total} — {breakdown}',
+      dayReadoutEmpty: '{day} · {total}',
+      priorityCount: (count: number, priority: string) => `${count} ${priority}`,
       caption: 'UTC günü başına açılan olaylar, önceliğe göre.',
       columnDay: 'Gün (UTC)',
       columnTotal: 'Toplam',
@@ -753,11 +757,12 @@ export const tr: Dictionary = {
       description: (scope: string) =>
         `Medyan, ${scope} — teslimatın yazılmasından kanalın onu onaylamasına kadar ölçülüyor.`,
       empty: 'Bu pencerede hiçbir şey gönderilmedi, yani süresi ölçülecek bir şey de yok.',
-      noneSucceededLead: 'Bu pencerede hiçbiri başarılı olmadı, ',
       noneSucceeded:
-        'yani çizilecek bir gönderim süresi yok. Bu sıfır gönderim süresi değil — sürenin yokluğu.',
+        '{lead} yani çizilecek bir gönderim süresi yok. Bu sıfır gönderim süresi değil — sürenin yokluğu.',
+      noneSucceededLead: 'Bu pencerede hiçbiri başarılı olmadı,',
       chartLabel: (scope: string, detail: string) =>
         `Entegrasyon başına medyan gönderim süresi, ${scope}. ${detail}.`,
+      chartRow: (name: string, value: string) => `${name} ${value}`,
       dashNote:
         'Uzun tire, o entegrasyon için bu pencerede hiçbir şeyin başarılı olmadığı anlamına gelir, yani medyanı yok. Bu sıfır gönderim süresi değil.',
     },
@@ -783,9 +788,11 @@ export const tr: Dictionary = {
       id: (short: string) => `id ${short}`,
       lastFailure: 'Son başarısızlık',
 
-      sent: 'Gönderildi',
+      // Same rule as the swatch labels above: these are <dt> elements naming a count, so the
+      // participle. 'Başarısız' is already adjectival.
+      sent: 'Gönderilen',
       failed: 'Başarısız',
-      pending: 'Beklemede',
+      pending: 'Bekleyen',
       median: 'Medyan süre',
       lastSent: 'Son gönderim',
     },

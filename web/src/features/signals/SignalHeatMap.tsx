@@ -3,7 +3,7 @@ import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useT } from '@/lib/i18n'
+import { T, useT } from '@/lib/i18n'
 import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
@@ -408,11 +408,18 @@ function Tile({
         >
           {panel === 'full' ? (
             <>
-              <div className="flex items-baseline gap-1.5">
-                <span className="text-sm font-semibold tabular-nums">{cell.occurrences}</span>
-                <span className="text-muted-foreground truncate text-[11px]">
-                  {t.panelCounts(cell.occurrences, cell.signalCount)}
-                </span>
+              <div className="text-muted-foreground flex items-baseline gap-1 truncate text-[11px]">
+                <T
+                  text={t.panelCounts}
+                  values={{
+                    occurrences: (
+                      <span className="text-foreground text-sm font-semibold tabular-nums">
+                        {cell.occurrences}
+                      </span>
+                    ),
+                    signals: cell.signalCount,
+                  }}
+                />
               </div>
 
               <div className="mt-0.5 flex items-center gap-1.5">

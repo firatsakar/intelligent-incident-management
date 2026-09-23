@@ -536,8 +536,10 @@ export const en = {
         `${service} · ${label} — ${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} across ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })} — ${band}`,
       justUpdated: ' — updated just now',
 
-      panelCounts: (occurrences: number, signals: number) =>
-        `${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} · ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })}`,
+      // The number is styled, so it arrives as a slot rather than as a prefix the component
+      // prints ahead of a bare unit. Turkish happens to front the figure too, which is exactly
+      // why the old shape looked correct while owning a rule it had no business owning.
+      panelCounts: '{occurrences} occurrences · {signals} signals',
       incidentLink: 'Incident →',
 
       legendOccurrences: 'occurrences',
@@ -569,9 +571,10 @@ export const en = {
 
       signatures: 'Signatures',
       signaturesCount: (count: number) =>
-        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals below`,
-      signaturesTruncated: ' — behind the ones shown, not behind the whole window',
-      signaturesAllTime: '. The counters on each span all time, not this window.',
+        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals below.`,
+      signaturesCountTruncated: (count: number) =>
+        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals shown — not behind the whole window.`,
+      signaturesAllTime: 'The counters on each span all time, not this window.',
       signaturesListLabel: 'Signatures behind the signals in this window',
       emptySignaturesTitle: 'No signatures here.',
       emptySignatures:
@@ -812,6 +815,11 @@ export const en = {
         `Incidents opened per UTC day across ${days} ${plural('en', days, { one: 'day', other: 'days' })}. Use the arrow keys to read one day at a time.`,
       // A drawn-but-empty grid reads as a chart that failed rather than as a quiet month.
       emptyPlot: 'Nothing opened in this window. Every day in it is empty.',
+      // The whole readout, separators included. It is `aria-live`, so the order the component
+      // was imposing was also the order it was spoken in.
+      dayReadout: '{day} · {total} — {breakdown}',
+      dayReadoutEmpty: '{day} · {total}',
+      priorityCount: (count: number, priority: string) => `${count} ${priority}`,
       caption: 'Incidents opened per UTC day, by priority.',
       columnDay: 'Day (UTC)',
       columnTotal: 'Total',
@@ -859,11 +867,16 @@ export const en = {
       description: (scope: string) =>
         `Median, ${scope} — measured from the delivery being written to the channel acknowledging it.`,
       empty: 'Nothing was dispatched in this window, so there is nothing to have timed.',
-      noneSucceededLead: 'Nothing succeeded in this window, ',
+      // One sentence with the muted half as a slot. Split across two entries, the connector
+      // straddled the seam and the order was the component's.
       noneSucceeded:
-        'so there is no dispatch time to draw. That is not a dispatch time of zero — it is the absence of one.',
+        '{lead} so there is no dispatch time to draw. That is not a dispatch time of zero — it is the absence of one.',
+      noneSucceededLead: 'Nothing succeeded in this window,',
       chartLabel: (scope: string, detail: string) =>
         `Median dispatch time per integration, ${scope}. ${detail}.`,
+      /** One row of that label. It is screen-reader text and was being built outside the
+       *  dictionary, where `check:i18n` cannot see it. */
+      chartRow: (name: string, value: string) => `${name} ${value}`,
       dashNote:
         'An em dash is an integration that had nothing succeed in this window, so it has no median. It is not a dispatch time of zero.',
     },

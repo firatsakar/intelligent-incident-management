@@ -223,8 +223,9 @@ export function EvidencePage() {
                     when the signals are truncated this list is truncated with them, and saying
                     "12 in this window" would be claiming a completeness the response never had. */}
                 <CardDescription>
-                  {t.signaturesCount(query.data.totalSignatures)}
-                  {query.data.signals.length < query.data.totalSignals && t.signaturesTruncated}
+                  {query.data.signals.length < query.data.totalSignals
+                    ? t.signaturesCountTruncated(query.data.totalSignatures)
+                    : t.signaturesCount(query.data.totalSignatures)}{' '}
                   {t.signaturesAllTime}
                 </CardDescription>
               </CardHeader>

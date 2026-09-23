@@ -10,7 +10,7 @@ import {
   stackOffsets,
 } from '@/components/chart/scale'
 import { formatUtcDay, formatUtcDayLong, priorityFill } from '@/lib/format'
-import { useT } from '@/lib/i18n'
+import { T, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { incidentPriorities, type IncidentDayBucket } from '@/types/api'
 
@@ -98,20 +98,26 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           `aria-live` because the arrow keys change it and nothing else announces that. */}
       <p aria-live="polite" className="min-h-9 text-sm">
         {activeDay ? (
-          <>
-            <span className="font-medium">{formatUtcDayLong(activeDay.day)}</span>
-            <span className="text-muted-foreground"> · </span>
-            <span className="tabular-nums">{t.dayTotal(activeDay.total)}</span>
-            {activeDay.total > 0 && (
-              <span className="text-muted-foreground tabular-nums">
-                {' — '}
-                {incidentPriorities
-                  .filter((priority) => (activeDay.byPriority[priority] ?? 0) > 0)
-                  .map((priority) => `${activeDay.byPriority[priority]} ${labels.priority[priority]}`)
-                  .join(' · ')}
-              </span>
-            )}
-          </>
+          <T
+            text={activeDay.total > 0 ? t.dayReadout : t.dayReadoutEmpty}
+            values={{
+              day: <span className="font-medium">{formatUtcDayLong(activeDay.day)}</span>,
+              total: <span className="tabular-nums">{t.dayTotal(activeDay.total)}</span>,
+              breakdown: (
+                <span className="text-muted-foreground tabular-nums">
+                  {incidentPriorities
+                    .filter((priority) => (activeDay.byPriority[priority] ?? 0) > 0)
+                    .map((priority) =>
+                      t.priorityCount(
+                        activeDay.byPriority[priority] ?? 0,
+                        labels.priority[priority],
+                      ),
+                    )
+                    .join(' · ')}
+                </span>
+              ),
+            }}
+          />
         ) : (
           <span className="text-muted-foreground tabular-nums">
             {t.summary(windowTotal, count)}

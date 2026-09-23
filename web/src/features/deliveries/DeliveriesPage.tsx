@@ -21,7 +21,7 @@ import {
   formatSeconds,
   statusTier,
 } from '@/lib/format'
-import { useT, type Dictionary } from '@/lib/i18n'
+import { T, useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { resolveWindowPreset } from '@/lib/window'
 import type { IntegrationHealth, NotificationStats } from '@/types/api'
@@ -221,8 +221,12 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
           <p className="text-muted-foreground text-sm">{t.empty}</p>
         ) : measured.length === 0 ? (
           <p className="text-sm">
-            <span className="text-muted-foreground">{t.noneSucceededLead}</span>
-            {t.noneSucceeded}
+            <T
+              text={t.noneSucceeded}
+              values={{
+                lead: <span className="text-muted-foreground">{t.noneSucceededLead}</span>,
+              }}
+            />
           </p>
         ) : (
           <>
@@ -234,9 +238,11 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
               label={t.chartLabel(
                 scope,
                 measured
-                  .map(
-                    (row) =>
-                      `${nameOf(deliveries, row)} ${formatSeconds(row.medianDispatchSeconds)}`,
+                  .map((row) =>
+                    t.chartRow(
+                      nameOf(deliveries, row),
+                      formatSeconds(row.medianDispatchSeconds),
+                    ),
                   )
                   .join(', '),
               )}
