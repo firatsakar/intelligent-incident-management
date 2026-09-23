@@ -76,7 +76,8 @@ function Identity({
   organizationName: string | undefined
   onSignOut: () => void
 }) {
-  const { identity } = useT().profile
+  const { common, profile } = useT()
+  const { identity } = profile
 
   return (
     <Card>
@@ -110,7 +111,7 @@ function Identity({
               means starting a session under a different one. */}
           <Button variant="outline" className="shrink-0" onClick={onSignOut}>
             <LogOutIcon aria-hidden />
-            {identity.signOut}
+            {common.signOut}
           </Button>
         </div>
 

@@ -1,4 +1,6 @@
 import type { WindowPreset } from '@/lib/window'
+import type { RealtimeStatus } from '@/app/RealtimeProvider'
+
 import type { Language } from './locale'
 import type {
   DeliveryStatus,
@@ -44,6 +46,110 @@ const byKey = <K extends string>(labels: Record<K, string>): Record<K, string> =
 export const en = {
   common: {
     selected: 'Selected',
+    // One wording for one action: the account menu and the profile card both read this.
+    signOut: 'Sign out',
+  },
+
+  nav: {
+    skip: 'Skip to content',
+    open: 'Open navigation',
+    sections: 'Sections',
+    drawer: 'Move between the console’s sections.',
+
+    groups: {
+      operations: 'Operations',
+      pipeline: 'Pipeline',
+    },
+
+    // Keyed rather than listed, so `AppLayout`'s array indexes this by a key the compiler
+    // checks — a nav entry cannot exist without a label, in either language.
+    items: {
+      dashboard: 'Dashboard',
+      incidents: 'Incidents',
+      signals: 'Signals',
+      evidence: 'Evidence',
+      funnel: 'Funnel',
+      services: 'Services',
+      deliveries: 'Deliveries',
+      settings: 'Settings',
+    },
+  },
+
+  account: {
+    menu: (name: string) => `Account — ${name}`,
+    unverifiedTitle: 'Unverified session',
+    unverified:
+      'Nothing checked who you are. This name labels the session; the services behind the console answer anyone who can reach them.',
+  },
+
+  realtime: {
+    status: byKey<RealtimeStatus>({
+      connecting: 'connecting',
+      live: 'live',
+      reconnecting: 'reconnecting',
+      offline: 'offline',
+    }),
+
+    hint: byKey<RealtimeStatus>({
+      connecting: 'Opening the update channel.',
+      live: 'Updates are pushed as they happen.',
+      reconnecting: 'The update channel dropped and is being re-established.',
+      offline: 'Screens still work, but they will not update on their own.',
+    }),
+
+    /** Read aloud after the word, so "live" is not announced as a stray adjective. */
+    suffix: '— realtime connection',
+  },
+
+  settingsNav: {
+    title: 'Settings',
+    intro:
+      'Your profile, the log stores this platform reads from, and the destinations it sends what it finds to.',
+    sections: 'Settings sections',
+    pages: {
+      profile: 'Profile',
+      telemetry: 'Telemetry',
+      integrations: 'Integrations',
+    },
+  },
+
+  login: {
+    tagline: 'It shows its work.',
+    taglineDetail:
+      'The platform watches your log store, decides on the record whether something is worth waking a human for, and then explains the decision it reached.',
+
+    points: {
+      gate: {
+        title: 'A gate you can read',
+        detail:
+          'Signals are scored by explicit rules before any model is involved, and the arithmetic stays on the incident — including the components that came out negative.',
+      },
+      restraint: {
+        title: 'And what it did not raise',
+        detail:
+          'Weak and suppressed signals stay on the record next to the detection latency, so a quiet hour reads as quiet rather than as unexplained.',
+      },
+      routing: {
+        title: 'Routed, not broadcast',
+        detail:
+          'A finished analysis reaches the destinations you configured, filtered by priority, and every attempt keeps its delivery result.',
+      },
+    },
+
+    heading: 'Sign in',
+    subheading: 'Choose the name this session runs under.',
+    organisation: 'Organisation',
+    ownership:
+      'Incidents, signals and integrations belong to the organisation rather than to the person who opened them. This build has one.',
+    nameLabel: 'Your name',
+    nameHint: 'Labels this session in the console. Nothing checks it.',
+    // A required field, not a rejected credential. It says what is missing and why it is wanted,
+    // and never implies that something was checked.
+    nameRequired: 'Enter a name. It is only used to label this session.',
+    noPasswordTitle: 'No password, because nothing would check it',
+    noPassword:
+      'This build has no authentication. The services behind this console answer anyone who can reach them, and signing in here only decides whose name the session carries. Real sign-in arrives with the gateway.',
+    submit: 'Enter the console',
   },
 
   language: {
@@ -86,7 +192,6 @@ export const en = {
     identity: {
       title: 'Identity',
       description: 'Who this console thinks you are, and what that is worth.',
-      signOut: 'Sign out',
       notAnAccountTitle: 'This is not an account',
       notAnAccount:
         'The name above is stored in this browser and nothing verified it. There is no password, no profile on any server, and no permission attached to it — the services behind this console answer anyone who can reach them, whatever name a session carries. To run under a different one, sign out and enter it. Real sign-in arrives with the gateway, and this page is where it will land.',

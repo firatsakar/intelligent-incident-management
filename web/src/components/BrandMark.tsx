@@ -1,6 +1,13 @@
 import { cn } from '@/lib/utils'
 
 /**
+ * The product's name, which is a proper noun and therefore not a translation. It lives beside the
+ * mark rather than in the dictionary for that reason, and in one place rather than three because
+ * the shell, the login aside and the login header all print it.
+ */
+export const productName = 'Incident Management'
+
+/**
  * The mark, in one file now that the shell is no longer the only thing that draws it. The stroke
  * is painted with --primary-foreground rather than white, so it stays legible wherever the accent
  * token lands in either theme.

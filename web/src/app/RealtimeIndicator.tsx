@@ -1,22 +1,11 @@
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import { useRealtimeStatus } from './RealtimeProvider'
 
 type Status = ReturnType<typeof useRealtimeStatus>
 
-const label: Record<Status, string> = {
-  connecting: 'connecting',
-  live: 'live',
-  reconnecting: 'reconnecting',
-  offline: 'offline',
-}
-
-const hint: Record<Status, string> = {
-  connecting: 'Opening the update channel.',
-  live: 'Updates are pushed as they happen.',
-  reconnecting: 'The update channel dropped and is being re-established.',
-  offline: 'Screens still work, but they will not update on their own.',
-}
+// The word and the hint are in the dictionary; what stays here is colour, which is not language.
 
 // Healthy is quiet: a dot and a word in the chrome. Degraded states escalate by gaining a tinted
 // chip, not by moving — a pulsing dot in the corner is ambient motion competing with the data,
@@ -41,6 +30,7 @@ const dot: Record<Status, string> = {
  */
 export function RealtimeIndicator() {
   const status = useRealtimeStatus()
+  const { realtime } = useT()
 
   return (
     <span
@@ -48,11 +38,11 @@ export function RealtimeIndicator() {
         'flex h-6 shrink-0 items-center gap-1.5 rounded-full text-xs',
         chip[status],
       )}
-      title={hint[status]}
+      title={realtime.hint[status]}
     >
       <span className={cn('size-1.5 shrink-0 rounded-full', dot[status])} />
-      {label[status]}
-      <span className="sr-only">— realtime connection</span>
+      {realtime.status[status]}
+      <span className="sr-only">{realtime.suffix}</span>
     </span>
   )
 }

@@ -2,6 +2,7 @@ import { DatabaseIcon, PlugIcon, UserRoundIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
 
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
@@ -22,7 +23,9 @@ import { cn } from '@/lib/utils'
 
 interface SettingsPage {
   to: string
-  label: string
+  /** Keyed into the dictionary, so a page cannot be listed here without a label in both
+   *  languages — the compiler checks the key, not a comment. */
+  id: keyof Dictionary['settingsNav']['pages']
   icon: LucideIcon
 }
 
@@ -30,27 +33,26 @@ interface SettingsPage {
 // and it is the one that is reached by wanting "my settings" rather than by wanting a connector.
 // Then the two halves of the pipeline in the order data moves through them — read, then routed.
 const pages: SettingsPage[] = [
-  { to: '/settings/profile', label: 'Profile', icon: UserRoundIcon },
-  { to: '/settings/telemetry', label: 'Telemetry', icon: DatabaseIcon },
-  { to: '/settings/integrations', label: 'Integrations', icon: PlugIcon },
+  { to: '/settings/profile', id: 'profile', icon: UserRoundIcon },
+  { to: '/settings/telemetry', id: 'telemetry', icon: DatabaseIcon },
+  { to: '/settings/integrations', id: 'integrations', icon: PlugIcon },
 ]
 
 export function SettingsLayout() {
+  const { settingsNav } = useT()
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Your profile, the log stores this platform reads from, and the destinations it sends
-            what it finds to.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{settingsNav.title}</h1>
+          <p className="text-muted-foreground mt-1 text-sm">{settingsNav.intro}</p>
         </div>
 
         {/* overflow-x-auto is insurance rather than an expected state: three labels fit a phone.
             The rule is drawn on the list so it runs the full width of the content column even when
             the row itself scrolls. */}
-        <nav aria-label="Settings sections" className="overflow-x-auto">
+        <nav aria-label={settingsNav.sections} className="overflow-x-auto">
           <ul className="border-border flex min-w-max gap-1 border-b">
             {pages.map((page) => (
               <li key={page.to}>
@@ -71,7 +73,7 @@ export function SettingsLayout() {
                   }
                 >
                   <page.icon className="size-4 shrink-0" aria-hidden />
-                  {page.label}
+                  {settingsNav.pages[page.id]}
                 </NavLink>
               </li>
             ))}
