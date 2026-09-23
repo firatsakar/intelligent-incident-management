@@ -45,7 +45,8 @@ import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './qu
  * would quietly break if either were confused for the other.
  */
 export function IncidentDetailPage() {
-  const { labels } = useT()
+  const { labels, incidents } = useT()
+  const t = incidents.detail
   const { id = '' } = useParams()
 
   const incident = useIncident(id)
@@ -80,9 +81,9 @@ export function IncidentDetailPage() {
       <div className="space-y-4">
         <BackLink />
         <Alert variant="destructive">
-          <AlertTitle>Could not load this incident</AlertTitle>
+          <AlertTitle>{t.loadErrorTitle}</AlertTitle>
           <AlertDescription>
-            {incident.error instanceof Error ? incident.error.message : 'Unknown error'}
+            {incident.error instanceof Error ? incident.error.message : t.unknownError}
           </AlertDescription>
         </Alert>
       </div>
@@ -102,10 +103,10 @@ export function IncidentDetailPage() {
 
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
               <Badge variant="outline" className={cn('border', priorityClass[data.priority])}>
-                {data.priority}
+                {labels.priority[data.priority]}
               </Badge>
               <Badge variant="secondary">{labels.incidentStatus[data.status]}</Badge>
-              <Badge variant="secondary">{data.source}</Badge>
+              <Badge variant="secondary">{labels.incidentSource[data.source]}</Badge>
 
               {data.assignedTeam && (
                 <span className="text-muted-foreground flex min-w-0 items-center gap-1">
@@ -115,7 +116,7 @@ export function IncidentDetailPage() {
               )}
 
               <span className="text-dim-foreground tabular-nums">
-                started {formatRelative(data.detectedAt ?? data.createdAt)}
+                {t.started(formatRelative(data.detectedAt ?? data.createdAt))}
               </span>
             </div>
           </div>
@@ -129,7 +130,7 @@ export function IncidentDetailPage() {
               onValueChange={(value) => updateStatus.mutate(value as IncidentStatus)}
               disabled={updateStatus.isPending}
             >
-              <SelectTrigger className="w-36" aria-label="Incident status">
+              <SelectTrigger className="w-36" aria-label={t.statusLabel}>
                 {/* Explicit for the same reason as the list filters: the trigger otherwise shows
                     the raw enum name. */}
                 <SelectValue>{labels.incidentStatus[data.status]}</SelectValue>
@@ -150,8 +151,8 @@ export function IncidentDetailPage() {
                 // The current team is on the identity row above, not in here as a placeholder: a
                 // placeholder is not a value, it vanishes the moment you type, and an operator
                 // who reads one as the current assignment will believe they cleared it.
-                placeholder={data.assignedTeam ? 'Reassign to…' : 'Assign a team'}
-                aria-label={data.assignedTeam ? 'Reassign to a different team' : 'Assign a team'}
+                placeholder={data.assignedTeam ? t.reassignPlaceholder : t.assignPlaceholder}
+                aria-label={data.assignedTeam ? t.reassignLabel : t.assignLabel}
                 className="w-40"
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' || !team.trim() || assignTeam.isPending) return
@@ -168,7 +169,7 @@ export function IncidentDetailPage() {
                   setTeam('')
                 }}
               >
-                {assignTeam.isPending ? 'Assigning…' : 'Assign'}
+                {assignTeam.isPending ? t.assigning : t.assign}
               </Button>
             </div>
           </div>
@@ -185,11 +186,9 @@ export function IncidentDetailPage() {
         <div className="min-w-0 space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>What happened</CardTitle>
+              <CardTitle>{t.whatHappened}</CardTitle>
               <CardDescription>
-                {data.source === 'Telemetry'
-                  ? 'Written by the detector from the log records themselves — this is the same text the analysis read.'
-                  : 'As entered when the incident was opened.'}
+                {data.source === 'Telemetry' ? t.fromDetector : t.fromOperator}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -222,13 +221,15 @@ export function IncidentDetailPage() {
 }
 
 function BackLink() {
+  const { nav } = useT()
+
   return (
     <Link
       to="/incidents"
       className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mx-1 inline-flex min-h-6 items-center gap-1.5 rounded-sm px-1 text-sm outline-none focus-visible:ring-[3px]"
     >
       <ArrowLeftIcon className="size-3.5" aria-hidden />
-      Incidents
+      {nav.items.incidents}
     </Link>
   )
 }
@@ -247,18 +248,19 @@ function BackLink() {
  * rendering a zero or an em dash there would imply the platform detected something instantly.
  */
 function DetectionStrip({ incident }: { incident: Incident }) {
+  const t = useT().incidents.detail
+
   if (!incident.detectedAt) {
     return (
       <Card>
         <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
           <span className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
             <HandIcon className="size-4 shrink-0" aria-hidden />
-            Opened by hand
+            {t.openedByHand}
           </span>
           <span className="text-sm tabular-nums">{formatDateTime(incident.createdAt)}</span>
           <span className="text-muted-foreground basis-full text-xs leading-relaxed">
-            Nothing detected this, so there is no detection latency to measure — the platform was
-            told rather than noticing. The score breakdown below is absent for the same reason.
+            {t.openedByHandDetail}
           </span>
         </CardContent>
       </Card>
@@ -271,33 +273,27 @@ function DetectionStrip({ incident }: { incident: Incident }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:gap-6">
-        <Moment
-          label="Problem started"
-          at={incident.detectedAt}
-          note="on the source's clock"
-        />
+        <Moment label={t.problemStarted} at={incident.detectedAt} note={t.sourceClock} />
 
         <ArrowRightIcon
           className="text-muted-foreground hidden size-4 shrink-0 sm:block"
           aria-hidden
         />
 
-        <Moment label="Incident opened" at={incident.createdAt} note="on ours" />
+        <Moment label={t.incidentOpened} at={incident.createdAt} note={t.ourClock} />
 
         <div className="sm:ml-auto sm:text-right">
           <p className="text-muted-foreground flex items-center gap-0.5 text-xs font-medium tracking-wider uppercase sm:justify-end">
-            {latencyMs < 0 ? 'Clock disagreement' : 'Detection latency'}
+            {latencyMs < 0 ? t.clockDisagreement : t.detectionLatency}
 
             <InfoHint
-              label="What detection latency measures"
+              label={t.latencyHintLabel}
               // Below rather than beside: this hint sits at the top-right of the page, and a
               // popup opening to its left lands squarely on top of the figure it is explaining.
               side="bottom"
               className="-my-1"
             >
-              {latencyMs < 0
-                ? 'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.'
-                : 'From the first log line the source stamped to the moment this record was filed — the log store’s clock to ours. It covers the poll interval, the detection pass and the scoring, and it is the whole of what the platform spent noticing this by itself.'}
+              {latencyMs < 0 ? t.skewHint : t.latencyHint}
             </InfoHint>
           </p>
 
@@ -311,7 +307,7 @@ function DetectionStrip({ incident }: { incident: Incident }) {
           </p>
 
           <p className="text-dim-foreground text-xs">
-            {latencyMs < 0 ? 'source clock is ahead of ours' : 'noticed without being told'}
+            {latencyMs < 0 ? t.skewNote : t.noticed}
           </p>
         </div>
       </CardContent>

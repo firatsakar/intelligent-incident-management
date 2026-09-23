@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { deliveryClass, formatDateTime, formatDuration } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { Integration, NotificationDelivery } from '@/types/api'
 
@@ -19,6 +20,8 @@ export function DeliveryStrip({
   deliveries: NotificationDelivery[]
   integrations: Integration[]
 }) {
+  const t = useT().incidents.notifications
+
   const lookup = (integrationId: string) =>
     integrations.find((integration) => integration.id === integrationId)
 
@@ -28,22 +31,19 @@ export function DeliveryStrip({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Notifications</CardTitle>
+        <CardTitle>{t.title}</CardTitle>
 
         {deliveries.length > 0 && (
           <CardDescription className="tabular-nums">
-            {sent} of {deliveries.length} delivered
-            {failed > 0 && ` · ${failed} failed`}
+            {t.summary(sent, deliveries.length)}
+            {failed > 0 && ` · ${t.failed(failed)}`}
           </CardDescription>
         )}
       </CardHeader>
 
       <CardContent>
         {deliveries.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Nothing sent yet. Notifications go out once the analysis completes, to every enabled
-            integration whose filters match.
-          </p>
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
         ) : (
           <ul className="divide-border -my-2 divide-y">
             {deliveries.map((delivery) => (
@@ -67,15 +67,18 @@ function DeliveryRow({
   delivery: NotificationDelivery
   integration: Integration | undefined
 }) {
+  const { incidents, labels } = useT()
+  const t = incidents.notifications
+
   // An integration deleted after the fact leaves its deliveries behind, which is correct: the
   // notification did happen, and the row is the only proof of it.
-  const name = integration?.name ?? 'deleted integration'
+  const name = integration?.name ?? t.deletedIntegration
 
   return (
     <li className="py-2.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge variant="outline" className={cn('border', deliveryClass[delivery.status])}>
-          {delivery.status}
+          {labels.deliveryStatus[delivery.status]}
         </Badge>
 
         <span className="min-w-0 flex-1 truncate text-sm font-medium" title={name}>
@@ -83,7 +86,9 @@ function DeliveryRow({
         </span>
 
         {integration && (
-          <span className="text-dim-foreground shrink-0 text-xs">{integration.channel}</span>
+          <span className="text-dim-foreground shrink-0 text-xs">
+            {labels.channel[integration.channel]}
+          </span>
         )}
       </div>
 
@@ -96,17 +101,17 @@ function DeliveryRow({
                 cost is visible anywhere in the console. */}
             <span className="text-dim-foreground">
               {' '}
-              · took {formatDuration(delivery.createdAt, delivery.sentAt)}
+              · {t.took(formatDuration(delivery.createdAt, delivery.sentAt))}
             </span>
           </>
         ) : (
           // Queued rather than sent. The created time is all there is, and calling it "sent" is
           // the one thing this panel must never do.
-          <>queued {formatDateTime(delivery.createdAt)}</>
+          <>{t.queued(formatDateTime(delivery.createdAt))}</>
         )}
 
         {delivery.attemptCount > 1 && (
-          <span className="text-dim-foreground"> · {delivery.attemptCount} attempts</span>
+          <span className="text-dim-foreground"> · {t.attempts(delivery.attemptCount)}</span>
         )}
       </p>
 

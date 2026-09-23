@@ -159,51 +159,26 @@ export function formatScore(value: number): string {
 
 // ---- the detection gate's score vocabulary ---------------------------------------------------
 //
-// SignalScoring emits its breakdown with the key names it uses internally, which are accurate and
-// meaningless to anybody who has not read that file. Two screens print those keys — the incident's
-// score panel and the signal list — so the translation lives here rather than in either of them.
-//
-// Kept as data, not prose in a component, because the set grows: the gate has eight terms today and
-// only five appear in a typical window, so a term nobody has seen yet must still render as words.
-
-export const scoreTermLabel: Record<string, string> = {
-  fatal: 'fatal error',
-  burstBase: 'burst base',
-  overThreshold: 'over threshold',
-  rateAnomaly: 'rate anomaly',
-  precedent: 'precedent',
-  blastRadius: 'blast radius',
-  falsePositivePrecedent: 'false-positive history',
-  muted: 'muted signature',
-}
+// The words moved to the dictionary; what stays here is the lookup and its fallback, because the
+// fallback is behaviour rather than text.
 
 /**
- * What each term actually measures — the gate's reasoning, in the operator's language.
- *
- * Deliberately says what the term *is* rather than what it is worth: the weights are constants in
- * SignalScoring and a number copied into the frontend is a number that will quietly go stale.
- */
-export const scoreTermHelp: Record<string, string> = {
-  fatal: 'The process crashed. A crash is not a judgement call, so it skips scoring entirely and goes straight through.',
-  burstBase: 'The starting score every burst gets for clearing its detection rule at all.',
-  overThreshold:
-    'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
-  rateAnomaly:
-    'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
-  precedent: 'This signature has produced a confirmed real incident before.',
-  blastRadius: 'Two or more services are raising it, not one.',
-  falsePositivePrecedent:
-    'This signature has been marked a false positive before, so the score is pulled down.',
-  muted: 'Somebody muted this signature. It is scored, and heavily penalised for being muted.',
-}
-
-/**
- * A term the gate emits that this file has not been taught yet. Splitting the camel case is enough
- * to keep it readable, and far better than printing a raw key or, worse, dropping the row — the
- * arithmetic has to add up on screen.
+ * A term the gate emits that the dictionary has not been taught. Splitting the camel case is
+ * enough to keep it readable, and far better than printing a raw key or, worse, dropping the row —
+ * the arithmetic has to add up on screen.
  */
 export function scoreTerm(key: string): string {
-  return scoreTermLabel[key] ?? key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
+  const label = activeDictionary().scoreTerms.label as Record<string, string | undefined>
+
+  return label[key] ?? key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
+}
+
+/** Undefined for a term this build has not been taught: an unknown key still gets its row and its
+ *  number, but not an empty tooltip promising an explanation. */
+export function scoreTermHelp(key: string): string | undefined {
+  const help = activeDictionary().scoreTerms.help
+
+  return (help as Record<string, string | undefined>)[key]
 }
 
 // ---- colour vocabulary ----------------------------------------------------------------------

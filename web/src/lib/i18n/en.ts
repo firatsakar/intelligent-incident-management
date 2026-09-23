@@ -2,6 +2,22 @@ import type { WindowPreset } from '@/lib/window'
 import type { RealtimeStatus } from '@/app/RealtimeProvider'
 
 import type { Language } from './locale'
+import { plural } from './translate'
+
+/**
+ * The eight scoring terms this build has been taught. Not every key the gate can emit —
+ * that set is open and `scoreTerm()` falls back to splitting the camel case — but these
+ * eight must have words in every language, so they go through `byKey`.
+ */
+type ScoreTerm =
+  | 'fatal'
+  | 'burstBase'
+  | 'overThreshold'
+  | 'rateAnomaly'
+  | 'precedent'
+  | 'blastRadius'
+  | 'falsePositivePrecedent'
+  | 'muted'
 import type {
   DeliveryStatus,
   IncidentPriority,
@@ -198,6 +214,237 @@ export const en = {
       ownership:
         'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. This build has one.',
     },
+  },
+
+
+  incidents: {
+    list: {
+      title: 'Incidents',
+      intro: 'Everything the platform has opened, by hand or on its own.',
+      // Says which count this is. "8 on record" next to an active filter is a claim about the
+      // whole table that the table is not showing.
+      matching: (count: number) => `${count} match these filters`,
+      onRecord: (count: number) => `${count} on record`,
+
+      filterStatus: 'Filter by status',
+      filterPriority: 'Filter by priority',
+      anyStatus: 'Any status',
+      anyPriority: 'Any priority',
+      /** The same two, as they read inside the empty-state sentence rather than in a control. */
+      anyStatusInline: 'any status',
+      anyPriorityInline: 'any priority',
+      clear: 'Clear',
+      clearFilters: 'Clear filters',
+
+      caption: 'Incidents, newest first. Each row links to the incident.',
+      columns: {
+        priority: 'Priority',
+        incident: 'Incident',
+        source: 'Source',
+        status: 'Status',
+        analysis: 'Analysis',
+        detected: 'Detected',
+        latency: 'Latency',
+      },
+
+      loadError: 'Could not load incidents',
+
+      // Two different situations, and only one of them is fixable by touching the filters.
+      emptyFilteredTitle: 'Nothing matches these filters.',
+      emptyFiltered: (status: string, priority: string) =>
+        `There are incidents on record; none of them is both ${status} and ${priority}.`,
+      emptyTitle: 'No incidents on record.',
+      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
+
+      page: (current: number, total: number) => `Page ${current} of ${total}`,
+      previous: 'Previous',
+      next: 'Next',
+
+      analysisFailed: 'analysis failed',
+      awaitingAnalysis: 'awaiting analysis',
+      analysed: 'analysed',
+      toOpen: (duration: string) => `+${duration} to open`,
+      // Opened by hand: there is no detection to have been slow. A zero would claim the platform
+      // found it instantly.
+      openedByHand: 'Opened by hand — nothing detected it',
+    },
+
+    detail: {
+      loadErrorTitle: 'Could not load this incident',
+      unknownError: 'Unknown error',
+      started: (relative: string) => `started ${relative}`,
+
+      statusLabel: 'Incident status',
+      assignPlaceholder: 'Assign a team',
+      reassignPlaceholder: 'Reassign to…',
+      assignLabel: 'Assign a team',
+      reassignLabel: 'Reassign to a different team',
+      assign: 'Assign',
+      assigning: 'Assigning…',
+
+      whatHappened: 'What happened',
+      fromDetector:
+        'Written by the detector from the log records themselves — this is the same text the analysis read.',
+      fromOperator: 'As entered when the incident was opened.',
+
+      openedByHand: 'Opened by hand',
+      openedByHandDetail:
+        'Nothing detected this, so there is no detection latency to measure — the platform was told rather than noticing. The score breakdown below is absent for the same reason.',
+      problemStarted: 'Problem started',
+      sourceClock: 'on the source’s clock',
+      incidentOpened: 'Incident opened',
+      ourClock: 'on ours',
+      detectionLatency: 'Detection latency',
+      clockDisagreement: 'Clock disagreement',
+      latencyHintLabel: 'What detection latency measures',
+      latencyHint:
+        'From the first log line the source stamped to the moment this record was filed — the log store’s clock to ours. It covers the poll interval, the detection pass and the scoring, and it is the whole of what the platform spent noticing this by itself.',
+      skewHint:
+        'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.',
+      noticed: 'noticed without being told',
+      skewNote: 'source clock is ahead of ours',
+    },
+
+    timeline: {
+      title: 'Timeline',
+      description:
+        'Five moments the services record separately. Where a time is missing, it is missing from the record rather than from this screen.',
+
+      problemStarted: 'Problem started',
+      onSourceClock: 'On the source clock, not ours.',
+      notRecorded: 'Not recorded — this incident was opened by hand.',
+
+      incidentOpened: 'Incident opened',
+      toDetect: (duration: string) => `+${duration} to detect`,
+      ourClockGap: 'Our clock. The gap above is what detection cost.',
+
+      analysisApplied: 'Analysis applied',
+      categorised: (category: string, priority: string) =>
+        `Categorised as ${category}, priority set to ${priority}`,
+      applied: 'Applied.',
+      analysisFailed: 'The analysis ran and returned nothing. See the panel for the reason.',
+      analysisWaiting: 'Waiting on the analysis service.',
+
+      peopleNotified: 'People notified',
+      afterOpening: (duration: string) => `+${duration} after opening`,
+      channelsDelivered: (sent: number, total: number) =>
+        `${sent} of ${total} ${plural('en', total, { one: 'channel', other: 'channels' })} delivered`,
+      noDeliveryYet: 'No delivery recorded yet.',
+      everyChannelFailed: 'Every configured channel failed — see the notifications panel.',
+
+      lastChanged: 'Last changed',
+      anyEdit: 'Any edit — status, team, or the analysis landing.',
+
+      // "done" rather than a time, and said as a word so nobody reads an em dash as "never
+      // happened".
+      doneUntimed: 'done · time not recorded',
+      notYet: 'not yet',
+    },
+
+    score: {
+      // Not "Why this was raised": the detector writes that exact phrase as a heading inside the
+      // evidence summary, which renders in the card immediately above this one.
+      title: 'How the gate scored it',
+      description:
+        'A deterministic score, not a judgement call. Every term is recorded so the decision can be argued with afterwards.',
+
+      total: 'Total',
+      totalNote: 'sum of the terms above, clamped to 1.00',
+      confidence: 'Confidence',
+      confidenceNote: 'scoring was bypassed',
+
+      // The threshold is per-rule and not exposed, so this states what the outcome was rather
+      // than inventing the number it was compared against.
+      defaultReason: 'It met the promotion threshold for its detection rule.',
+
+      signature: 'Signature',
+      muted: 'muted',
+      occurrences: (count: number, promotions: number, real: number, falsePositive: number) =>
+        `${count} ${plural('en', count, { one: 'occurrence', other: 'occurrences' })} recorded in total · promoted ${promotions}×, ${real} confirmed real, ${falsePositive} false positive`,
+
+      measuresLabel: (term: string) => `What ${term} measures`,
+    },
+
+    notifications: {
+      title: 'Notifications',
+      summary: (sent: number, total: number) => `${sent} of ${total} delivered`,
+      failed: (count: number) => `${count} failed`,
+      empty:
+        'Nothing sent yet. Notifications go out once the analysis completes, to every enabled integration whose filters match.',
+      // An integration deleted after the fact leaves its deliveries behind, which is correct: the
+      // notification did happen, and the row is the only proof of it.
+      deletedIntegration: 'deleted integration',
+      took: (duration: string) => `took ${duration}`,
+      // Queued rather than sent. Calling it "sent" is the one thing this panel must never do.
+      queued: (when: string) => `queued ${when}`,
+      attempts: (count: number) =>
+        `${count} ${plural('en', count, { one: 'attempt', other: 'attempts' })}`,
+    },
+
+    analysis: {
+      title: 'AI analysis',
+      description:
+        'Enrichment on top of the deterministic gate — it set the category and the priority, not whether this was raised.',
+
+      failedDescription:
+        'The analysis ran and did not produce a result. Nothing further is coming on its own — the priority and category below are the ones detection set.',
+      failedTitle: 'Analysis failed',
+      failedFooter: 'A later attempt that succeeds clears this and fills the panel in.',
+
+      waiting:
+        'Waiting for the analysis service. It reads the evidence summary carried on the incident, so no extra call is made on its behalf.',
+
+      confidence: 'Confidence',
+      confidenceHintLabel: 'What the confidence figure means',
+      confidenceHint:
+        'How sure the analysis was of its own category and priority — not how severe the incident is, and not how certain the gate was that something broke. Those are the score on the left.',
+      // Null is a missing measurement, not a zero. An empty bar would read as "certain this is
+      // nothing", which is the opposite of what it means.
+      noConfidence:
+        'The analysis did not put a number on it. That is not the same as being unsure — it declined to quantify, so there is nothing to draw.',
+
+      reasoning: 'Reasoning',
+    },
+  },
+
+  /**
+   * The detection gate's own vocabulary.
+   *
+   * `SignalScoring` emits its breakdown with the key names it uses internally, which are accurate
+   * and meaningless to anybody who has not read that file. The eight terms this build has been
+   * taught are total below; a term the gate grows later still renders, through `scoreTerm`'s
+   * camel-case fallback, because the arithmetic has to add up on screen.
+   *
+   * The help text says what each term *is* rather than what it is worth: the weights are constants
+   * in `SignalScoring`, and a number copied into the frontend is a number that will go stale.
+   */
+  scoreTerms: {
+    label: byKey<ScoreTerm>({
+      fatal: 'fatal error',
+      burstBase: 'burst base',
+      overThreshold: 'over threshold',
+      rateAnomaly: 'rate anomaly',
+      precedent: 'precedent',
+      blastRadius: 'blast radius',
+      falsePositivePrecedent: 'false-positive history',
+      muted: 'muted signature',
+    }),
+
+    help: byKey<ScoreTerm>({
+      fatal:
+        'The process crashed. A crash is not a judgement call, so it skips scoring entirely and goes straight through.',
+      burstBase: 'The starting score every burst gets for clearing its detection rule at all.',
+      overThreshold:
+        'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
+      rateAnomaly:
+        'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
+      precedent: 'This signature has produced a confirmed real incident before.',
+      blastRadius: 'Two or more services are raising it, not one.',
+      falsePositivePrecedent:
+        'This signature has been marked a false positive before, so the score is pulled down.',
+      muted:
+        'Somebody muted this signature. It is scored, and heavily penalised for being muted.',
+    }),
   },
 
   // ---- the enum vocabulary ---------------------------------------------------------------

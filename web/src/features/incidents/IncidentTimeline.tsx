@@ -1,5 +1,6 @@
 ﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatDuration } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { Incident, NotificationDelivery } from '@/types/api'
 
@@ -37,6 +38,9 @@ export function IncidentTimeline({
   incident: Incident
   deliveries: NotificationDelivery[]
 }) {
+  const { incidents, labels } = useT()
+  const t = incidents.timeline
+
   const sent = deliveries
     .filter((delivery) => delivery.sentAt)
     .sort((a, b) => (a.sentAt! < b.sentAt! ? -1 : 1))
@@ -46,72 +50,67 @@ export function IncidentTimeline({
   const stages: Stage[] = [
     incident.detectedAt
       ? {
-          label: 'Problem started',
+          label: t.problemStarted,
           at: incident.detectedAt,
           state: 'reached',
-          detail: 'On the source clock, not ours.',
+          detail: t.onSourceClock,
         }
       : {
-          label: 'Problem started',
+          label: t.problemStarted,
           at: null,
           state: 'absent',
-          detail: 'Not recorded — this incident was opened by hand.',
+          detail: t.notRecorded,
         },
     {
-      label: 'Incident opened',
+      label: t.incidentOpened,
       at: incident.createdAt,
       state: 'reached',
       since: incident.detectedAt
-        ? `${formatDuration(incident.detectedAt, incident.createdAt)} to detect`
+        ? t.toDetect(formatDuration(incident.detectedAt, incident.createdAt))
         : undefined,
-      detail: incident.detectedAt
-        ? 'Our clock. The gap above is what detection cost.'
-        : undefined,
+      detail: incident.detectedAt ? t.ourClockGap : undefined,
     },
     // No timestamp, and deliberately so. The incident record does not store when the analysis
     // landed, and updatedAt moves on every change — a status transition an hour later would make
     // this stage claim the analysis happened then. A missing time is better than a wrong one.
     incident.isAiAnalyzed
       ? {
-          label: 'Analysis applied',
+          label: t.analysisApplied,
           at: null,
           state: 'untimed',
           detail: incident.aiSuggestedCategory
-            ? `Categorised as ${incident.aiSuggestedCategory}, priority set to ${incident.priority}`
-            : 'Applied.',
+            ? t.categorised(incident.aiSuggestedCategory, labels.priority[incident.priority])
+            : t.applied,
         }
       : incident.aiAnalysisError
         ? {
             // Not 'pending'. A pending stage says "this has not happened yet", and on a spine
             // whose whole argument is that the timestamps are real, a stage that will never
             // happen must not sit there looking like one that still might.
-            label: 'Analysis applied',
+            label: t.analysisApplied,
             at: null,
             state: 'failed',
-            detail: 'The analysis ran and returned nothing. See the panel for the reason.',
+            detail: t.analysisFailed,
           }
         : {
-            label: 'Analysis applied',
+            label: t.analysisApplied,
             at: null,
             state: 'pending',
-            detail: 'Waiting on the analysis service.',
+            detail: t.analysisWaiting,
           },
     firstSentAt
       ? {
-          label: 'People notified',
+          label: t.peopleNotified,
           at: firstSentAt,
           state: 'reached',
-          since: `${formatDuration(incident.createdAt, firstSentAt)} after opening`,
-          detail: `${sent.length} of ${deliveries.length} channel(s) delivered`,
+          since: t.afterOpening(formatDuration(incident.createdAt, firstSentAt)),
+          detail: t.channelsDelivered(sent.length, deliveries.length),
         }
       : {
-          label: 'People notified',
+          label: t.peopleNotified,
           at: null,
           state: deliveries.length === 0 ? 'pending' : 'absent',
-          detail:
-            deliveries.length === 0
-              ? 'No delivery recorded yet.'
-              : 'Every configured channel failed — see the notifications panel.',
+          detail: deliveries.length === 0 ? t.noDeliveryYet : t.everyChannelFailed,
         },
   ]
 
@@ -121,21 +120,18 @@ export function IncidentTimeline({
     // to sit beside one — an earlier version of this screen did exactly that and mis-stated the
     // time on the first incident it was checked against.
     stages.push({
-      label: 'Last changed',
+      label: t.lastChanged,
       at: incident.updatedAt,
       state: 'reached',
-      detail: 'Any edit — status, team, or the analysis landing.',
+      detail: t.anyEdit,
     })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Timeline</CardTitle>
-        <CardDescription>
-          Five moments the services record separately. Where a time is missing, it is missing from
-          the record rather than from this screen.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -172,9 +168,9 @@ export function IncidentTimeline({
                     ) : stage.state === 'untimed' ? (
                       // "done" rather than a time, and said as a word so nobody reads an em dash
                       // as "never happened".
-                      <span className="text-foreground">done · time not recorded</span>
+                      <span className="text-foreground">{t.doneUntimed}</span>
                     ) : stage.state === 'pending' ? (
-                      'not yet'
+                      t.notYet
                     ) : (
                       '—'
                     )}
@@ -183,7 +179,7 @@ export function IncidentTimeline({
 
                 {stage.since && (
                   <p className="text-foreground mt-0.5 text-xs font-medium tabular-nums">
-                    +{stage.since}
+                    {stage.since}
                   </p>
                 )}
 

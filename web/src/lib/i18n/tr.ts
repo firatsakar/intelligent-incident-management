@@ -185,6 +185,209 @@ export const tr: Dictionary = {
     },
   },
 
+
+  incidents: {
+    list: {
+      title: 'Olaylar',
+      intro: 'Platformun açtığı her şey — elle ya da kendiliğinden.',
+      matching: (count: number) => `${count} kayıt bu filtrelere uyuyor`,
+      onRecord: (count: number) => `Kayıtta ${count} olay`,
+
+      filterStatus: 'Duruma göre süz',
+      filterPriority: 'Önceliğe göre süz',
+      anyStatus: 'Her durum',
+      anyPriority: 'Her öncelik',
+      anyStatusInline: 'herhangi bir durumda',
+      anyPriorityInline: 'herhangi bir öncelikte',
+      clear: 'Temizle',
+      clearFilters: 'Filtreleri temizle',
+
+      caption: 'Olaylar, en yenisi başta. Her satır kendi olayına bağlanıyor.',
+      columns: {
+        priority: 'Öncelik',
+        incident: 'Olay',
+        source: 'Kaynak',
+        status: 'Durum',
+        analysis: 'Analiz',
+        detected: 'Tespit',
+        latency: 'Gecikme',
+      },
+
+      loadError: 'Olaylar yüklenemedi',
+
+      emptyFilteredTitle: 'Bu filtrelere uyan bir şey yok.',
+      emptyFiltered: (status: string, priority: string) =>
+        `Kayıtta olaylar var; hiçbiri aynı anda hem ${status} hem ${priority} değil.`,
+      emptyTitle: 'Kayıtta hiç olay yok.',
+      empty: 'Elle açılmış bir şey yok, ve henüz hiçbir şey bir tespit kuralını aşmadı.',
+
+      page: (current: number, total: number) => `Sayfa ${current} / ${total}`,
+      previous: 'Önceki',
+      next: 'Sonraki',
+
+      analysisFailed: 'analiz başarısız',
+      awaitingAnalysis: 'analiz bekleniyor',
+      analysed: 'analiz edildi',
+      toOpen: (duration: string) => `açılışa +${duration}`,
+      openedByHand: 'Elle açıldı — bunu hiçbir şey tespit etmedi',
+    },
+
+    detail: {
+      loadErrorTitle: 'Bu olay yüklenemedi',
+      unknownError: 'Bilinmeyen hata',
+      started: (relative: string) => `${relative} başladı`,
+
+      statusLabel: 'Olay durumu',
+      assignPlaceholder: 'Bir ekip ata',
+      reassignPlaceholder: 'Başka ekibe ata…',
+      assignLabel: 'Bir ekip ata',
+      reassignLabel: 'Başka bir ekibe ata',
+      assign: 'Ata',
+      assigning: 'Atanıyor…',
+
+      whatHappened: 'Ne oldu',
+      fromDetector:
+        'Tespit eden tarafından doğrudan log kayıtlarından yazıldı — analizin okuduğu metnin aynısı.',
+      fromOperator: 'Olay açılırken girildiği gibi.',
+
+      openedByHand: 'Elle açıldı',
+      openedByHandDetail:
+        'Bunu hiçbir şey tespit etmedi, yani ölçülecek bir tespit gecikmesi de yok — platform fark etmedi, kendisine söylendi. Aşağıdaki puan dökümünün olmamasının sebebi de aynı.',
+      problemStarted: 'Sorun başladı',
+      sourceClock: 'kaynağın saatiyle',
+      incidentOpened: 'Olay açıldı',
+      ourClock: 'bizimkiyle',
+      detectionLatency: 'Tespit gecikmesi',
+      clockDisagreement: 'Saat uyuşmazlığı',
+      latencyHintLabel: 'Tespit gecikmesi neyi ölçüyor',
+      latencyHint:
+        'Kaynağın damgaladığı ilk log satırından bu kaydın açıldığı ana kadar — log deposunun saatinden bizimkine. İçinde poll aralığı, tespit geçişi ve puanlama var; platformun bunu kendi başına fark etmek için harcadığı sürenin tamamı bu.',
+      skewHint:
+        'Kaynak, bunun biz kaydı açtıktan sonra başladığını bildiriyor; bu ancak iki saatin uyuşmadığı anlamına gelir. Gördüğünüz rakam bir gecikme değil, o uyuşmazlığın büyüklüğü.',
+      noticed: 'söylenmeden fark edildi',
+      skewNote: 'kaynağın saati bizimkinin ilerisinde',
+    },
+
+    timeline: {
+      title: 'Zaman çizelgesi',
+      description:
+        'Servislerin ayrı ayrı kaydettiği beş an. Bir zaman eksikse, bu ekrandan değil kayıttan eksiktir.',
+
+      problemStarted: 'Sorun başladı',
+      onSourceClock: 'Kaynağın saatiyle, bizimkiyle değil.',
+      notRecorded: 'Kaydedilmedi — bu olay elle açıldı.',
+
+      incidentOpened: 'Olay açıldı',
+      toDetect: (duration: string) => `tespit için +${duration}`,
+      ourClockGap: 'Bizim saatimiz. Yukarıdaki aralık tespitin maliyeti.',
+
+      analysisApplied: 'Analiz uygulandı',
+      categorised: (category: string, priority: string) =>
+        `${category} olarak sınıflandı, öncelik ${priority} yapıldı`,
+      applied: 'Uygulandı.',
+      analysisFailed: 'Analiz çalıştı ve hiçbir şey döndürmedi. Sebebi için panele bakın.',
+      analysisWaiting: 'Analiz servisi bekleniyor.',
+
+      peopleNotified: 'İnsanlara haber verildi',
+      afterOpening: (duration: string) => `açılıştan +${duration} sonra`,
+      channelsDelivered: (sent: number, total: number) =>
+        `${total} kanaldan ${sent} tanesi teslim etti`,
+      noDeliveryYet: 'Henüz kayıtlı teslimat yok.',
+      everyChannelFailed:
+        'Yapılandırılmış her kanal başarısız oldu — bildirimler paneline bakın.',
+
+      lastChanged: 'Son değişiklik',
+      anyEdit: 'Herhangi bir değişiklik — durum, ekip, ya da analizin inmesi.',
+
+      doneUntimed: 'yapıldı · zamanı kaydedilmedi',
+      notYet: 'henüz değil',
+    },
+
+    score: {
+      title: 'Kapı bunu nasıl puanladı',
+      description:
+        'Bir yargı değil, belirlenimci bir puan. Karar sonradan tartışılabilsin diye her terim kayıtta.',
+
+      total: 'Toplam',
+      totalNote: 'yukarıdaki terimlerin toplamı, 1.00 ile sınırlı',
+      confidence: 'Güven',
+      confidenceNote: 'puanlama atlandı',
+
+      defaultReason: 'Kendi tespit kuralının terfi eşiğini karşıladı.',
+
+      signature: 'İmza',
+      muted: 'susturulmuş',
+      occurrences: (count: number, promotions: number, real: number, falsePositive: number) =>
+        `toplam ${count} kez görüldü · ${promotions}× terfi, ${real} gerçek olduğu doğrulandı, ${falsePositive} yanlış pozitif`,
+
+      measuresLabel: (term: string) => `${term} neyi ölçüyor`,
+    },
+
+    notifications: {
+      title: 'Bildirimler',
+      summary: (sent: number, total: number) => `${total} teslimattan ${sent} tanesi ulaştı`,
+      failed: (count: number) => `${count} başarısız`,
+      empty:
+        'Henüz bir şey gönderilmedi. Bildirimler analiz tamamlanınca, filtreleri uyan her etkin entegrasyona gidiyor.',
+      deletedIntegration: 'silinmiş entegrasyon',
+      took: (duration: string) => `${duration} sürdü`,
+      queued: (when: string) => `${when} kuyruğa girdi`,
+      attempts: (count: number) => `${count} deneme`,
+    },
+
+    analysis: {
+      title: 'AI analizi',
+      description:
+        'Belirlenimci kapının üstüne eklenen zenginleştirme — kategoriyi ve önceliği o belirledi, bunun yükseltilip yükseltilmeyeceğini değil.',
+
+      failedDescription:
+        'Analiz çalıştı ve bir sonuç üretmedi. Kendiliğinden gelecek başka bir şey yok — aşağıdaki öncelik ve kategori tespitin koyduğu değerler.',
+      failedTitle: 'Analiz başarısız',
+      failedFooter: 'Sonraki başarılı bir deneme bunu temizler ve paneli doldurur.',
+
+      waiting:
+        'Analiz servisi bekleniyor. Olayın üstünde taşınan kanıt özetini okuyor, yani onun adına fazladan bir çağrı yapılmıyor.',
+
+      confidence: 'Güven',
+      confidenceHintLabel: 'Güven rakamı ne anlama geliyor',
+      confidenceHint:
+        'Analizin kendi kategorisinden ve önceliğinden ne kadar emin olduğu — olayın ne kadar ciddi olduğu değil, ve kapının bir şeyin bozulduğundan ne kadar emin olduğu da değil. O ikincisi soldaki puan.',
+      noConfidence:
+        'Analiz buna bir sayı koymadı. Bu emin olmamakla aynı şey değil — sayısallaştırmayı reddetti, yani çizilecek bir şey yok.',
+
+      reasoning: 'Gerekçe',
+    },
+  },
+
+  scoreTerms: {
+    label: {
+      fatal: 'ölümcül hata',
+      burstBase: 'patlama tabanı',
+      overThreshold: 'eşik aşımı',
+      rateAnomaly: 'hız anomalisi',
+      precedent: 'emsal',
+      blastRadius: 'etki alanı',
+      falsePositivePrecedent: 'yanlış pozitif geçmişi',
+      muted: 'susturulmuş imza',
+    },
+
+    help: {
+      fatal:
+        'Süreç çöktü. Çökme bir yargı meselesi değil, o yüzden puanlamayı tamamen atlayıp doğrudan geçiyor.',
+      burstBase: 'Her patlamanın, tespit kuralını aşmış olmaktan aldığı başlangıç puanı.',
+      overThreshold:
+        'Patlamanın kuralın eşiğini ne kadar aştığı — katlanarak sayılıyor ve bir tavanı var: iki katı anlamlı şekilde daha kötü, elli katı değil.',
+      rateAnomaly:
+        'İmzanın kendi hız geçmişi, bu hacmin onun için olağandışı olduğunu söylüyor. İkinci bir veri kaynağı olmadan elde edilebilecek en güçlü destek.',
+      precedent: 'Bu imza daha önce gerçek olduğu doğrulanmış bir olay üretti.',
+      blastRadius: 'Bunu bir servis değil, iki ya da daha fazlası bildiriyor.',
+      falsePositivePrecedent:
+        'Bu imza daha önce yanlış pozitif olarak işaretlendi, o yüzden puan aşağı çekiliyor.',
+      muted:
+        'Birisi bu imzayı susturmuş. Yine de puanlanıyor, ve susturulmuş olduğu için ağır ceza alıyor.',
+    },
+  },
+
   labels: {
     incidentStatus: {
       Open: 'Açık',
