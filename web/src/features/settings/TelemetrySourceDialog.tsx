@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { maskedValue, type TelemetrySource, type TelemetrySourceKind } from '@/types/api'
 
@@ -43,6 +44,11 @@ export function TelemetrySourceDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const dictionary = useT()
+  const { labels, settings } = dictionary
+  const t = settings.telemetry
+  const kindName = labels.telemetryKind[kind]
+
   const [name, setName] = useState(source?.name ?? '')
   const [pollInterval, setPollInterval] = useState(String(source?.pollIntervalSeconds ?? 15))
 
@@ -66,9 +72,9 @@ export function TelemetrySourceDialog({
       withStrayFields(
         telemetrySourceFields[kind],
         stored,
-        'Stored on this source; this form does not know its shape.',
+        settings.config.straySource,
       ),
-    [kind, stored],
+    [kind, stored, settings.config.straySource],
   )
 
   const parsedPoll = Number(pollInterval.trim())
@@ -88,7 +94,7 @@ export function TelemetrySourceDialog({
         : telemetrySourcesApi.create({ ...input, kind, isEnabled: true })
     },
     onSuccess: () => {
-      toast.success(source ? 'Source updated' : `${kind} connected`)
+      toast.success(source ? t.updated : t.connected(kindName))
       onSaved()
     },
   })
@@ -103,9 +109,11 @@ export function TelemetrySourceDialog({
             </span>
 
             <div className="min-w-0">
-              <DialogTitle>{source ? `Edit ${kind} source` : `Connect ${kind}`}</DialogTitle>
+              <DialogTitle>
+                {source ? t.editTitle(kindName) : t.connectTitle(kindName)}
+              </DialogTitle>
               <DialogDescription>
-                {source ? 'A secret left blank keeps the value already stored.' : entry?.summary}
+                {source ? settings.shared.secretKept : entry && t.summary[entry.kind]}
               </DialogDescription>
             </div>
           </div>
@@ -113,16 +121,14 @@ export function TelemetrySourceDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="source-name">Name</Label>
+            <Label htmlFor="source-name">{settings.shared.name}</Label>
             <Input
               id="source-name"
               value={name}
-              placeholder={`${kind} — production`}
+              placeholder={t.namePlaceholder(kindName)}
               onChange={(event) => setName(event.target.value)}
             />
-            <p className="text-muted-foreground text-xs">
-              How this source is identified on the telemetry page and in detection logs.
-            </p>
+            <p className="text-muted-foreground text-xs">{t.nameHint}</p>
           </div>
 
           <ConfigFields
@@ -134,7 +140,7 @@ export function TelemetrySourceDialog({
 
           <div className="space-y-2">
             <div className="space-y-1.5">
-              <Label htmlFor="poll">Poll interval (seconds)</Label>
+              <Label htmlFor="poll">{t.pollLabel}</Label>
               <Input
                 id="poll"
                 inputMode="numeric"
@@ -155,8 +161,8 @@ export function TelemetrySourceDialog({
               className={cn('text-xs', pollIsValid ? 'text-muted-foreground' : 'text-alarm-ink')}
             >
               {pollIsValid
-                ? `${describeDraftSchedule(parsedPoll, values.Filter ?? '')}.`
-                : `Enter a whole number of seconds, ${minimumPollSeconds} or more. Polling faster than that hammers the source for no benefit.`}
+                ? `${describeDraftSchedule(dictionary, parsedPoll, values.Filter ?? '')}.`
+                : t.pollInvalid(minimumPollSeconds)}
             </p>
           </div>
 
@@ -175,13 +181,17 @@ export function TelemetrySourceDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {settings.shared.cancel}
           </Button>
           <Button
             disabled={!name.trim() || !pollIsValid || save.isPending}
             onClick={() => save.mutate()}
           >
-            {save.isPending ? 'Saving…' : source ? 'Save changes' : 'Connect'}
+            {save.isPending
+              ? settings.shared.saving
+              : source
+                ? settings.shared.saveChanges
+                : settings.shared.connect}
           </Button>
         </DialogFooter>
       </DialogContent>

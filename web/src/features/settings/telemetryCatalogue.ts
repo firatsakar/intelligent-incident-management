@@ -6,7 +6,10 @@ import {
   type TelemetrySourceKind,
 } from '@/types/api'
 
-import type { MarkComponent, PlannedEntry } from './SettingsCatalogue'
+import type { Dictionary } from '@/lib/i18n'
+
+import type { PlannedSourceId } from './plannedIds'
+import type { MarkComponent } from './SettingsCatalogue'
 
 /**
  * What this end of the platform is allowed to claim, built the same way the integrations catalogue
@@ -22,20 +25,16 @@ import type { MarkComponent, PlannedEntry } from './SettingsCatalogue'
 
 export interface SourceCatalogueEntry {
   kind: TelemetrySourceKind
-  name: string
   mark: MarkComponent
-  summary: string
 }
 
 const entries: Record<TelemetrySourceKind, SourceCatalogueEntry> = {
   Seq: {
     kind: 'Seq',
-    name: 'Seq',
     // A line icon rather than a vendor mark, unlike the integrations grid. The marks there were
     // drawn from published silhouettes; a Seq logo reproduced from memory would be a guess at
     // somebody's brand, and a wrong logo is a worse claim than an honest generic one.
     mark: DatabaseIcon,
-    summary: "Pulls from a Seq instance's query API on a schedule.",
   },
 }
 
@@ -47,37 +46,33 @@ export const connectable: SourceCatalogueEntry[] = telemetrySourceKinds.map((kin
  * is a standard wire format rather than a queue of vendor connectors. Inert, because a control that
  * errors is worse than an absent one.
  */
-export const planned: PlannedEntry[] = [
-  {
-    name: 'OTLP log ingest',
-    mark: RadioTowerIcon,
-    summary: 'Your collector pushes; no connector per vendor.',
-  },
-  {
-    name: 'Alert webhook ingest',
-    mark: WebhookIcon,
-    summary: 'Alerts from your monitoring, not logs.',
-  },
+// Unlike the integrations catalogue, these two names are descriptive rather than trademarks, so
+// they live in the dictionary with their summaries.
+export const planned: { id: PlannedSourceId; mark: MarkComponent }[] = [
+  { id: 'otlp', mark: RadioTowerIcon },
+  { id: 'alerts', mark: WebhookIcon },
 ]
-
-/** What the connector selects when the source does not say. Mirrors SeqTelemetryConnector. */
-const defaultFilterDescription = 'errors and fatals'
 
 /**
  * A source with no filter still reads something specific, and the pair of blank form controls that
  * produced it does not say what. Written out wherever a source is shown, the way an integration's
  * filters are — same reason, different pair of facts: an integration is defined by what it lets
  * through, a source by how often it looks and at what.
+ *
+ * What the connector selects when the source does not say mirrors SeqTelemetryConnector.
  */
-export function describeSchedule(source: TelemetrySource): string {
-  const filter = source.config.Filter?.trim()
-
-  return `Polls every ${source.pollIntervalSeconds}s for ${filter ? `events matching ${filter}` : defaultFilterDescription}`
+export function describeSchedule(t: Dictionary, source: TelemetrySource): string {
+  return describeDraftSchedule(t, source.pollIntervalSeconds, source.config.Filter ?? '')
 }
 
 /** The same sentence for a source that does not exist yet, where there is no stored config. */
-export function describeDraftSchedule(pollIntervalSeconds: number, filter: string): string {
+export function describeDraftSchedule(
+  t: Dictionary,
+  pollIntervalSeconds: number,
+  filter: string,
+): string {
+  const text = t.settings.telemetry
   const trimmed = filter.trim()
 
-  return `Polls every ${pollIntervalSeconds}s for ${trimmed ? `events matching ${trimmed}` : defaultFilterDescription}`
+  return text.polls(pollIntervalSeconds, trimmed ? text.matching(trimmed) : text.defaultFilter)
 }

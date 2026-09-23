@@ -1,9 +1,11 @@
 import { MailIcon, WebhookIcon } from 'lucide-react'
 
+import type { Dictionary } from '@/lib/i18n'
 import { notificationChannels, type Integration, type NotificationChannelType } from '@/types/api'
 
 import { DiscordMark, JiraMark, PagerDutyMark, SlackMark, TeamsMark } from './BrandIcons'
-import type { MarkComponent, PlannedEntry } from './SettingsCatalogue'
+import type { PlannedIntegrationId } from './plannedIds'
+import type { MarkComponent } from './SettingsCatalogue'
 
 /**
  * What the catalogue is allowed to claim.
@@ -18,35 +20,21 @@ import type { MarkComponent, PlannedEntry } from './SettingsCatalogue'
 
 export interface CatalogueEntry {
   channel: NotificationChannelType
-  name: string
   /**
    * A protocol gets lucide's line icon, a product gets its own filled mark. The two weights
    * sitting in one grid is not an oversight — it is the tile saying whether what you are about to
    * configure is a standard or somebody's product.
    */
   mark: MarkComponent
-  summary: string
 }
 
+// The name and the summary are in the dictionary — `labels.channel` and
+// `settings.integrations.summary`, both total over this same union. What stays here is the mark,
+// which is not language.
 const entries: Record<NotificationChannelType, CatalogueEntry> = {
-  Email: {
-    channel: 'Email',
-    name: 'Email',
-    mark: MailIcon,
-    summary: 'SMTP to a mailbox or a distribution list.',
-  },
-  Webhook: {
-    channel: 'Webhook',
-    name: 'Webhook',
-    mark: WebhookIcon,
-    summary: 'An HTTP POST of the incident and its analysis to an endpoint you control.',
-  },
-  Jira: {
-    channel: 'Jira',
-    name: 'Jira',
-    mark: JiraMark,
-    summary: 'Opens an issue in a project, with the reasoning in the description.',
-  },
+  Email: { channel: 'Email', mark: MailIcon },
+  Webhook: { channel: 'Webhook', mark: WebhookIcon },
+  Jira: { channel: 'Jira', mark: JiraMark },
 }
 
 export const connectable: CatalogueEntry[] = notificationChannels.map((channel) => entries[channel])
@@ -56,11 +44,12 @@ export const connectable: CatalogueEntry[] = notificationChannels.map((channel) 
  * product with three integrations rather than as a product whose directory is filling up, and they
  * are inert because a button that errors is worse than an absent one.
  */
-export const planned: PlannedEntry[] = [
-  { name: 'Slack', mark: SlackMark, summary: 'Post to a channel.' },
-  { name: 'Microsoft Teams', mark: TeamsMark, summary: 'Post to a team channel.' },
-  { name: 'PagerDuty', mark: PagerDutyMark, summary: 'Page whoever is on call.' },
-  { name: 'Discord', mark: DiscordMark, summary: 'Post to a channel.' },
+export const planned: { id: PlannedIntegrationId; name: string; mark: MarkComponent }[] = [
+  // The names are trademarks, so they are not translated; the summaries are.
+  { id: 'slack', name: 'Slack', mark: SlackMark },
+  { id: 'teams', name: 'Microsoft Teams', mark: TeamsMark },
+  { id: 'pagerduty', name: 'PagerDuty', mark: PagerDutyMark },
+  { id: 'discord', name: 'Discord', mark: DiscordMark },
 ]
 
 /**
@@ -69,13 +58,15 @@ export const planned: PlannedEntry[] = [
  * is shown.
  */
 export function describeFilters(
+  t: Dictionary,
   minPriority: Integration['minPriority'],
   categoryFilter: Integration['categoryFilter'],
 ): string {
+  const text = t.settings.integrations
   const parts: string[] = []
 
-  if (minPriority) parts.push(`${minPriority} and above`)
-  if (categoryFilter) parts.push(`category ${categoryFilter}`)
+  if (minPriority) parts.push(text.andAbove(t.labels.priority[minPriority]))
+  if (categoryFilter) parts.push(text.category(categoryFilter))
 
-  return parts.length > 0 ? `Sends ${parts.join(' · ')}` : 'Sends every incident — no filters set'
+  return parts.length > 0 ? text.sends(parts.join(' · ')) : text.sendsEverything
 }

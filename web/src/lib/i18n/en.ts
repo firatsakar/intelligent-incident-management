@@ -1,5 +1,10 @@
 import type { WindowPreset } from '@/lib/window'
 import type { RealtimeStatus } from '@/app/RealtimeProvider'
+import type { ConfigFieldId } from '@/features/settings/configSchema'
+import type {
+  PlannedIntegrationId,
+  PlannedSourceId,
+} from '@/features/settings/plannedIds'
 
 import type { Language } from './locale'
 import { plural } from './translate'
@@ -58,6 +63,9 @@ import type {
  * values to their English literals, which is the opposite of what a translation file needs.
  */
 const byKey = <K extends string>(labels: Record<K, string>): Record<K, string> => labels
+
+/** The same, for an entry that is more than one string. */
+const byKeyOf = <K extends string, V>(entries: Record<K, V>): Record<K, V> => entries
 
 export const en = {
   common: {
@@ -720,6 +728,387 @@ export const en = {
 
       footnote:
         'Counted from the signal and signature side. {incidents} is the number of distinct incidents this service’s signals reached, so an incident somebody opened by hand is attributed to no service — an incident record does not carry one, and reading it out of the title would be a guess.',
+    },
+  },
+
+
+  dashboard: {
+    title: 'Dashboard',
+    intro: 'What is open now, what arrived, and how much of it the platform found on its own.',
+    days: (count: number) => `${count} days`,
+    loadError: 'Could not load the figures',
+
+    open: {
+      title: 'Open right now',
+      description:
+        'Every incident still Open or In progress, however old. One opened six weeks ago and never closed is the one you most need to see, so this count deliberately ignores the window.',
+      // On the card, not in a tooltip. Which numbers move with the picker is the kind of thing a
+      // reader has to be able to check at a glance rather than by hovering.
+      notWindowed: 'not windowed',
+      open: 'open',
+    },
+
+    byDate: {
+      title: 'Incidents by date',
+      description:
+        'When incidents were opened, stacked by priority — {scope}. Days are cut in {utc} on the server, not in your zone, and the last column is today, still filling.',
+    },
+
+    detection: {
+      title: 'Detection',
+      description: (scope: string) =>
+        `How much the platform noticed by itself rather than being told, and how long it took to open what it noticed — ${scope}, UTC.`,
+      empty: 'No incidents in this window, so there is nothing to have noticed. Try a longer window.',
+      share: 'noticed by the platform itself',
+      noticed: 'Noticed',
+      filed: 'Filed by hand',
+      median: 'Median latency',
+      p95: '95th percentile',
+      // An em dash with no explanation invites the reader to supply one, and the one they supply
+      // is "zero". These are opposite facts, so the reason is spelled out.
+      nothingNoticed:
+        'Nothing in this window was noticed automatically, so there is no latency to measure. That is not a latency of zero — it is the absence of one.',
+      allSkewed:
+        'Every detection in this window came back with the record filed before the problem started, which is two clocks disagreeing rather than a latency. Those rows sit out of the percentiles.',
+    },
+
+    sources: {
+      title: 'Where incidents come from',
+      description: (scope: string) => `How each incident got opened — ${scope}, UTC.`,
+      empty: 'No incidents in this window, from any source.',
+      // Fixed order, most autonomous first, because the order is the point being made.
+      meaning: byKey<IncidentSource>({
+        Telemetry: 'the platform found it in the log stream',
+        Alert: 'an external alert raised it',
+        Manual: 'somebody opened it by hand',
+      }),
+    },
+
+    latest: {
+      title: 'Latest incidents',
+      description: (rows: number) =>
+        `The ${rows} most recent, whenever they were opened. Arrives over the socket — no refresh, and no window.`,
+      loadError: 'Could not load incidents',
+      emptyTitle: 'No incidents on record.',
+      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
+      all: (total: number) => `All ${total} incidents`,
+    },
+
+    chart: {
+      summary: (total: number, days: number) =>
+        `${total} opened across ${days} ${plural('en', days, { one: 'day', other: 'days' })}`,
+      busiest: (count: number) => ` · busiest day ${count}`,
+      hint: ' · hover or focus the chart for one day',
+      dayTotal: (total: number) =>
+        `${total} ${plural('en', total, { one: 'incident', other: 'incidents' })}`,
+      ariaLabel: (days: number) =>
+        `Incidents opened per UTC day across ${days} ${plural('en', days, { one: 'day', other: 'days' })}. Use the arrow keys to read one day at a time.`,
+      // A drawn-but-empty grid reads as a chart that failed rather than as a quiet month.
+      emptyPlot: 'Nothing opened in this window. Every day in it is empty.',
+      caption: 'Incidents opened per UTC day, by priority.',
+      columnDay: 'Day (UTC)',
+      columnTotal: 'Total',
+      legendNote: 'Critical at the base of each bar',
+    },
+  },
+
+
+  deliveries: {
+    title: 'Delivery health',
+    intro:
+      'Whether each channel is getting through — across the whole window, not one incident at a time.',
+    loadError: 'Could not load delivery health',
+
+    /** The name a deleted integration has left. Its deliveries are kept on purpose. */
+    deleted: 'Deleted integration',
+
+    totals: {
+      title: 'Deliveries',
+      description: (scope: string) => `Every notification this platform attempted — ${scope}.`,
+      emptyLead: 'Nothing was sent in this window. ',
+      empty:
+        'Notifications go out when an analysis finishes, so a window with no incidents in it and a dispatcher that has stopped look identical from here. The incidents screen says which of the two this is.',
+
+      // Same shape as the funnel's headline, and for the same reason: the denominator is on the
+      // line, so a zero cannot be read as "nothing was attempted".
+      failedOf: (total: string, totalCount: number, channels: string, channelCount: number) =>
+        `of ${total} ${plural('en', totalCount, { one: 'delivery', other: 'deliveries' })} failed, across ${channels} ${plural('en', channelCount, { one: 'integration', other: 'integrations' })}`,
+
+      failed: 'failed',
+      sent: 'sent',
+      pending: 'pending',
+
+      someFailing: (failing: string, count: number) =>
+        `${failing} ${plural('en', count, { one: 'integration', other: 'integrations' })} recorded a failure in this window. The rows below say which, when, and what the channel said back.`,
+      allThrough: 'Every delivery in this window got through. ',
+      stillQueued: (pending: string, count: number) =>
+        count === 1
+          ? `${pending} delivery is still queued and has not been attempted yet — queued is not sent.`
+          : `${pending} deliveries are still queued and have not been attempted yet — queued is not sent.`,
+      nothingQueued: 'Nothing is queued and nothing is outstanding.',
+    },
+
+    dispatch: {
+      title: 'Dispatch time',
+      description: (scope: string) =>
+        `How long each channel took to accept a notification, median — ${scope}. Measured from the delivery being written to the channel acknowledging it.`,
+      empty: 'Nothing was dispatched in this window, so there is nothing to have timed.',
+      noneSucceededLead: 'Nothing succeeded in this window, ',
+      noneSucceeded:
+        'so there is no dispatch time to draw. That is not a dispatch time of zero — it is the absence of one.',
+      chartLabel: (scope: string, detail: string) =>
+        `Median dispatch time per integration, ${scope}. ${detail}.`,
+      dashNote:
+        'An em dash is an integration that had nothing succeed in this window, so it has no median. It is not a dispatch time of zero.',
+    },
+
+    /**
+     * What a channel is doing, as a word.
+     *
+     * A failure count alone is not a verdict: an integration that failed twice on Monday and has
+     * delivered forty times since is working, and calling it "failing" all week teaches the
+     * operator to ignore the word.
+     */
+    verdict: {
+      failing: 'Failing',
+      recovered: 'Recovered',
+      delivering: 'Delivering',
+      queued: 'Queued',
+      silent: 'Nothing sent',
+    },
+
+    byIntegration: {
+      title: 'By integration',
+      description: (scope: string) =>
+        `One row per integration that attempted a delivery — ${scope}. In the order the server returned them, which is worst first.`,
+      emptyTitle: 'No integration attempted a delivery.',
+      empty:
+        'An integration only appears here once it has something to report. One configured and enabled but never reached in this window is not on this list — Settings › Integrations is the roll of what exists.',
+      // Said once, here, rather than on every row that has one. An em dash with no explanation
+      // invites the reader to supply one, and the one they supply is "zero".
+      medianNote:
+        'A median dispatch of — means nothing succeeded for that integration in this window. That is the absence of a measurement, not a measurement of zero.',
+
+      // Only for an integration that still exists. A deleted one reads as disabled through the
+      // same field, and saying "disabled" about something that is gone is two wrong words.
+      disabled: 'disabled',
+      deletedNote:
+        'This integration has been deleted. Its deliveries are kept on purpose — they are the record that somebody was told — so the counts below are still true, and the name and channel they belonged to are gone.',
+      id: (short: string) => `id ${short}`,
+      lastFailure: 'Last failure',
+
+      sent: 'Sent',
+      failed: 'Failed',
+      pending: 'Pending',
+      median: 'Median dispatch',
+      lastSent: 'Last sent',
+    },
+  },
+
+
+  settings: {
+    /** The vocabulary the two catalogue screens share — they are one pattern shown twice. */
+    shared: {
+      availableNow: 'Available now',
+      comingSoon: 'Coming soon',
+      counts: (total: number, enabled: number) => `${total} connected · ${enabled} active`,
+      connected: ' connected',
+      notConnected: 'Not connected.',
+      test: 'Test',
+      testing: 'Testing…',
+      edit: 'Edit',
+      cancel: 'Cancel',
+      deleting: 'Deleting…',
+      paused: 'Paused',
+      name: 'Name',
+      dismissTest: 'Dismiss test result',
+      testReport: '{status} at {time} — {detail}',
+      secretKept: 'A secret left blank keeps the value already stored.',
+      saving: 'Saving…',
+      saveChanges: 'Save changes',
+      connect: 'Connect',
+      enabledSwitch: (name: string) => `${name} enabled`,
+      deleteAria: (name: string) => `Delete ${name}`,
+      deleteTitle: (name: string) => `Delete “${name}”?`,
+    },
+
+    config: {
+      keepCurrent: 'Leave blank to keep the current value',
+      // A stored key the schema does not declare. Appending it as a real field is what stops the
+      // form deleting a credential nobody can retype.
+      strayIntegration: 'Stored on this integration; this form does not know its shape.',
+      straySource: 'Stored on this source; this form does not know its shape.',
+
+      /**
+       * One entry per declared config field. Keyed by a stable id rather than by the config key,
+       * because the same key means different things in different connectors — `Url` is the webhook
+       * endpoint in one place and the Seq instance in another.
+       */
+      fields: byKey<ConfigFieldId>({
+        'email.host': 'SMTP host',
+        'email.port': 'Port',
+        'email.from': 'From',
+        'email.to': 'To',
+        'email.username': 'Username',
+        'email.password': 'Password',
+        'webhook.url': 'URL',
+        'webhook.timeout': 'Timeout (seconds)',
+        'webhook.authorization': 'Authorization header',
+        'jira.baseUrl': 'Base URL',
+        'jira.projectKey': 'Project key',
+        'jira.email': 'Account email',
+        'jira.apiToken': 'API token',
+        'jira.issueType': 'Issue type',
+        'seq.url': 'Seq URL',
+        'seq.apiKey': 'API key',
+        'seq.filter': 'Filter',
+        'seq.serviceProperty': 'Service property',
+        'seq.initialLookback': 'Initial lookback (minutes)',
+      }),
+
+      hints: {
+        'webhook.authorization': 'Any setting prefixed Header: is sent as a request header.',
+        'seq.apiKey':
+          'Only needed when the Seq instance has authentication enabled. The key needs Read permission.',
+        'seq.filter': 'Seq filter expression. Left blank, the connector reads errors and fatals.',
+        'seq.serviceProperty': 'Which event property names the service a log line came from.',
+        'seq.initialLookback':
+          'How far back the first poll reads. Later polls resume from where the last one stopped.',
+      } as Partial<Record<ConfigFieldId, string>>,
+    },
+
+    integrations: {
+      title: 'Integrations',
+      intro:
+        'Where a notification goes when an analysis completes. One destination type can hold several integrations — two Email entries with different filters is a normal setup.',
+      loadError: 'Could not load integrations.',
+
+      // Nothing connected and everything paused are different configurations with the same
+      // consequence: an analysis finishes and no one is told.
+      silenceNone: 'Nothing is connected. When an analysis completes, no one is told.',
+      silenceOne: 'The only integration is paused. When an analysis completes, no one is told.',
+      silenceMany: (total: number) =>
+        `All ${total} integrations are paused. When an analysis completes, no one is told.`,
+
+      comingSoonNote:
+        'Planned destinations with nothing behind them yet — there is nothing here to configure. Until they land, a custom endpoint is reachable through Webhook, which posts this platform’s own JSON rather than any vendor’s payload format.',
+
+      addAnother: (name: string) => `Add another ${name}`,
+      connectOne: (name: string) => `Connect ${name}`,
+
+      summary: byKey<NotificationChannelType>({
+        Email: 'SMTP to a mailbox or a distribution list.',
+        Webhook: 'An HTTP POST of the incident and its analysis to an endpoint you control.',
+        Jira: 'Opens an issue in a project, with the reasoning in the description.',
+      }),
+
+      planned: byKey<PlannedIntegrationId>({
+        slack: 'Post to a channel.',
+        teams: 'Post to a team channel.',
+        pagerduty: 'Page whoever is on call.',
+        discord: 'Post to a channel.',
+      }),
+
+      deleted: 'Integration deleted',
+      updated: 'Integration updated',
+      connected: (channel: string) => `${channel} connected`,
+
+      testOk: 'The channel accepted a test notification.',
+      testRejected: 'The channel rejected the test.',
+      testOkLabel: 'Test sent',
+      testFailLabel: 'Test failed',
+
+      deleteBody: (channel: string) =>
+        `This ${channel} destination and the credentials stored with it are removed. Delivery history for incidents already sent is kept.`,
+      deleteConfirm: 'Delete integration',
+
+      editTitle: (channel: string) => `Edit ${channel} integration`,
+      connectTitle: (channel: string) => `Connect ${channel}`,
+      namePlaceholder: (channel: string) => `${channel} — on-call`,
+      // One channel can hold several integrations, so the name is what tells them apart.
+      nameHint: 'How this destination is identified on the integrations page.',
+      minPriority: 'Minimum priority',
+      anyPriority: 'Any priority',
+      andAbove: (priority: string) => `${priority} and above`,
+      categoryFilter: 'Category filter',
+      categoryPlaceholder: 'Any category',
+
+      // An integration with no filters matches every incident. Left as two blank form controls
+      // that is indistinguishable from an unfinished setup, so the rule is written out.
+      sends: (parts: string) => `Sends ${parts}`,
+      sendsEverything: 'Sends every incident — no filters set',
+      category: (value: string) => `category ${value}`,
+      pausedNote: '— nothing is sent here.',
+      whenResumed: 'when resumed.',
+    },
+
+    telemetry: {
+      title: 'Telemetry',
+      intro:
+        'Where detection reads from. The platform pulls from your own log store on a schedule — it never watches itself, and nothing reaches it that you have not connected here.',
+      loadError: 'Could not load sources.',
+
+      // The most consequential configuration gap in the product: with no source being read,
+      // detection has no input, so the incident list stays empty and reads as "quiet" rather
+      // than as "deaf".
+      blindnessNone:
+        'No source is connected. Nothing is being read, so nothing will ever be detected.',
+      blindnessOne: 'The only source is paused. Nothing is being read, so nothing will be detected.',
+      blindnessMany: (total: number) =>
+        `All ${total} sources are paused. Nothing is being read, so nothing will be detected.`,
+
+      comingSoonNote:
+        'Both of these are the general answer to “my logs are not in Seq”, and neither is built yet — there is nothing here to configure. The intent is deliberately not a connector per vendor: one standard wire format, and the long tail handled by the shipper you already run.',
+
+      addAnother: (name: string) => `Add another ${name} source`,
+      connectOne: (name: string) => `Connect ${name}`,
+
+      summary: byKey<TelemetrySourceKind>({
+        Seq: 'Pulls from a Seq instance’s query API on a schedule.',
+      }),
+
+      planned: byKeyOf<PlannedSourceId, { name: string; summary: string }>({
+        otlp: { name: 'OTLP log ingest', summary: 'Your collector pushes; no connector per vendor.' },
+        alerts: {
+          name: 'Alert webhook ingest',
+          summary: 'Alerts from your monitoring, not logs.',
+        },
+      }),
+
+      deleted: 'Source deleted',
+      updated: 'Source updated',
+      connected: (kind: string) => `${kind} connected`,
+
+      // Connecting and matching are different successes. A source that answers but shows nothing
+      // is a filter problem or a quiet window.
+      probeAnswered: 'The source answered the probe.',
+      probeNoMatch:
+        'The source answered, but nothing matched the filter in the window probed. Either the window is quiet or the filter is too narrow.',
+      probeMatched: (count: number) =>
+        `The source answered with ${count} matching ${plural('en', count, { one: 'event', other: 'events' })} visible.`,
+      probeRejected: 'The source rejected the probe.',
+      testOkLabel: 'Probe succeeded',
+      testFailLabel: 'Probe failed',
+
+      deleteBody: (kind: string) =>
+        `This ${kind} source and the credentials stored with it are removed, and detection stops reading from it immediately. Logs and signatures already ingested are kept — they are the evidence behind incidents already opened. A source connected here again starts from its initial lookback window rather than from where this one stopped.`,
+      deleteConfirm: 'Delete source',
+
+      editTitle: (kind: string) => `Edit ${kind} source`,
+      connectTitle: (kind: string) => `Connect ${kind}`,
+      namePlaceholder: (kind: string) => `${kind} — production`,
+      nameHint: 'How this source is identified on the telemetry page and in detection logs.',
+      pollLabel: 'Poll interval (seconds)',
+      pollInvalid: (minimum: number) =>
+        `Enter a whole number of seconds, ${minimum} or more. Polling faster than that hammers the source for no benefit.`,
+
+      // A source with no filter still reads something specific, and the pair of blank form
+      // controls that produced it does not say what.
+      polls: (seconds: number, what: string) => `Polls every ${seconds}s for ${what}`,
+      matching: (filter: string) => `events matching ${filter}`,
+      defaultFilter: 'errors and fatals',
+      pausedNote: '— nothing is read from here.',
+      whenResumed: 'when resumed.',
     },
   },
 

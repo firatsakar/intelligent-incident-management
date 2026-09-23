@@ -21,8 +21,8 @@ import {
   formatSeconds,
   statusTier,
 } from '@/lib/format'
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
 import { resolveWindowPreset } from '@/lib/window'
 import type { IntegrationHealth, NotificationStats } from '@/types/api'
 
@@ -47,21 +47,19 @@ import { defaultDeliveryWindow, useNotificationStats } from './queries'
  */
 export function DeliveriesPage() {
   const [params] = useSearchParams()
+  const { deliveries: t, window: windowText } = useT()
 
   const preset = params.get('window') ?? defaultDeliveryWindow
   const query = useNotificationStats(preset)
 
-  const scope = useT().window.scope[resolveWindowPreset(preset)]
+  const scope = windowText.scope[resolveWindowPreset(preset)]
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Delivery health</h1>
-          <p className="text-muted-foreground text-sm">
-            Whether each channel is getting through — across the whole window, not one incident at
-            a time.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <WindowSelect value={preset} />
@@ -70,7 +68,7 @@ export function DeliveriesPage() {
       {query.isError && (
         <Card>
           <CardContent className="text-alarm-ink py-6 text-sm">
-            {query.error instanceof Error ? query.error.message : 'Could not load delivery health'}
+            {query.error instanceof Error ? query.error.message : t.loadError}
           </CardContent>
         </Card>
       )}
@@ -104,12 +102,13 @@ export function DeliveriesPage() {
   )
 }
 
-const plural = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`
-
-/** Not `plural`: the one noun on this screen whose plural is not the singular with an s on it. */
-const deliveries = (count: number) => (count === 1 ? 'delivery' : 'deliveries')
+// The two hand-rolled pluralisers this file carried — one appending an "s", one special-casing
+// "delivery/deliveries" — are gone. Both were English grammar written into a component, and the
+// second existed only because the first was wrong about a word.
 
 function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
+  const t = useT().deliveries.totals
+
   const total = stats.totalSent + stats.totalFailed + stats.totalPending
   const channels = stats.integrations.length
   const failing = stats.integrations.filter((row) => row.failed > 0).length
@@ -117,19 +116,15 @@ function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string 
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Deliveries</CardTitle>
-        <CardDescription>
-          Every notification this platform attempted — {scope}.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {total === 0 ? (
           <p className="max-w-2xl text-sm">
-            <span className="text-muted-foreground">Nothing was sent in this window. </span>
-            Notifications go out when an analysis finishes, so a window with no incidents in it and
-            a dispatcher that has stopped look identical from here. The incidents screen says which
-            of the two this is.
+            <span className="text-muted-foreground">{t.emptyLead}</span>
+            {t.empty}
           </p>
         ) : (
           <>
@@ -145,8 +140,7 @@ function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string 
                 {formatCount(stats.totalFailed)}
               </span>
               <span className="text-muted-foreground text-sm">
-                of {formatCount(total)} {deliveries(total)} failed, across{' '}
-                {formatCount(channels)} {plural(channels, 'integration')}
+                {t.failedOf(formatCount(total), total, formatCount(channels), channels)}
               </span>
             </p>
 
@@ -161,30 +155,20 @@ function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string 
             />
 
             <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm">
-              <Total swatch="bg-alarm" label="failed" value={stats.totalFailed} />
-              <Total swatch="bg-foreground/55" label="sent" value={stats.totalSent} />
-              <Total swatch="bg-foreground/20" label="pending" value={stats.totalPending} />
+              <Total swatch="bg-alarm" label={t.failed} value={stats.totalFailed} />
+              <Total swatch="bg-foreground/55" label={t.sent} value={stats.totalSent} />
+              <Total swatch="bg-foreground/20" label={t.pending} value={stats.totalPending} />
             </dl>
 
             <p className="text-muted-foreground max-w-2xl text-sm">
               {stats.totalFailed > 0 ? (
-                <>
-                  {formatCount(failing)} {plural(failing, 'integration')} recorded a failure in
-                  this window. The rows below say which, when, and what the channel said back.
-                </>
+                t.someFailing(formatCount(failing), failing)
               ) : (
                 <>
-                  Every delivery in this window got through.{' '}
-                  {stats.totalPending > 0 ? (
-                    <>
-                      {formatCount(stats.totalPending)} {deliveries(stats.totalPending)}{' '}
-                      {stats.totalPending === 1 ? 'is' : 'are'} still queued and{' '}
-                      {stats.totalPending === 1 ? 'has' : 'have'} not been attempted yet — queued
-                      is not sent.
-                    </>
-                  ) : (
-                    <>Nothing is queued and nothing is outstanding.</>
-                  )}
+                  {t.allThrough}
+                  {stats.totalPending > 0
+                    ? t.stillQueued(formatCount(stats.totalPending), stats.totalPending)
+                    : t.nothingQueued}
                 </>
               )}
             </p>
@@ -208,11 +192,14 @@ function Total({ swatch, label, value }: { swatch: string; label: string; value:
 }
 
 function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
+  const { deliveries } = useT()
+  const t = deliveries.dispatch
+
   const measured = stats.integrations.filter((row) => row.medianDispatchSeconds !== null)
 
   const rows: BarRow[] = stats.integrations.map((row) => ({
     key: row.integrationId,
-    label: nameOf(row),
+    label: nameOf(deliveries, row),
     value: row.medianDispatchSeconds,
     display: formatSeconds(row.medianDispatchSeconds),
     dim: row.medianDispatchSeconds === null,
@@ -221,23 +208,17 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Dispatch time</CardTitle>
-        <CardDescription>
-          How long each channel took to accept a notification, median — {scope}. Measured from the
-          delivery being written to the channel acknowledging it.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {stats.integrations.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            Nothing was dispatched in this window, so there is nothing to have timed.
-          </p>
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
         ) : measured.length === 0 ? (
           <p className="text-sm">
-            <span className="text-muted-foreground">Nothing succeeded in this window, </span>
-            so there is no dispatch time to draw. That is not a dispatch time of zero — it is the
-            absence of one.
+            <span className="text-muted-foreground">{t.noneSucceededLead}</span>
+            {t.noneSucceeded}
           </p>
         ) : (
           <>
@@ -246,16 +227,19 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
                 column of durations does not show. Each row prints its own exact figure. */}
             <BarRows
               rows={rows}
-              label={`Median dispatch time per integration, ${scope}. ${measured
-                .map((row) => `${nameOf(row)} ${formatSeconds(row.medianDispatchSeconds)}`)
-                .join(', ')}.`}
+              label={t.chartLabel(
+                scope,
+                measured
+                  .map(
+                    (row) =>
+                      `${nameOf(deliveries, row)} ${formatSeconds(row.medianDispatchSeconds)}`,
+                  )
+                  .join(', '),
+              )}
             />
 
             {measured.length < stats.integrations.length && (
-              <p className="text-muted-foreground text-xs">
-                An em dash is an integration that had nothing succeed in this window, so it has no
-                median. It is not a dispatch time of zero.
-              </p>
+              <p className="text-muted-foreground text-xs">{t.dashNote}</p>
             )}
           </>
         )}
@@ -271,7 +255,9 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
  * record that somebody was told, and they are kept on purpose. So the row survives without a name
  * rather than disappearing, which would quietly delete the evidence along with the config.
  */
-const nameOf = (row: IntegrationHealth) => row.name ?? 'Deleted integration'
+type DeliveriesText = Dictionary['deliveries']
+
+const nameOf = (t: DeliveriesText, row: IntegrationHealth) => row.name ?? t.deleted
 
 type Verdict = 'failing' | 'recovered' | 'delivering' | 'queued' | 'silent'
 
@@ -298,37 +284,33 @@ function verdictOf(row: IntegrationHealth): Verdict {
 }
 
 // Only `failing` reaches the solid alarm fill. Recovered is a real caveat and gets the amber tint;
-// everything else is the calm baseline. Each carries a word and a shape as well as the colour.
-const verdictStyle: Record<Verdict, { label: string; className: string; icon: LucideIcon }> = {
-  failing: { label: 'Failing', className: statusTier.alarm, icon: TriangleAlertIcon },
-  recovered: { label: 'Recovered', className: statusTier.caution, icon: CircleCheckIcon },
-  delivering: { label: 'Delivering', className: statusTier.nominal, icon: CircleCheckIcon },
-  queued: { label: 'Queued', className: statusTier.inert, icon: ClockIcon },
-  silent: { label: 'Nothing sent', className: statusTier.inert, icon: CircleSlashIcon },
+// everything else is the calm baseline. Each carries a word and a shape as well as the colour —
+// the word comes from the dictionary, the colour and the shape stay here.
+const verdictStyle: Record<Verdict, { className: string; icon: LucideIcon }> = {
+  failing: { className: statusTier.alarm, icon: TriangleAlertIcon },
+  recovered: { className: statusTier.caution, icon: CircleCheckIcon },
+  delivering: { className: statusTier.nominal, icon: CircleCheckIcon },
+  queued: { className: statusTier.inert, icon: ClockIcon },
+  silent: { className: statusTier.inert, icon: CircleSlashIcon },
 }
 
 function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
+  const t = useT().deliveries.byIntegration
+
   const anyMissingMedian = stats.integrations.some((row) => row.medianDispatchSeconds === null)
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>By integration</CardTitle>
-        <CardDescription>
-          One row per integration that attempted a delivery — {scope}. In the order the server
-          returned them, which is worst first.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {stats.integrations.length === 0 ? (
           <div className="py-6 text-center">
-            <p className="text-sm font-medium">No integration attempted a delivery.</p>
-            <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">
-              An integration only appears here once it has something to report. One configured and
-              enabled but never reached in this window is not on this list — Settings › Integrations
-              is the roll of what exists.
-            </p>
+            <p className="text-sm font-medium">{t.emptyTitle}</p>
+            <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">{t.empty}</p>
           </div>
         ) : (
           <ul className="divide-border -my-1 divide-y">
@@ -341,10 +323,7 @@ function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: s
         {anyMissingMedian && (
           // Said once, here, rather than on every row that has one. An em dash with no explanation
           // invites the reader to supply one, and the one they supply is "zero".
-          <p className="text-muted-foreground text-xs">
-            A median dispatch of — means nothing succeeded for that integration in this window.
-            That is the absence of a measurement, not a measurement of zero.
-          </p>
+          <p className="text-muted-foreground text-xs">{t.medianNote}</p>
         )}
       </CardContent>
     </Card>
@@ -352,15 +331,20 @@ function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: s
 }
 
 function IntegrationRow({ row }: { row: IntegrationHealth }) {
+  const { deliveries, labels } = useT()
+  const t = deliveries.byIntegration
+
   const deleted = row.name === null
-  const verdict = verdictStyle[verdictOf(row)]
+  const kind = verdictOf(row)
+  const verdict = verdictStyle[kind]
+  const name = nameOf(deliveries, row)
 
   return (
     <li className="space-y-2 py-3">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <Badge variant="outline" className={cn('border', verdict.className)}>
           <verdict.icon aria-hidden />
-          {verdict.label}
+          {deliveries.verdict[kind]}
         </Badge>
 
         <span
@@ -368,29 +352,31 @@ function IntegrationRow({ row }: { row: IntegrationHealth }) {
             'min-w-0 flex-1 truncate text-sm font-medium',
             deleted && 'text-muted-foreground font-normal italic',
           )}
-          title={nameOf(row)}
+          title={name}
         >
-          {nameOf(row)}
+          {name}
         </span>
 
-        {row.channel && <span className="text-dim-foreground shrink-0 text-xs">{row.channel}</span>}
+        {row.channel && (
+          <span className="text-dim-foreground shrink-0 text-xs">
+            {labels.channel[row.channel as keyof typeof labels.channel] ?? row.channel}
+          </span>
+        )}
 
         {/* Only for an integration that still exists. A deleted one reads as disabled through the
             same field, and saying "disabled" about something that is gone is two wrong words. */}
         {!deleted && !row.isEnabled && (
           <Badge variant="outline" className={cn('border', statusTier.caution)}>
-            disabled
+            {t.disabled}
           </Badge>
         )}
       </div>
 
       {deleted && (
         <p className="text-muted-foreground text-xs">
-          This integration has been deleted. Its deliveries are kept on purpose — they are the
-          record that somebody was told — so the counts below are still true, and the name and
-          channel they belonged to are gone.{' '}
+          {t.deletedNote}{' '}
           <span className="text-dim-foreground" title={row.integrationId}>
-            id {row.integrationId.slice(0, 8)}
+            {t.id(row.integrationId.slice(0, 8))}
           </span>
         </p>
       )}
@@ -398,21 +384,21 @@ function IntegrationRow({ row }: { row: IntegrationHealth }) {
       {/* The same grid on every row, so the figures line up down the page and can be compared by
           eye. That comparison is the reason this screen exists. */}
       <dl className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3 lg:grid-cols-5">
-        <Metric label="Sent" value={formatCount(row.sent)} zero={row.sent === 0} />
+        <Metric label={t.sent} value={formatCount(row.sent)} zero={row.sent === 0} />
         <Metric
-          label="Failed"
+          label={t.failed}
           value={formatCount(row.failed)}
           zero={row.failed === 0}
           className={row.failed > 0 ? 'text-alarm-ink' : undefined}
         />
-        <Metric label="Pending" value={formatCount(row.pending)} zero={row.pending === 0} />
+        <Metric label={t.pending} value={formatCount(row.pending)} zero={row.pending === 0} />
         <Metric
-          label="Median dispatch"
+          label={t.median}
           value={formatSeconds(row.medianDispatchSeconds)}
           zero={row.medianDispatchSeconds === null}
         />
         <Metric
-          label="Last sent"
+          label={t.lastSent}
           value={formatRelative(row.lastSentAt)}
           title={row.lastSentAt ? formatDateTime(row.lastSentAt) : undefined}
           zero={row.lastSentAt === null}
@@ -427,7 +413,7 @@ function IntegrationRow({ row }: { row: IntegrationHealth }) {
           {/* muted rather than dim: the tinted panel lifts the background, and the dim ink that
               clears AA on a card does not clear it here. */}
           <p className="text-muted-foreground text-xs tabular-nums">
-            Last failure{' '}
+            {t.lastFailure}{' '}
             <span title={row.lastErrorAt ? formatDateTime(row.lastErrorAt) : undefined}>
               {formatRelative(row.lastErrorAt)}
             </span>

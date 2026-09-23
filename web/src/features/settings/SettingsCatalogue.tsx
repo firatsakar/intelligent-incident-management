@@ -2,6 +2,7 @@ import { AlertTriangleIcon, CircleCheckIcon, XIcon } from 'lucide-react'
 import type { ComponentType, ReactNode } from 'react'
 
 import { formatTime } from '@/lib/format'
+import { T, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
@@ -19,7 +20,8 @@ import { cn } from '@/lib/utils'
 /** Both lucide icons and the local vendor marks take a className; nothing else is asked of them. */
 export type MarkComponent = ComponentType<{ className?: string }>
 
-/** Something the roadmap names and the code does not implement. Inert on purpose. */
+/** Something the roadmap names and the code does not implement. Inert on purpose. The words come
+ *  from whichever catalogue is drawing it, because only that screen knows which union names it. */
 export interface PlannedEntry {
   name: string
   mark: MarkComponent
@@ -60,6 +62,8 @@ export function Notice({ tone, children }: { tone: 'warn' | 'bad'; children: Rea
 }
 
 export function PlannedRow({ entry }: { entry: PlannedEntry }) {
+  const t = useT().settings.shared
+
   return (
     <div className="border-inert-border flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5">
       <span className="bg-muted/50 text-dim-foreground grid size-9 shrink-0 place-items-center rounded-lg">
@@ -74,7 +78,7 @@ export function PlannedRow({ entry }: { entry: PlannedEntry }) {
       {/* Not a disabled button. A control that cannot ever be pressed is still a control, and it
           invites the press that does nothing. This is a label. */}
       <span className="border-inert-border text-dim-foreground ml-auto shrink-0 rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap">
-        Coming soon
+        {t.comingSoon}
       </span>
     </div>
   )
@@ -102,6 +106,8 @@ export function TestReport({
   failLabel: string
   onDismiss: () => void
 }) {
+  const t = useT().settings.shared
+
   return (
     <div
       role="status"
@@ -122,14 +128,20 @@ export function TestReport({
       )}
 
       <span className="min-w-0 flex-1 break-words">
-        <span className="font-medium">{outcome.ok ? okLabel : failLabel}</span> at{' '}
-        {formatTime(outcome.at)} — {outcome.detail}
+        <T
+          text={t.testReport}
+          values={{
+            status: <span className="font-medium">{outcome.ok ? okLabel : failLabel}</span>,
+            time: formatTime(outcome.at),
+            detail: outcome.detail,
+          }}
+        />
       </span>
 
       <button
         type="button"
         onClick={onDismiss}
-        aria-label="Dismiss test result"
+        aria-label={t.dismissTest}
         className="focus-visible:ring-ring/50 -my-0.5 -mr-1 grid size-6 shrink-0 place-items-center rounded-sm outline-none hover:opacity-70 focus-visible:ring-3"
       >
         <XIcon className="size-3.5" aria-hidden />

@@ -642,6 +642,351 @@ export const tr: Dictionary = {
     },
   },
 
+
+  dashboard: {
+    title: 'Panel',
+    intro: 'Şu anda ne açık, ne geldi, ve bunun ne kadarını platform kendi buldu.',
+    days: (count: number) => `${count} gün`,
+    loadError: 'Rakamlar yüklenemedi',
+
+    open: {
+      title: 'Şu anda açık',
+      description:
+        'Ne kadar eski olursa olsun hâlâ Açık ya da Devam ediyor olan her olay. Altı hafta önce açılmış ve hiç kapanmamış olan, en çok görmeniz gereken olaydır; o yüzden bu sayım pencereyi bilerek yok sayıyor.',
+      notWindowed: 'pencereden bağımsız',
+      open: 'açık',
+    },
+
+    byDate: {
+      title: 'Tarihe göre olaylar',
+      description:
+        'Olayların ne zaman açıldığı, önceliğe göre yığılmış — {scope}. Günler sunucuda sizin diliminizde değil {utc} olarak kesiliyor, ve son kolon bugün — hâlâ doluyor.',
+    },
+
+    detection: {
+      title: 'Tespit',
+      description: (scope: string) =>
+        `Platformun ne kadarını kendisine söylenmeden fark ettiği, ve fark ettiklerini açmasının ne kadar sürdüğü — ${scope}, UTC.`,
+      empty:
+        'Bu pencerede olay yok, yani fark edilmiş olacak bir şey de yok. Daha uzun bir pencere deneyin.',
+      share: 'platformun kendisi fark etti',
+      noticed: 'Fark edildi',
+      filed: 'Elle açıldı',
+      median: 'Medyan gecikme',
+      p95: '95. yüzdelik',
+      nothingNoticed:
+        'Bu pencerede hiçbir şey otomatik olarak fark edilmedi, yani ölçülecek bir gecikme yok. Bu sıfır gecikme değil — gecikmenin yokluğu.',
+      allSkewed:
+        'Bu penceredeki her tespit, kayıt sorun başlamadan önce açılmış olarak döndü; bu bir gecikme değil, iki saatin uyuşmaması. O satırlar yüzdeliklerin dışında kalıyor.',
+    },
+
+    sources: {
+      title: 'Olaylar nereden geliyor',
+      description: (scope: string) => `Her olayın nasıl açıldığı — ${scope}, UTC.`,
+      empty: 'Bu pencerede hiçbir kaynaktan olay yok.',
+      meaning: {
+        Telemetry: 'platform onu log akışında buldu',
+        Alert: 'dışarıdan bir alarm onu yükseltti',
+        Manual: 'birisi onu elle açtı',
+      },
+    },
+
+    latest: {
+      title: 'Son olaylar',
+      description: (rows: number) =>
+        `Ne zaman açılmış olursa olsun en yeni ${rows} tanesi. Soketten geliyor — yenileme yok, pencere yok.`,
+      loadError: 'Olaylar yüklenemedi',
+      emptyTitle: 'Kayıtta hiç olay yok.',
+      empty: 'Elle açılmış bir şey yok, ve henüz hiçbir şey bir tespit kuralını aşmadı.',
+      all: (total: number) => `${total} olayın tamamı`,
+    },
+
+    chart: {
+      summary: (total: number, days: number) => `${days} günde ${total} olay açıldı`,
+      busiest: (count: number) => ` · en yoğun gün ${count}`,
+      hint: ' · tek bir gün için grafiğin üstüne gelin ya da odaklayın',
+      dayTotal: (total: number) => `${total} olay`,
+      ariaLabel: (days: number) =>
+        `${days} gün boyunca UTC günü başına açılan olaylar. Günleri tek tek okumak için ok tuşlarını kullanın.`,
+      emptyPlot: 'Bu pencerede hiçbir şey açılmadı. İçindeki her gün boş.',
+      caption: 'UTC günü başına açılan olaylar, önceliğe göre.',
+      columnDay: 'Gün (UTC)',
+      columnTotal: 'Toplam',
+      legendNote: 'Kritik her çubuğun tabanında',
+    },
+  },
+
+
+  deliveries: {
+    title: 'Teslimat sağlığı',
+    intro:
+      'Her kanalın ulaşıp ulaşmadığı — tek bir olay üzerinden değil, pencerenin tamamında.',
+    loadError: 'Teslimat sağlığı yüklenemedi',
+
+    deleted: 'Silinmiş entegrasyon',
+
+    totals: {
+      title: 'Teslimatlar',
+      description: (scope: string) =>
+        `Bu platformun denediği her bildirim — ${scope}.`,
+      emptyLead: 'Bu pencerede hiçbir şey gönderilmedi. ',
+      empty:
+        'Bildirimler bir analiz bittiğinde çıkıyor; yani içinde hiç olay olmayan bir pencere ile durmuş bir dağıtıcı buradan birebir aynı görünür. Hangisi olduğunu olaylar ekranı söyler.',
+
+      failedOf: (total: string, _totalCount: number, channels: string, _channelCount: number) =>
+        `/ ${channels} entegrasyonda toplam ${total} teslimat başarısız oldu`,
+
+      failed: 'başarısız',
+      sent: 'gönderildi',
+      pending: 'beklemede',
+
+      someFailing: (failing: string, _count: number) =>
+        `Bu pencerede ${failing} entegrasyon bir başarısızlık kaydetti. Hangisi, ne zaman, ve kanalın ne cevap verdiği aşağıdaki satırlarda.`,
+      allThrough: 'Bu penceredeki her teslimat ulaştı. ',
+      stillQueued: (pending: string, _count: number) =>
+        `${pending} teslimat hâlâ kuyrukta ve henüz denenmedi — kuyrukta olmak gönderilmiş olmak değil.`,
+      nothingQueued: 'Kuyrukta bir şey yok, bekleyen bir şey de yok.',
+    },
+
+    dispatch: {
+      title: 'Gönderim süresi',
+      description: (scope: string) =>
+        `Her kanalın bir bildirimi kabul etmesinin ne kadar sürdüğü, medyan — ${scope}. Teslimatın yazılmasından kanalın onu onaylamasına kadar ölçülüyor.`,
+      empty: 'Bu pencerede hiçbir şey gönderilmedi, yani süresi ölçülecek bir şey de yok.',
+      noneSucceededLead: 'Bu pencerede hiçbiri başarılı olmadı, ',
+      noneSucceeded:
+        'yani çizilecek bir gönderim süresi yok. Bu sıfır gönderim süresi değil — sürenin yokluğu.',
+      chartLabel: (scope: string, detail: string) =>
+        `Entegrasyon başına medyan gönderim süresi, ${scope}. ${detail}.`,
+      dashNote:
+        'Uzun tire, o entegrasyon için bu pencerede hiçbir şeyin başarılı olmadığı anlamına gelir, yani medyanı yok. Bu sıfır gönderim süresi değil.',
+    },
+
+    verdict: {
+      failing: 'Başarısız',
+      recovered: 'Toparladı',
+      delivering: 'Teslim ediyor',
+      queued: 'Kuyrukta',
+      silent: 'Gönderim yok',
+    },
+
+    byIntegration: {
+      title: 'Entegrasyona göre',
+      description: (scope: string) =>
+        `Teslimat denemiş her entegrasyon için bir satır — ${scope}. Sunucunun döndürdüğü sırada, yani en kötüsü başta.`,
+      emptyTitle: 'Hiçbir entegrasyon teslimat denemedi.',
+      empty:
+        'Bir entegrasyon burada ancak raporlayacak bir şeyi olduğunda görünür. Yapılandırılmış ve etkin ama bu pencerede hiç ulaşılmamış olan bu listede değildir — neyin var olduğunun listesi Ayarlar › Entegrasyonlar.',
+      medianNote:
+        'Medyan gönderimin — olması, o entegrasyon için bu pencerede hiçbir şeyin başarılı olmadığı anlamına gelir. Bu bir ölçümün yokluğu, sıfır ölçümü değil.',
+
+      disabled: 'devre dışı',
+      deletedNote:
+        'Bu entegrasyon silindi. Teslimatları bilerek saklanıyor — birine haber verildiğinin kaydı onlar — yani aşağıdaki sayılar hâlâ doğru, ait oldukları ad ve kanal ise yok.',
+      id: (short: string) => `id ${short}`,
+      lastFailure: 'Son başarısızlık',
+
+      sent: 'Gönderildi',
+      failed: 'Başarısız',
+      pending: 'Beklemede',
+      median: 'Medyan gönderim',
+      lastSent: 'Son gönderim',
+    },
+  },
+
+
+  settings: {
+    shared: {
+      availableNow: 'Şu anda mevcut',
+      comingSoon: 'Yakında',
+      counts: (total: number, enabled: number) => `${total} bağlı · ${enabled} etkin`,
+      connected: ' bağlı',
+      notConnected: 'Bağlı değil.',
+      test: 'Test et',
+      testing: 'Test ediliyor…',
+      edit: 'Düzenle',
+      cancel: 'Vazgeç',
+      deleting: 'Siliniyor…',
+      paused: 'Duraklatıldı',
+      name: 'Ad',
+      dismissTest: 'Test sonucunu kapat',
+      testReport: '{status} · {time} — {detail}',
+      secretKept: 'Boş bırakılan bir sır, saklanan değeri korur.',
+      saving: 'Kaydediliyor…',
+      saveChanges: 'Değişiklikleri kaydet',
+      connect: 'Bağlan',
+      enabledSwitch: (name: string) => `${name} etkin`,
+      deleteAria: (name: string) => `${name} sil`,
+      deleteTitle: (name: string) => `“${name}” silinsin mi?`,
+    },
+
+    config: {
+      keepCurrent: 'Mevcut değeri korumak için boş bırakın',
+      strayIntegration: 'Bu entegrasyonda saklı; bu form onun şeklini bilmiyor.',
+      straySource: 'Bu kaynakta saklı; bu form onun şeklini bilmiyor.',
+
+      fields: {
+        'email.host': 'SMTP sunucusu',
+        'email.port': 'Port',
+        'email.from': 'Gönderen',
+        'email.to': 'Alıcı',
+        'email.username': 'Kullanıcı adı',
+        'email.password': 'Parola',
+        'webhook.url': 'URL',
+        'webhook.timeout': 'Zaman aşımı (saniye)',
+        'webhook.authorization': 'Authorization başlığı',
+        'jira.baseUrl': 'Temel URL',
+        'jira.projectKey': 'Proje anahtarı',
+        'jira.email': 'Hesap e-postası',
+        'jira.apiToken': 'API token',
+        'jira.issueType': 'Issue tipi',
+        'seq.url': 'Seq URL',
+        'seq.apiKey': 'API anahtarı',
+        'seq.filter': 'Filtre',
+        'seq.serviceProperty': 'Servis alanı',
+        'seq.initialLookback': 'İlk geriye bakış (dakika)',
+      },
+
+      hints: {
+        'webhook.authorization':
+          'Header: ön ekiyle başlayan her ayar bir istek başlığı olarak gönderilir.',
+        'seq.apiKey':
+          'Yalnızca Seq örneğinde kimlik doğrulama açıksa gerekir. Anahtarın Read yetkisi olmalı.',
+        'seq.filter':
+          'Seq filtre ifadesi. Boş bırakılırsa connector error ve fatal kayıtları okur.',
+        'seq.serviceProperty':
+          'Bir log satırının hangi servisten geldiğini söyleyen event alanının adı.',
+        'seq.initialLookback':
+          'İlk poll ne kadar geriye bakar. Sonraki pollar sonuncunun bıraktığı yerden devam eder.',
+      },
+    },
+
+    integrations: {
+      title: 'Entegrasyonlar',
+      intro:
+        'Bir analiz tamamlandığında bildirimin nereye gideceği. Bir hedef türü birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
+      loadError: 'Entegrasyonlar yüklenemedi.',
+
+      silenceNone: 'Hiçbir şey bağlı değil. Bir analiz tamamlandığında kimseye haber verilmez.',
+      silenceOne:
+        'Tek entegrasyon duraklatılmış. Bir analiz tamamlandığında kimseye haber verilmez.',
+      silenceMany: (total: number) =>
+        `${total} entegrasyonun hepsi duraklatılmış. Bir analiz tamamlandığında kimseye haber verilmez.`,
+
+      comingSoonNote:
+        'Henüz arkasında kod olmayan planlanmış hedefler — burada yapılandırılacak bir şey yok. Onlar gelene kadar, kendi uç noktanıza Webhook üzerinden ulaşılabilir; Webhook herhangi bir sağlayıcının payload formatını değil, bu platformun kendi JSON’unu gönderir.',
+
+      addAnother: (name: string) => `Bir ${name} daha ekle`,
+      connectOne: (name: string) => `${name} bağla`,
+
+      summary: {
+        Email: 'Bir posta kutusuna ya da dağıtım listesine SMTP.',
+        Webhook: 'Olayın ve analizinin, sizin kontrol ettiğiniz bir uca HTTP POST edilmesi.',
+        Jira: 'Bir projede issue açar, gerekçe de açıklamasına girer.',
+      },
+
+      planned: {
+        slack: 'Bir kanala gönderir.',
+        teams: 'Bir takım kanalına gönderir.',
+        pagerduty: 'Nöbetçi kim ise onu çağırır.',
+        discord: 'Bir kanala gönderir.',
+      },
+
+      deleted: 'Entegrasyon silindi',
+      updated: 'Entegrasyon güncellendi',
+      connected: (channel: string) => `${channel} bağlandı`,
+
+      testOk: 'Kanal bir test bildirimini kabul etti.',
+      testRejected: 'Kanal testi reddetti.',
+      testOkLabel: 'Test gönderildi',
+      testFailLabel: 'Test başarısız',
+
+      deleteBody: (channel: string) =>
+        `Bu ${channel} hedefi ve onunla saklanan kimlik bilgileri kaldırılıyor. Zaten gönderilmiş olaylara ait teslimat geçmişi korunuyor.`,
+      deleteConfirm: 'Entegrasyonu sil',
+
+      editTitle: (channel: string) => `${channel} entegrasyonunu düzenle`,
+      connectTitle: (channel: string) => `${channel} bağla`,
+      namePlaceholder: (channel: string) => `${channel} — nöbet`,
+      nameHint: 'Bu hedefin entegrasyonlar sayfasında nasıl tanınacağı.',
+      minPriority: 'Asgari öncelik',
+      anyPriority: 'Her öncelik',
+      andAbove: (priority: string) => `${priority} ve üstü`,
+      categoryFilter: 'Kategori filtresi',
+      categoryPlaceholder: 'Her kategori',
+
+      sends: (parts: string) => `Gönderir: ${parts}`,
+      sendsEverything: 'Her olayı gönderir — filtre ayarlanmamış',
+      category: (value: string) => `kategori ${value}`,
+      pausedNote: '— buraya bir şey gönderilmiyor.',
+      whenResumed: 'devam ettirildiğinde.',
+    },
+
+    telemetry: {
+      title: 'Telemetri',
+      intro:
+        'Tespitin nereden okuduğu. Platform kendi log deponuzdan belirli aralıklarla çekiyor — kendini asla izlemiyor, ve buradan bağlamadığınız hiçbir şey ona ulaşmıyor.',
+      loadError: 'Kaynaklar yüklenemedi.',
+
+      blindnessNone: 'Hiçbir kaynak bağlı değil. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilemeyecek.',
+      blindnessOne: 'Tek kaynak duraklatılmış. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilmeyecek.',
+      blindnessMany: (total: number) =>
+        `${total} kaynağın hepsi duraklatılmış. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilmeyecek.`,
+
+      comingSoonNote:
+        '“Loglarım Seq’te değil” sorusunun genel cevabı bu ikisi, ve henüz ikisi de yapılmadı — burada yapılandırılacak bir şey yok. Amaç bilerek sağlayıcı başına connector değil: tek bir standart tel formatı, ve uzun kuyruğu zaten çalıştırdığınız shipper’ın halletmesi.',
+
+      addAnother: (name: string) => `Bir ${name} kaynağı daha ekle`,
+      connectOne: (name: string) => `${name} bağla`,
+
+      summary: {
+        Seq: 'Bir Seq örneğinin sorgu API’sinden belirli aralıklarla çeker.',
+      },
+
+      planned: {
+        otlp: {
+          name: 'OTLP log alımı',
+          summary: 'Sizin collector’ınız gönderir; sağlayıcı başına connector yok.',
+        },
+        alerts: {
+          name: 'Alarm webhook alımı',
+          summary: 'Log değil, izleme sisteminizden gelen alarmlar.',
+        },
+      },
+
+      deleted: 'Kaynak silindi',
+      updated: 'Kaynak güncellendi',
+      connected: (kind: string) => `${kind} bağlandı`,
+
+      probeAnswered: 'Kaynak yoklamaya cevap verdi.',
+      probeNoMatch:
+        'Kaynak cevap verdi, ama yoklanan pencerede filtreye uyan hiçbir şey yoktu. Ya pencere sessiz ya da filtre fazla dar.',
+      probeMatched: (count: number) =>
+        `Kaynak cevap verdi, görünen ${count} eşleşen kayıt var.`,
+      probeRejected: 'Kaynak yoklamayı reddetti.',
+      testOkLabel: 'Yoklama başarılı',
+      testFailLabel: 'Yoklama başarısız',
+
+      deleteBody: (kind: string) =>
+        `Bu ${kind} kaynağı ve onunla saklanan kimlik bilgileri kaldırılıyor, ve tespit hemen ondan okumayı bırakıyor. Zaten alınmış loglar ve imzalar korunuyor — onlar zaten açılmış olayların arkasındaki kanıt. Buraya yeniden bağlanan bir kaynak, bunun bıraktığı yerden değil kendi ilk geriye bakış penceresinden başlar.`,
+      deleteConfirm: 'Kaynağı sil',
+
+      editTitle: (kind: string) => `${kind} kaynağını düzenle`,
+      connectTitle: (kind: string) => `${kind} bağla`,
+      namePlaceholder: (kind: string) => `${kind} — üretim`,
+      nameHint: 'Bu kaynağın telemetri sayfasında ve tespit loglarında nasıl tanınacağı.',
+      pollLabel: 'Poll aralığı (saniye)',
+      pollInvalid: (minimum: number) =>
+        `Tam sayı olarak ${minimum} saniye ya da daha fazlasını girin. Bundan hızlı poll etmek kaynağı boşuna yorar.`,
+
+      polls: (seconds: number, what: string) => `Her ${seconds}sn'de bir ${what} için bakıyor`,
+      matching: (filter: string) => `${filter} ile eşleşen kayıtlar`,
+      defaultFilter: 'error ve fatal kayıtlar',
+      pausedNote: '— buradan bir şey okunmuyor.',
+      whenResumed: 'devam ettirildiğinde.',
+    },
+  },
+
   labels: {
     incidentStatus: {
       Open: 'Açık',
