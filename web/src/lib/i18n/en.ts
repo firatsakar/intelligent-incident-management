@@ -1,0 +1,1232 @@
+import type { WindowPreset } from '@/lib/window'
+import type { RealtimeStatus } from '@/app/RealtimeProvider'
+import type { ConfigFieldId } from '@/features/settings/configSchema'
+import type {
+  PlannedIntegrationId,
+  PlannedSourceId,
+} from '@/features/settings/plannedIds'
+
+import type { Language } from './locale'
+import { plural } from './translate'
+
+/**
+ * The eight scoring terms this build has been taught. Not every key the gate can emit —
+ * that set is open and `scoreTerm()` falls back to splitting the camel case — but these
+ * eight must have words in every language, so they go through `byKey`.
+ */
+type ScoreTerm =
+  | 'fatal'
+  | 'burstBase'
+  | 'overThreshold'
+  | 'rateAnomaly'
+  | 'precedent'
+  | 'blastRadius'
+  | 'falsePositivePrecedent'
+  | 'muted'
+import type {
+  DeliveryStatus,
+  IncidentPriority,
+  IncidentSource,
+  IncidentStatus,
+  LogSeverity,
+  NotificationChannelType,
+  SignalKind,
+  SignalStatus,
+  TelemetrySourceKind,
+} from '@/types/api'
+
+/**
+ * The source dictionary, and the shape every other language has to match.
+ *
+ * It is an object, not a lookup function. A screen writes `const { profile } = useT()` and then
+ * `profile.title`, so there are no string key paths — which means a key cannot be mistyped, and a
+ * diff that touches four hundred strings cannot silently render the wrong sentence. Anything that
+ * takes a value is a function here, so the substitution is a template literal the compiler checks
+ * rather than a runtime `t(key, { count })` it cannot.
+ *
+ * `tr.ts` is typed as `Dictionary`, so a missing Turkish key fails the build instead of quietly
+ * falling back to English, and a signature mismatch fails it too.
+ *
+ * Every `Record<Union, string>` below is deliberate: adding a member to one of those unions breaks
+ * this file until somebody writes the label, which is the same totality trick
+ * `features/settings/integrationCatalogue.ts` uses to keep the catalogue honest.
+ *
+ * What is NOT here, on purpose: prose that arrives from the services. An analysis's reasoning, a
+ * detection's reason, a provider's error message. Translating those would mean either translating
+ * the model's output or inventing a message the provider did not send.
+ */
+/**
+ * Forces a label map to be total over its union, and widens the values back to `string` so the
+ * Turkish dictionary is not made to repeat the English words.
+ *
+ * `as Record<...>` would not do it — an assertion is not a check — and `satisfies` would pin the
+ * values to their English literals, which is the opposite of what a translation file needs.
+ */
+const byKey = <K extends string>(labels: Record<K, string>): Record<K, string> => labels
+
+/** The same, for an entry that is more than one string. */
+const byKeyOf = <K extends string, V>(entries: Record<K, V>): Record<K, V> => entries
+
+export const en = {
+  common: {
+    selected: 'Selected',
+    // One wording for one action: the account menu and the profile card both read this.
+    signOut: 'Sign out',
+  },
+
+  session: {
+    /** The stored value stays 'Default organisation' — this is only how it reads. */
+    defaultOrganization: 'Default organisation',
+  },
+
+  nav: {
+    skip: 'Skip to content',
+    open: 'Open navigation',
+    sections: 'Sections',
+    drawer: 'Move between the console’s sections.',
+
+    groups: {
+      operations: 'Operations',
+      pipeline: 'Pipeline',
+    },
+
+    // Keyed rather than listed, so `AppLayout`'s array indexes this by a key the compiler
+    // checks — a nav entry cannot exist without a label, in either language.
+    items: {
+      dashboard: 'Dashboard',
+      incidents: 'Incidents',
+      signals: 'Signals',
+      evidence: 'Evidence',
+      funnel: 'Funnel',
+      services: 'Services',
+      deliveries: 'Deliveries',
+      settings: 'Settings',
+    },
+  },
+
+  account: {
+    menu: (name: string) => `Account — ${name}`,
+    unverifiedTitle: 'Unverified session',
+    unverified:
+      'Nothing checked who you are. This name labels the session; the services behind the console answer anyone who can reach them.',
+  },
+
+  realtime: {
+    status: byKey<RealtimeStatus>({
+      connecting: 'connecting',
+      live: 'live',
+      reconnecting: 'reconnecting',
+      offline: 'offline',
+    }),
+
+    hint: byKey<RealtimeStatus>({
+      connecting: 'Opening the update channel.',
+      live: 'Updates are pushed as they happen.',
+      reconnecting: 'The update channel dropped and is being re-established.',
+      offline: 'Screens still work, but they will not update on their own.',
+    }),
+
+    /** Read aloud after the word, so "live" is not announced as a stray adjective. */
+    suffix: '— realtime connection',
+  },
+
+  settingsNav: {
+    title: 'Settings',
+    intro:
+      'Your profile, the log stores this platform reads from, and the destinations it sends what it finds to.',
+    sections: 'Settings sections',
+    pages: {
+      profile: 'Profile',
+      telemetry: 'Telemetry',
+      integrations: 'Integrations',
+    },
+  },
+
+  login: {
+    tagline: 'It shows its work.',
+    taglineDetail:
+      'The platform watches your log store, decides on the record whether something is worth waking a human for, and then explains the decision it reached.',
+
+    points: {
+      gate: {
+        title: 'A gate you can read',
+        detail:
+          'Signals are scored by explicit rules before any model is involved, and the arithmetic stays on the incident — including the components that came out negative.',
+      },
+      restraint: {
+        title: 'And what it did not raise',
+        detail:
+          'Weak and suppressed signals stay on the record next to the detection latency, so a quiet hour reads as quiet rather than as unexplained.',
+      },
+      routing: {
+        title: 'Routed, not broadcast',
+        detail:
+          'A finished analysis reaches the destinations you configured, filtered by priority, and every attempt keeps its delivery result.',
+      },
+    },
+
+    heading: 'Sign in',
+    subheading: 'Choose the name this session runs under.',
+    organisation: 'Organisation',
+    ownership:
+      'Incidents, signals and integrations belong to the organisation rather than to the person who opened them. This build has one.',
+    nameLabel: 'Your name',
+    nameHint: 'Labels this session in the console. Nothing checks it.',
+    // A required field, not a rejected credential. It says what is missing and why it is wanted,
+    // and never implies that something was checked.
+    nameRequired: 'Enter a name. It is only used to label this session.',
+    noPasswordTitle: 'No password, because nothing would check it',
+    noPassword:
+      'This build has no authentication. The services behind this console answer anyone who can reach them, and signing in here only decides whose name the session carries. Real sign-in arrives with the gateway.',
+    submit: 'Enter the console',
+  },
+
+  language: {
+    change: 'Change language',
+    title: 'Language',
+    description:
+      'Stored in this browser, not against your name — a second machine reads it from the browser again.',
+    legend: 'Language',
+    // Each option is titled with its own endonym from `languageName`; this says what choosing it
+    // actually changes, which is more than the words — the dates and the thousands separators
+    // move with it.
+    options: byKey<Language>({
+      en: 'The console’s own text, dates and numbers in English.',
+      tr: 'The console’s own text, dates and numbers in Turkish.',
+    }),
+    // Said once, here, rather than as a footnote on every screen that shows a server message.
+    passthrough:
+      'The console’s own text is translated. Text that arrives from the services — an analysis’s reasoning, a detection’s reason, a provider’s error — is passed through exactly as it was written, in English.',
+  },
+
+  theme: {
+    change: 'Change theme',
+    title: 'Appearance',
+    description:
+      'Stored in this browser, not against your name — a second machine starts on System again.',
+    legend: 'Theme',
+    options: {
+      light: { label: 'Light', detail: 'Always the light palette.' },
+      dark: { label: 'Dark', detail: 'Always the dark palette.' },
+      system: { label: 'System', detail: 'Follows your operating system.' },
+    },
+    palette: { light: 'light', dark: 'dark' },
+    resolved: (palette: string) => `Your system is currently asking for the ${palette} palette.`,
+  },
+
+  profile: {
+    title: 'Profile',
+    intro:
+      'The name this session runs under, the organisation everything on screen belongs to, and how the console looks and reads while you are in it.',
+    identity: {
+      title: 'Identity',
+      description: 'Who this console thinks you are, and what that is worth.',
+      notAnAccountTitle: 'This is not an account',
+      notAnAccount:
+        'The name above is stored in this browser and nothing verified it. There is no password, no profile on any server, and no permission attached to it — the services behind this console answer anyone who can reach them, whatever name a session carries. To run under a different one, sign out and enter it. Real sign-in arrives with the gateway, and this page is where it will land.',
+      ownership:
+        'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. This build has one.',
+    },
+  },
+
+
+  incidents: {
+    list: {
+      title: 'Incidents',
+      intro: 'Everything the platform has opened, by hand or on its own.',
+      // Says which count this is. "8 on record" next to an active filter is a claim about the
+      // whole table that the table is not showing.
+      matching: (count: number) => `${count} match these filters`,
+      onRecord: (count: number) => `${count} on record`,
+
+      filterStatus: 'Filter by status',
+      filterPriority: 'Filter by priority',
+      anyStatus: 'Any status',
+      anyPriority: 'Any priority',
+      /** The same two, as they read inside the empty-state sentence rather than in a control. */
+      anyStatusInline: 'any status',
+      anyPriorityInline: 'any priority',
+      clear: 'Clear',
+      clearFilters: 'Clear filters',
+
+      caption: 'Incidents, newest first. Each row links to the incident.',
+      columns: {
+        priority: 'Priority',
+        incident: 'Incident',
+        source: 'Source',
+        status: 'Status',
+        analysis: 'Analysis',
+        detected: 'Detected',
+        latency: 'Latency',
+      },
+
+      loadError: 'Could not load incidents',
+
+      // Two different situations, and only one of them is fixable by touching the filters.
+      emptyFilteredTitle: 'Nothing matches these filters.',
+      emptyFiltered: (status: string, priority: string) =>
+        `There are incidents on record; none of them is both ${status} and ${priority}.`,
+      emptyTitle: 'No incidents on record.',
+      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
+
+      page: (current: number, total: number) => `Page ${current} of ${total}`,
+      previous: 'Previous',
+      next: 'Next',
+
+      analysisFailed: 'analysis failed',
+      awaitingAnalysis: 'awaiting analysis',
+      analysed: 'analysed',
+      toOpen: (duration: string) => `+${duration} to open`,
+      // Opened by hand: there is no detection to have been slow. A zero would claim the platform
+      // found it instantly.
+      openedByHand: 'Opened by hand — nothing detected it',
+    },
+
+    detail: {
+      loadErrorTitle: 'Could not load this incident',
+      unknownError: 'Unknown error',
+      started: (relative: string) => `started ${relative}`,
+
+      statusLabel: 'Incident status',
+      assignPlaceholder: 'Assign a team',
+      reassignPlaceholder: 'Reassign to…',
+      assignLabel: 'Assign a team',
+      reassignLabel: 'Reassign to a different team',
+      assign: 'Assign',
+      assigning: 'Assigning…',
+
+      whatHappened: 'What happened',
+      fromDetector:
+        'Written by the detector from the log records themselves — this is the same text the analysis read.',
+      fromOperator: 'As entered when the incident was opened.',
+
+      openedByHand: 'Opened by hand',
+      openedByHandDetail:
+        'Nothing detected this, so there is no detection latency to measure — the platform was told rather than noticing. The score breakdown below is absent for the same reason.',
+      problemStarted: 'Problem started',
+      sourceClock: 'on the source’s clock',
+      incidentOpened: 'Incident opened',
+      ourClock: 'on ours',
+      detectionLatency: 'Detection latency',
+      clockDisagreement: 'Clock disagreement',
+      latencyHintLabel: 'What detection latency measures',
+      latencyHint:
+        'From the first log line the source stamped to the moment this record was filed — the log store’s clock to ours. It covers the poll interval, the detection pass and the scoring, and it is the whole of what the platform spent noticing this by itself.',
+      skewHint:
+        'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.',
+      noticed: 'noticed without being told',
+      skewNote: 'source clock is ahead of ours',
+    },
+
+    timeline: {
+      title: 'Timeline',
+      description:
+        'Five moments the services record separately. Where a time is missing, it is missing from the record rather than from this screen.',
+
+      problemStarted: 'Problem started',
+      onSourceClock: 'On the source clock, not ours.',
+      notRecorded: 'Not recorded — this incident was opened by hand.',
+
+      incidentOpened: 'Incident opened',
+      toDetect: (duration: string) => `+${duration} to detect`,
+      ourClockGap: 'Our clock. The gap above is what detection cost.',
+
+      analysisApplied: 'Analysis applied',
+      categorised: (category: string, priority: string) =>
+        `Categorised as ${category}, priority set to ${priority}`,
+      applied: 'Applied.',
+      analysisFailed: 'The analysis ran and returned nothing. See the panel for the reason.',
+      analysisWaiting: 'Waiting on the analysis service.',
+
+      peopleNotified: 'People notified',
+      afterOpening: (duration: string) => `+${duration} after opening`,
+      channelsDelivered: (sent: number, total: number) =>
+        `${sent} of ${total} ${plural('en', total, { one: 'channel', other: 'channels' })} delivered`,
+      noDeliveryYet: 'No delivery recorded yet.',
+      everyChannelFailed: 'Every configured channel failed — see the notifications panel.',
+
+      lastChanged: 'Last changed',
+      anyEdit: 'Any edit — status, team, or the analysis landing.',
+
+      // "done" rather than a time, and said as a word so nobody reads an em dash as "never
+      // happened".
+      doneUntimed: 'done · time not recorded',
+      notYet: 'not yet',
+    },
+
+    score: {
+      // Not "Why this was raised": the detector writes that exact phrase as a heading inside the
+      // evidence summary, which renders in the card immediately above this one.
+      title: 'How the gate scored it',
+      description:
+        'A deterministic score, not a judgement call. Every term is recorded so the decision can be argued with afterwards.',
+
+      total: 'Total',
+      totalNote: 'sum of the terms above, clamped to 1.00',
+      confidence: 'Confidence',
+      confidenceNote: 'scoring was bypassed',
+
+      // The threshold is per-rule and not exposed, so this states what the outcome was rather
+      // than inventing the number it was compared against.
+      defaultReason: 'It met the promotion threshold for its detection rule.',
+
+      signature: 'Signature',
+      muted: 'muted',
+      occurrences: (count: number, promotions: number, real: number, falsePositive: number) =>
+        `${count} ${plural('en', count, { one: 'occurrence', other: 'occurrences' })} recorded in total · promoted ${promotions}×, ${real} confirmed real, ${falsePositive} false positive`,
+
+      measuresLabel: (term: string) => `What ${term} measures`,
+    },
+
+    notifications: {
+      title: 'Notifications',
+      summary: (sent: number, total: number) => `${sent} of ${total} delivered`,
+      failed: (count: number) => `${count} failed`,
+      empty:
+        'Nothing sent yet. Notifications go out once the analysis completes, to every enabled integration whose filters match.',
+      // An integration deleted after the fact leaves its deliveries behind, which is correct: the
+      // notification did happen, and the row is the only proof of it.
+      deletedIntegration: 'deleted integration',
+      took: (duration: string) => `took ${duration}`,
+      // Queued rather than sent. Calling it "sent" is the one thing this panel must never do.
+      queued: (when: string) => `queued ${when}`,
+      attempts: (count: number) =>
+        `${count} ${plural('en', count, { one: 'attempt', other: 'attempts' })}`,
+    },
+
+    analysis: {
+      title: 'AI analysis',
+      description:
+        'Enrichment on top of the deterministic gate — it set the category and the priority, not whether this was raised.',
+
+      failedDescription:
+        'The analysis ran and did not produce a result. Nothing further is coming on its own — the priority and category below are the ones detection set.',
+      failedTitle: 'Analysis failed',
+      failedFooter: 'A later attempt that succeeds clears this and fills the panel in.',
+
+      waiting:
+        'Waiting for the analysis service. It reads the evidence summary carried on the incident, so no extra call is made on its behalf.',
+
+      confidence: 'Confidence',
+      confidenceHintLabel: 'What the confidence figure means',
+      confidenceHint:
+        'How sure the analysis was of its own category and priority — not how severe the incident is, and not how certain the gate was that something broke. Those are the score on the left.',
+      // Null is a missing measurement, not a zero. An empty bar would read as "certain this is
+      // nothing", which is the opposite of what it means.
+      noConfidence:
+        'The analysis did not put a number on it. That is not the same as being unsure — it declined to quantify, so there is nothing to draw.',
+
+      reasoning: 'Reasoning',
+    },
+  },
+
+  /**
+   * The detection gate's own vocabulary.
+   *
+   * `SignalScoring` emits its breakdown with the key names it uses internally, which are accurate
+   * and meaningless to anybody who has not read that file. The eight terms this build has been
+   * taught are total below; a term the gate grows later still renders, through `scoreTerm`'s
+   * camel-case fallback, because the arithmetic has to add up on screen.
+   *
+   * The help text says what each term *is* rather than what it is worth: the weights are constants
+   * in `SignalScoring`, and a number copied into the frontend is a number that will go stale.
+   */
+  scoreTerms: {
+    label: byKey<ScoreTerm>({
+      fatal: 'fatal error',
+      burstBase: 'burst base',
+      overThreshold: 'over threshold',
+      rateAnomaly: 'rate anomaly',
+      precedent: 'precedent',
+      blastRadius: 'blast radius',
+      falsePositivePrecedent: 'false-positive history',
+      muted: 'muted signature',
+    }),
+
+    help: byKey<ScoreTerm>({
+      fatal:
+        'The process crashed. A crash is not a judgement call, so it skips scoring entirely and goes straight through.',
+      burstBase: 'The starting score every burst gets for clearing its detection rule at all.',
+      overThreshold:
+        'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
+      rateAnomaly:
+        'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
+      precedent: 'This signature has produced a confirmed real incident before.',
+      blastRadius: 'Two or more services are raising it, not one.',
+      falsePositivePrecedent:
+        'This signature has been marked a false positive before, so the score is pulled down.',
+      muted:
+        'Somebody muted this signature. It is scored, and heavily penalised for being muted.',
+    }),
+  },
+
+
+  telemetry: {
+    /** The tail bucket, named once: it is a cell key, a URL value and a heading, and spelling it
+     *  out in three places is how the three stop agreeing. */
+    otherSignatures: 'other signatures',
+    unknownError: 'unknown error',
+    unknownService: 'unknown service',
+
+    signals: {
+      title: 'Signals',
+      intro:
+        'Everything the detection gate looked at — including what it decided not to wake anyone for.',
+      loadError: 'Could not load signals',
+
+      allSignals: 'All signals',
+      shown: (count: number) => `${count} shown`,
+      inWindow: (total: number) => `${total} in this window`,
+      loaded: (loaded: number, total: number) => `${loaded} of ${total} loaded`,
+      chips:
+        'the chips are the gate’s score components, and the confidence is what they add up to',
+      clearFilter: 'Clear filter',
+
+      emptyTileTitle: 'No signals for this tile.',
+      // Two causes, and from here they are indistinguishable: the link may carry a tile from
+      // another window, or the signatures may have been re-ranked since.
+      emptyTile:
+        'Nothing in the current window matches this tile. The link may have been made against a different window, or the signatures may have been re-ranked since.',
+      emptyWindowTitle: 'No signals in this window.',
+      emptyWindow:
+        'Nothing has crossed a detection rule yet. A quiet window and a source that is not being read look the same here — Settings › Telemetry says which.',
+
+      loadMore: (count: number) => `Load ${count} more`,
+      notLoaded: (count: number) =>
+        `${count} older ${plural('en', count, { one: 'signal', other: 'signals' })} in this window ${plural('en', count, { one: 'is', other: 'are' })} not loaded, so the map above does not count them.`,
+      ceiling: (max: number, total: number, remaining: number) =>
+        `${max} is as much as this endpoint will hand over at once, and this window holds ${total}. A shorter window is the way to see the rest — the remaining ${remaining} are older than everything above.`,
+
+      occurrences: (count: number) =>
+        `${count} ${plural('en', count, { one: 'occurrence', other: 'occurrences' })}`,
+      viewIncident: 'View incident',
+    },
+
+    heatmap: {
+      title: 'Where the errors are',
+      description:
+        'Every tile is one error signature. Size and colour are both how often it fired — biggest and reddest top-left — the corner mark is how far the gate took it, and a tile outlines itself when a signal for it has just arrived.',
+      // Said on the map rather than only on the list below it. A treemap that claims to show
+      // where the errors are while covering a third of the window is a quiet lie.
+      partial: (loaded: number, total: number) =>
+        `Built from the ${loaded} most recent of ${total} signals in this window — Load more below widens it.`,
+      empty: 'No signals in this window. Nothing has crossed a detection rule yet.',
+
+      allServices: 'All services',
+      counts: (services: number, tiles: number, occurrences: number) =>
+        `${services} ${plural('en', services, { one: 'service', other: 'services' })} · ${tiles} ${plural('en', tiles, { one: 'tile', other: 'tiles' })} · ${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })}`,
+
+      /** What the gate did with the cell's signals, as a phrase rather than the enum name. */
+      band: byKey<SignalStatus>({
+        Promoted: 'opened an incident',
+        Deduplicated: 'counted into an open incident',
+        Weak: 'weak — shown, not raised',
+        Recorded: 'recorded only',
+        Suppressed: 'suppressed (muted signature)',
+      }),
+
+      // Colour is never the only channel, and neither is an animation: a mark that can only be
+      // seen by watching is a mark an operator who looked away has missed.
+      tile: (
+        service: string,
+        label: string,
+        occurrences: number,
+        signals: number,
+        band: string,
+      ) =>
+        `${service} · ${label} — ${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} across ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })} — ${band}`,
+      justUpdated: ' — updated just now',
+
+      panelCounts: (occurrences: number, signals: number) =>
+        `${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} · ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })}`,
+      incidentLink: 'Incident →',
+
+      legendOccurrences: 'occurrences',
+      noMark: 'no mark — recorded only',
+      legendFlash: 'updated in the last few seconds',
+      unplaced: (count: number) =>
+        `${count} ${plural('en', count, { one: 'signal', other: 'signals' })} could not be placed — their signature is gone.`,
+    },
+
+    evidence: {
+      title: 'Evidence',
+      intro: 'The raw material: what was logged, what it rolled up into, and what that produced.',
+      loadError: 'Could not load evidence',
+
+      filterService: 'Filter by service',
+      clearService: 'Clear the service filter',
+
+      logRecords: 'Log records',
+      // The endpoint caps at 200 but reports the true total, so a truncated view is shown as
+      // truncated rather than quietly lying about the volume.
+      showingRecent: (shown: number, total: number) =>
+        `Showing the most recent ${shown} of ${total}`,
+      inWindow: (total: number) => `${total} in this window`,
+      logListLabel: 'Log records in this window',
+      emptyLogTitle: 'Nothing logged in this window.',
+      emptyLogForService: (service: string) =>
+        `No record from "${service}" in the window. Either it was quiet, or nothing by that name is being read — the name has to match what the source reports.`,
+      emptyLog:
+        'Detection reads from your own log store on a schedule, so an empty window means either a quiet period or a source that is not being read.',
+
+      signatures: 'Signatures',
+      signaturesCount: (count: number) =>
+        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals below`,
+      signaturesTruncated: ' — behind the ones shown, not behind the whole window',
+      signaturesAllTime: '. The counters on each span all time, not this window.',
+      signaturesListLabel: 'Signatures behind the signals in this window',
+      emptySignaturesTitle: 'No signatures here.',
+      emptySignatures:
+        'A signature is created the first time an error is normalised, so an empty list means nothing in the window was an error.',
+
+      signals: 'Signals',
+      signalsDescription: 'What the gate made of those signatures in this window',
+      signalsRecent: (shown: number, total: number) => `the most recent ${shown} of ${total}`,
+      signalsListLabel: 'Signals in this window',
+      emptySignalsTitle: 'No signals here.',
+      emptySignals:
+        'Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide.',
+
+      arrived: (records: number) =>
+        `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested since this window was read`,
+      acrossPolls: (polls: number) => `, across ${polls} polls`,
+      // The tick counts records, not records matching a filter: the summary is per source, and
+      // the service a record belongs to is not in it.
+      allServicesNote: ' Counted across all services, not just the one filtered here.',
+      reread: 'Re-read the window',
+      rereading: 'Re-reading…',
+
+      clockSkew: 'clock skew',
+      ingestionLag: 'Ingestion lag — from the source’s timestamp to ours',
+      muted: 'muted',
+      signatureCounts: (
+        total: number,
+        promotions: number,
+        real: number,
+        falsePositive: number,
+      ) => `${total} total · promoted ${promotions}× · ${real} real, ${falsePositive} false`,
+      signalCounts: (occurrences: number, when: string) =>
+        `${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} · ${when}`,
+    },
+
+    funnel: {
+      title: 'Signal funnel',
+      intro:
+        'Everything the platform read, what it folded together, and how much of it it decided was not worth waking anybody for.',
+      loadError: 'Could not load the funnel',
+
+      notRaised: 'Not raised',
+      notRaisedDescription: (scope: string) =>
+        `Signals the gate scored and deliberately left alone — ${scope}.`,
+      // The denominator travels with the numerator. It is the whole defence against a zero here
+      // being read as an empty window, so it cannot be somewhere the eye can skip.
+      ofScored: (signals: number) =>
+        `of ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })} the gate scored`,
+      heldBack: 'held back',
+      actedOn: 'acted on',
+
+      zeroHeldBack:
+        'Everything the gate scored in this window, it acted on — all {count} crossed the threshold, so there was nothing left to hold back. {emphasis} What it looked at is the number beside it, and the stages below.',
+      zeroEmphasis: 'A zero here means the gate refused nothing, not that it looked at nothing.',
+      someHeldBack: (notRaised: string, signals: string) =>
+        `${notRaised} of ${signals} were scored and left where they were: no incident, no page, no email. That is the thing an alerting rule cannot do — decide, on arithmetic you can read back, that this one was not worth a human.`,
+      // The exclusion is deliberate on the server and is worth showing rather than hiding: it is
+      // the difference between restraint and a claim of restraint.
+      deduplicated: (count: number) =>
+        `${count} deduplicated ${plural('en', count, { one: 'signal', other: 'signals' })} count as acted on, not as held back. Each was folded into an incident that was already open, so somebody was woken — just earlier.`,
+
+      nothingScored: 'Nothing was scored in this window.',
+      nothingScoredRecords: (records: string, count: number) =>
+        `${records} log ${plural('en', count, { one: 'record', other: 'records' })} arrived and none of them crossed a detection rule, so no burst ever reached the score. The filtering here happened a stage earlier than this number measures — the stages below are where to read it.`,
+      nothingArrived:
+        'No telemetry arrived in this window at all, so the gate had nothing to look at. A quiet window and a source that is not being read look the same from here — Settings › Telemetry says which.',
+
+      stagesTitle: 'From log records to signals',
+      stagesDescription: (scope: string) =>
+        `The three stages, on one scale — ${scope}. They count different things: records are lines of log, signatures are distinct fingerprints cut from them, and signals are bursts the gate was asked to score.`,
+      stageLogRecords: 'Log records',
+      stageSignatures: 'Signatures',
+      stageSignals: 'Signals',
+      stagesChartLabel: (records: string, signatures: string, signals: string) =>
+        `Pipeline stages. ${records} log records, ${signatures} signatures, ${signals} signals.`,
+
+      nothingToFingerprint: 'Nothing arrived, so there was nothing to fingerprint.',
+      nothingFingerprinted:
+        'Nothing in this window was fingerprinted, which should not happen — the records arrived without one.',
+      // The drop fingerprinting bought, stated as a ratio rather than left to be inferred from a
+      // bar that is two pixels wide.
+      folding: (perSignature: string, signatures: string, records: string, count: number) =>
+        `About ${perSignature} records per signature. That fold is what fingerprinting bought: the gate reasons about ${signatures} ${plural('en', count, { one: 'thing', other: 'things' })}, not ${records}.`,
+
+      neverScored: 'No burst crossed a detection rule, so the gate was never asked to score anything.',
+      bursting: (signatures: string, signatureCount: number, signals: string, signalCount: number) =>
+        `${signatures} ${plural('en', signatureCount, { one: 'signature', other: 'signatures' })} produced ${signals} ${plural('en', signalCount, { one: 'burst', other: 'bursts' })} for the gate to score.`,
+      /** The one stage that can widen, which a funnel drawn without saying so would misreport. */
+      burstingWider:
+        ' A signature can fire more than once, which is why this stage is wider than the one above it rather than narrower.',
+
+      whatArrived: 'What arrived',
+      noLogRecord: 'No log record arrived in this window.',
+
+      verdictsTitle: 'How the gate ruled',
+      verdictsDescription: (scope: string) =>
+        `Every verdict the gate can reach, and how many landed on each — ${scope}.`,
+      noVerdicts: 'The gate scored nothing in this window, so it reached none of these.',
+
+      wokenHeading: 'Somebody was woken',
+      wokenNote: 'Not counted as held back.',
+      notWokenHeading: 'Nobody was woken',
+      notWokenNote: 'These three are what "not raised" counts.',
+
+      /**
+       * What each verdict means, in the operator's language rather than the enum's. Says what the
+       * gate *did*, not how it scored: the weights live in SignalScoring and a number copied into
+       * the frontend is a number that goes stale without anyone noticing.
+       */
+      verdict: byKey<SignalStatus>({
+        Promoted: 'Cleared the line, and the gate opened an incident for it.',
+        Deduplicated:
+          'Folded into an incident that was already open. Somebody was woken — earlier.',
+        Weak: 'Scored, and scored under the line. Kept where you can see it; nobody was called.',
+        Recorded: 'Kept for the record and nothing more.',
+        Suppressed:
+          'The signature is muted, so the gate scored it and then silenced it on purpose.',
+      }),
+    },
+
+    services: {
+      title: 'Service health',
+      intro: 'Where the errors are coming from, and how far up the pipeline they got.',
+      // The count only once there is one: "0 services produced something" is a sentence nobody
+      // writes, and the empty row says the same thing properly.
+      produced: (count: string, raw: number) =>
+        `${count} ${plural('en', raw, { one: 'service', other: 'services' })} produced something in this window.`,
+      loadError: 'Could not load service health',
+
+      caption: (scope: string) =>
+        `Log volume, signals and incidents per service — ${scope}. Sortable by every column except the top signature.`,
+
+      columnService: 'Service',
+      columnLogRecords: 'Log records',
+      columnSignals: 'Signals',
+      columnPromoted: 'Promoted',
+      columnIncidents: 'Incidents',
+      columnTopSignature: 'Top signature',
+      columnLastSignal: 'Last signal',
+
+      emptyTitle: 'Nothing arrived in this window.',
+      empty:
+        'No service wrote a log record and nothing crossed a detection rule. A genuinely quiet window and a telemetry source that is not being read look the same from here — Settings › Telemetry says which.',
+
+      goneHintLabel: 'What (signature gone) means',
+      goneHint:
+        'These signals were detected, but the error signature behind them has since been deleted — and the service name lived on the signature. The counts are real; the name they belong to is not recoverable.',
+
+      folded: (records: string, promoted: string, incidents: string) =>
+        `${records} records · ${promoted} promoted · ${incidents} incidents · `,
+      occurrences: (count: number) =>
+        plural('en', count, { one: 'occurrence', other: 'occurrences' }),
+      noSignal: 'No signal from this service in this window',
+
+      signatureGone: 'signature no longer on record',
+      nothingCrossed: 'nothing crossed a detection rule in this window',
+
+      footnote:
+        'Counted from the signal and signature side. {incidents} is the number of distinct incidents this service’s signals reached, so an incident somebody opened by hand is attributed to no service — an incident record does not carry one, and reading it out of the title would be a guess.',
+    },
+  },
+
+
+  dashboard: {
+    title: 'Dashboard',
+    intro: 'What is open now, what arrived, and how much of it the platform found on its own.',
+    days: (count: number) => `${count} days`,
+    loadError: 'Could not load the figures',
+
+    open: {
+      title: 'Open right now',
+      description:
+        'Every incident still Open or In progress, however old. One opened six weeks ago and never closed is the one you most need to see, so this count deliberately ignores the window.',
+      // On the card, not in a tooltip. Which numbers move with the picker is the kind of thing a
+      // reader has to be able to check at a glance rather than by hovering.
+      notWindowed: 'not windowed',
+      open: 'open',
+    },
+
+    byDate: {
+      title: 'Incidents by date',
+      description:
+        'When incidents were opened, stacked by priority — {scope}. Days are cut in {utc} on the server, not in your zone, and the last column is today, still filling.',
+    },
+
+    detection: {
+      title: 'Detection',
+      description: (scope: string) =>
+        `How much the platform noticed by itself rather than being told, and how long it took to open what it noticed — ${scope}, UTC.`,
+      empty: 'No incidents in this window, so there is nothing to have noticed. Try a longer window.',
+      share: 'noticed by the platform itself',
+      noticed: 'Noticed',
+      filed: 'Filed by hand',
+      median: 'Median latency',
+      p95: '95th percentile',
+      // An em dash with no explanation invites the reader to supply one, and the one they supply
+      // is "zero". These are opposite facts, so the reason is spelled out.
+      nothingNoticed:
+        'Nothing in this window was noticed automatically, so there is no latency to measure. That is not a latency of zero — it is the absence of one.',
+      allSkewed:
+        'Every detection in this window came back with the record filed before the problem started, which is two clocks disagreeing rather than a latency. Those rows sit out of the percentiles.',
+    },
+
+    sources: {
+      title: 'Where incidents come from',
+      description: (scope: string) => `How each incident got opened — ${scope}, UTC.`,
+      empty: 'No incidents in this window, from any source.',
+      // Fixed order, most autonomous first, because the order is the point being made.
+      meaning: byKey<IncidentSource>({
+        Telemetry: 'the platform found it in the log stream',
+        Alert: 'an external alert raised it',
+        Manual: 'somebody opened it by hand',
+      }),
+    },
+
+    latest: {
+      title: 'Latest incidents',
+      description: (rows: number) =>
+        `The ${rows} most recent, whenever they were opened. Arrives over the socket — no refresh, and no window.`,
+      loadError: 'Could not load incidents',
+      emptyTitle: 'No incidents on record.',
+      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
+      all: (total: number) => `All ${total} incidents`,
+    },
+
+    chart: {
+      summary: (total: number, days: number) =>
+        `${total} opened across ${days} ${plural('en', days, { one: 'day', other: 'days' })}`,
+      busiest: (count: number) => ` · busiest day ${count}`,
+      hint: ' · hover or focus the chart for one day',
+      dayTotal: (total: number) =>
+        `${total} ${plural('en', total, { one: 'incident', other: 'incidents' })}`,
+      ariaLabel: (days: number) =>
+        `Incidents opened per UTC day across ${days} ${plural('en', days, { one: 'day', other: 'days' })}. Use the arrow keys to read one day at a time.`,
+      // A drawn-but-empty grid reads as a chart that failed rather than as a quiet month.
+      emptyPlot: 'Nothing opened in this window. Every day in it is empty.',
+      caption: 'Incidents opened per UTC day, by priority.',
+      columnDay: 'Day (UTC)',
+      columnTotal: 'Total',
+      legendNote: 'Critical at the base of each bar',
+    },
+  },
+
+
+  deliveries: {
+    title: 'Delivery health',
+    intro:
+      'Whether each channel is getting through — across the whole window, not one incident at a time.',
+    loadError: 'Could not load delivery health',
+
+    /** The name a deleted integration has left. Its deliveries are kept on purpose. */
+    deleted: 'Deleted integration',
+
+    totals: {
+      title: 'Deliveries',
+      description: (scope: string) => `Every notification this platform attempted — ${scope}.`,
+      emptyLead: 'Nothing was sent in this window. ',
+      empty:
+        'Notifications go out when an analysis finishes, so a window with no incidents in it and a dispatcher that has stopped look identical from here. The incidents screen says which of the two this is.',
+
+      // Same shape as the funnel's headline, and for the same reason: the denominator is on the
+      // line, so a zero cannot be read as "nothing was attempted".
+      failedOf: (total: string, totalCount: number, channels: string, channelCount: number) =>
+        `of ${total} ${plural('en', totalCount, { one: 'delivery', other: 'deliveries' })} failed, across ${channels} ${plural('en', channelCount, { one: 'integration', other: 'integrations' })}`,
+
+      failed: 'failed',
+      sent: 'sent',
+      pending: 'pending',
+
+      someFailing: (failing: string, count: number) =>
+        `${failing} ${plural('en', count, { one: 'integration', other: 'integrations' })} recorded a failure in this window. The rows below say which, when, and what the channel said back.`,
+      allThrough: 'Every delivery in this window got through. ',
+      stillQueued: (pending: string, count: number) =>
+        count === 1
+          ? `${pending} delivery is still queued and has not been attempted yet — queued is not sent.`
+          : `${pending} deliveries are still queued and have not been attempted yet — queued is not sent.`,
+      nothingQueued: 'Nothing is queued and nothing is outstanding.',
+    },
+
+    dispatch: {
+      title: 'Dispatch time',
+      description: (scope: string) =>
+        `How long each channel took to accept a notification, median — ${scope}. Measured from the delivery being written to the channel acknowledging it.`,
+      empty: 'Nothing was dispatched in this window, so there is nothing to have timed.',
+      noneSucceededLead: 'Nothing succeeded in this window, ',
+      noneSucceeded:
+        'so there is no dispatch time to draw. That is not a dispatch time of zero — it is the absence of one.',
+      chartLabel: (scope: string, detail: string) =>
+        `Median dispatch time per integration, ${scope}. ${detail}.`,
+      dashNote:
+        'An em dash is an integration that had nothing succeed in this window, so it has no median. It is not a dispatch time of zero.',
+    },
+
+    /**
+     * What a channel is doing, as a word.
+     *
+     * A failure count alone is not a verdict: an integration that failed twice on Monday and has
+     * delivered forty times since is working, and calling it "failing" all week teaches the
+     * operator to ignore the word.
+     */
+    verdict: {
+      failing: 'Failing',
+      recovered: 'Recovered',
+      delivering: 'Delivering',
+      queued: 'Queued',
+      silent: 'Nothing sent',
+    },
+
+    byIntegration: {
+      title: 'By integration',
+      description: (scope: string) =>
+        `One row per integration that attempted a delivery — ${scope}. In the order the server returned them, which is worst first.`,
+      emptyTitle: 'No integration attempted a delivery.',
+      empty:
+        'An integration only appears here once it has something to report. One configured and enabled but never reached in this window is not on this list — Settings › Integrations is the roll of what exists.',
+      // Said once, here, rather than on every row that has one. An em dash with no explanation
+      // invites the reader to supply one, and the one they supply is "zero".
+      medianNote:
+        'A median dispatch of — means nothing succeeded for that integration in this window. That is the absence of a measurement, not a measurement of zero.',
+
+      // Only for an integration that still exists. A deleted one reads as disabled through the
+      // same field, and saying "disabled" about something that is gone is two wrong words.
+      disabled: 'disabled',
+      deletedNote:
+        'This integration has been deleted. Its deliveries are kept on purpose — they are the record that somebody was told — so the counts below are still true, and the name and channel they belonged to are gone.',
+      id: (short: string) => `id ${short}`,
+      lastFailure: 'Last failure',
+
+      sent: 'Sent',
+      failed: 'Failed',
+      pending: 'Pending',
+      median: 'Median dispatch',
+      lastSent: 'Last sent',
+    },
+  },
+
+
+  settings: {
+    /** The vocabulary the two catalogue screens share — they are one pattern shown twice. */
+    shared: {
+      availableNow: 'Available now',
+      comingSoon: 'Coming soon',
+      counts: (total: number, enabled: number) => `${total} connected · ${enabled} active`,
+      connected: ' connected',
+      notConnected: 'Not connected.',
+      test: 'Test',
+      testing: 'Testing…',
+      edit: 'Edit',
+      cancel: 'Cancel',
+      deleting: 'Deleting…',
+      paused: 'Paused',
+      name: 'Name',
+      dismissTest: 'Dismiss test result',
+      testReport: '{status} at {time} — {detail}',
+      secretKept: 'A secret left blank keeps the value already stored.',
+      saving: 'Saving…',
+      saveChanges: 'Save changes',
+      connect: 'Connect',
+      enabledSwitch: (name: string) => `${name} enabled`,
+      deleteAria: (name: string) => `Delete ${name}`,
+      deleteTitle: (name: string) => `Delete “${name}”?`,
+    },
+
+    config: {
+      keepCurrent: 'Leave blank to keep the current value',
+      // A stored key the schema does not declare. Appending it as a real field is what stops the
+      // form deleting a credential nobody can retype.
+      strayIntegration: 'Stored on this integration; this form does not know its shape.',
+      straySource: 'Stored on this source; this form does not know its shape.',
+
+      /**
+       * One entry per declared config field. Keyed by a stable id rather than by the config key,
+       * because the same key means different things in different connectors — `Url` is the webhook
+       * endpoint in one place and the Seq instance in another.
+       */
+      fields: byKey<ConfigFieldId>({
+        'email.host': 'SMTP host',
+        'email.port': 'Port',
+        'email.from': 'From',
+        'email.to': 'To',
+        'email.username': 'Username',
+        'email.password': 'Password',
+        'webhook.url': 'URL',
+        'webhook.timeout': 'Timeout (seconds)',
+        'webhook.authorization': 'Authorization header',
+        'jira.baseUrl': 'Base URL',
+        'jira.projectKey': 'Project key',
+        'jira.email': 'Account email',
+        'jira.apiToken': 'API token',
+        'jira.issueType': 'Issue type',
+        'seq.url': 'Seq URL',
+        'seq.apiKey': 'API key',
+        'seq.filter': 'Filter',
+        'seq.serviceProperty': 'Service property',
+        'seq.initialLookback': 'Initial lookback (minutes)',
+      }),
+
+      hints: {
+        'webhook.authorization': 'Any setting prefixed Header: is sent as a request header.',
+        'seq.apiKey':
+          'Only needed when the Seq instance has authentication enabled. The key needs Read permission.',
+        'seq.filter': 'Seq filter expression. Left blank, the connector reads errors and fatals.',
+        'seq.serviceProperty': 'Which event property names the service a log line came from.',
+        'seq.initialLookback':
+          'How far back the first poll reads. Later polls resume from where the last one stopped.',
+      } as Partial<Record<ConfigFieldId, string>>,
+    },
+
+    integrations: {
+      title: 'Integrations',
+      intro:
+        'Where a notification goes when an analysis completes. One destination type can hold several integrations — two Email entries with different filters is a normal setup.',
+      loadError: 'Could not load integrations.',
+
+      // Nothing connected and everything paused are different configurations with the same
+      // consequence: an analysis finishes and no one is told.
+      silenceNone: 'Nothing is connected. When an analysis completes, no one is told.',
+      silenceOne: 'The only integration is paused. When an analysis completes, no one is told.',
+      silenceMany: (total: number) =>
+        `All ${total} integrations are paused. When an analysis completes, no one is told.`,
+
+      comingSoonNote:
+        'Planned destinations with nothing behind them yet — there is nothing here to configure. Until they land, a custom endpoint is reachable through Webhook, which posts this platform’s own JSON rather than any vendor’s payload format.',
+
+      addAnother: (name: string) => `Add another ${name}`,
+      connectOne: (name: string) => `Connect ${name}`,
+
+      summary: byKey<NotificationChannelType>({
+        Email: 'SMTP to a mailbox or a distribution list.',
+        Webhook: 'An HTTP POST of the incident and its analysis to an endpoint you control.',
+        Jira: 'Opens an issue in a project, with the reasoning in the description.',
+      }),
+
+      planned: byKey<PlannedIntegrationId>({
+        slack: 'Post to a channel.',
+        teams: 'Post to a team channel.',
+        pagerduty: 'Page whoever is on call.',
+        discord: 'Post to a channel.',
+      }),
+
+      deleted: 'Integration deleted',
+      updated: 'Integration updated',
+      connected: (channel: string) => `${channel} connected`,
+
+      testOk: 'The channel accepted a test notification.',
+      testRejected: 'The channel rejected the test.',
+      testOkLabel: 'Test sent',
+      testFailLabel: 'Test failed',
+
+      deleteBody: (channel: string) =>
+        `This ${channel} destination and the credentials stored with it are removed. Delivery history for incidents already sent is kept.`,
+      deleteConfirm: 'Delete integration',
+
+      editTitle: (channel: string) => `Edit ${channel} integration`,
+      connectTitle: (channel: string) => `Connect ${channel}`,
+      namePlaceholder: (channel: string) => `${channel} — on-call`,
+      // One channel can hold several integrations, so the name is what tells them apart.
+      nameHint: 'How this destination is identified on the integrations page.',
+      minPriority: 'Minimum priority',
+      anyPriority: 'Any priority',
+      andAbove: (priority: string) => `${priority} and above`,
+      categoryFilter: 'Category filter',
+      categoryPlaceholder: 'Any category',
+
+      // An integration with no filters matches every incident. Left as two blank form controls
+      // that is indistinguishable from an unfinished setup, so the rule is written out.
+      sends: (parts: string) => `Sends ${parts}`,
+      sendsEverything: 'Sends every incident — no filters set',
+      category: (value: string) => `category ${value}`,
+      pausedNote: '— nothing is sent here.',
+      whenResumed: 'when resumed.',
+    },
+
+    telemetry: {
+      title: 'Telemetry',
+      intro:
+        'Where detection reads from. The platform pulls from your own log store on a schedule — it never watches itself, and nothing reaches it that you have not connected here.',
+      loadError: 'Could not load sources.',
+
+      // The most consequential configuration gap in the product: with no source being read,
+      // detection has no input, so the incident list stays empty and reads as "quiet" rather
+      // than as "deaf".
+      blindnessNone:
+        'No source is connected. Nothing is being read, so nothing will ever be detected.',
+      blindnessOne: 'The only source is paused. Nothing is being read, so nothing will be detected.',
+      blindnessMany: (total: number) =>
+        `All ${total} sources are paused. Nothing is being read, so nothing will be detected.`,
+
+      comingSoonNote:
+        'Both of these are the general answer to “my logs are not in Seq”, and neither is built yet — there is nothing here to configure. The intent is deliberately not a connector per vendor: one standard wire format, and the long tail handled by the shipper you already run.',
+
+      addAnother: (name: string) => `Add another ${name} source`,
+      connectOne: (name: string) => `Connect ${name}`,
+
+      summary: byKey<TelemetrySourceKind>({
+        Seq: 'Pulls from a Seq instance’s query API on a schedule.',
+      }),
+
+      planned: byKeyOf<PlannedSourceId, { name: string; summary: string }>({
+        otlp: { name: 'OTLP log ingest', summary: 'Your collector pushes; no connector per vendor.' },
+        alerts: {
+          name: 'Alert webhook ingest',
+          summary: 'Alerts from your monitoring, not logs.',
+        },
+      }),
+
+      deleted: 'Source deleted',
+      updated: 'Source updated',
+      connected: (kind: string) => `${kind} connected`,
+
+      // Connecting and matching are different successes. A source that answers but shows nothing
+      // is a filter problem or a quiet window.
+      probeAnswered: 'The source answered the probe.',
+      probeNoMatch:
+        'The source answered, but nothing matched the filter in the window probed. Either the window is quiet or the filter is too narrow.',
+      probeMatched: (count: number) =>
+        `The source answered with ${count} matching ${plural('en', count, { one: 'event', other: 'events' })} visible.`,
+      probeRejected: 'The source rejected the probe.',
+      testOkLabel: 'Probe succeeded',
+      testFailLabel: 'Probe failed',
+
+      deleteBody: (kind: string) =>
+        `This ${kind} source and the credentials stored with it are removed, and detection stops reading from it immediately. Logs and signatures already ingested are kept — they are the evidence behind incidents already opened. A source connected here again starts from its initial lookback window rather than from where this one stopped.`,
+      deleteConfirm: 'Delete source',
+
+      editTitle: (kind: string) => `Edit ${kind} source`,
+      connectTitle: (kind: string) => `Connect ${kind}`,
+      namePlaceholder: (kind: string) => `${kind} — production`,
+      nameHint: 'How this source is identified on the telemetry page and in detection logs.',
+      pollLabel: 'Poll interval (seconds)',
+      pollInvalid: (minimum: number) =>
+        `Enter a whole number of seconds, ${minimum} or more. Polling faster than that hammers the source for no benefit.`,
+
+      // A source with no filter still reads something specific, and the pair of blank form
+      // controls that produced it does not say what.
+      polls: (seconds: number, what: string) => `Polls every ${seconds}s for ${what}`,
+      matching: (filter: string) => `events matching ${filter}`,
+      defaultFilter: 'errors and fatals',
+      pausedNote: '— nothing is read from here.',
+      whenResumed: 'when resumed.',
+    },
+  },
+
+  // ---- the enum vocabulary ---------------------------------------------------------------
+  //
+  // Display only. The wire value never changes: a filter still sends `InProgress`, and the badge
+  // beside it still reads "In progress". One source, so a badge and a filter cannot drift apart.
+  labels: {
+    incidentStatus: byKey<IncidentStatus>({
+      Open: 'Open',
+      InProgress: 'In progress',
+      Resolved: 'Resolved',
+      Closed: 'Closed',
+    }),
+
+    priority: byKey<IncidentPriority>({
+      Critical: 'Critical',
+      High: 'High',
+      Medium: 'Medium',
+      Low: 'Low',
+    }),
+
+    incidentSource: byKey<IncidentSource>({
+      Manual: 'Manual',
+      Telemetry: 'Telemetry',
+      Alert: 'Alert',
+    }),
+
+    signalStatus: byKey<SignalStatus>({
+      Promoted: 'Promoted',
+      Weak: 'Weak',
+      Recorded: 'Recorded only',
+      Deduplicated: 'Deduplicated',
+      Suppressed: 'Suppressed',
+    }),
+
+    // Lower case: these are printed inside a sentence rather than on a badge of their own.
+    signalKind: byKey<SignalKind>({
+      LogBurst: 'burst',
+      RateAnomaly: 'rate anomaly',
+    }),
+
+    severity: byKey<LogSeverity>({
+      Fatal: 'Fatal',
+      Error: 'Error',
+      Warning: 'Warning',
+      Information: 'Information',
+      Debug: 'Debug',
+      Verbose: 'Verbose',
+    }),
+
+    deliveryStatus: byKey<DeliveryStatus>({
+      Pending: 'Pending',
+      Sent: 'Sent',
+      Failed: 'Failed',
+    }),
+
+    // Product names, so most of these are the same in every language. They live here anyway so
+    // that a screen has one place to ask, rather than two conventions for the same kind of thing.
+    channel: byKey<NotificationChannelType>({
+      Email: 'Email',
+      Webhook: 'Webhook',
+      Jira: 'Jira',
+    }),
+
+    /** The server's own name for signals whose signature has since been deleted. A sentinel
+     *  rather than prose, so it is translated the way an enum is — the literal stays the key. */
+    goneService: '(signature gone)',
+
+    telemetryKind: byKey<TelemetrySourceKind>({
+      Seq: 'Seq',
+    }),
+  },
+
+  window: {
+    label: 'Time window',
+
+    option: byKey<WindowPreset>({
+      '30m': 'Last 30 minutes',
+      '2h': 'Last 2 hours',
+      '24h': 'Last 24 hours',
+      '7d': 'Last 7 days',
+    }),
+
+    /**
+     * The same window as it appears inside a sentence — "… per service, last 24 hours."
+     *
+     * Written out rather than lower-cased from the option above. `toLowerCase()` on a Turkish
+     * string is not a display transform, it is a language operation with its own rules, and a
+     * sentence that reads well is not always the picker's label with a small first letter.
+     */
+    scope: byKey<WindowPreset>({
+      '30m': 'last 30 minutes',
+      '2h': 'last 2 hours',
+      '24h': 'last 24 hours',
+      '7d': 'last 7 days',
+    }),
+
+    dayScope: (days: number) => `last ${days} days`,
+  },
+
+  format: {
+    justNow: 'just now',
+    minutesAgo: (minutes: number) => `${minutes}m ago`,
+    hoursAgo: (hours: number) => `${hours}h ago`,
+    daysAgo: (days: number) => `${days}d ago`,
+    notGiven: 'not given',
+    confidence: {
+      high: 'high confidence',
+      moderate: 'moderate confidence',
+      low: 'low confidence',
+    },
+  },
+}
+
+export type Dictionary = typeof en

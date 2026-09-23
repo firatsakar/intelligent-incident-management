@@ -5,20 +5,12 @@ import { InfoHint } from '@/components/InfoHint'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatScore, scoreTerm, scoreTermHelp } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { Incident } from '@/types/api'
 
 /** Minutes either side of detectedAt. Generous, because the match is by id, not by time. */
 const windowMinutes = 5
-
-/**
- * Not "Why this was raised", which is what this panel was called and what it deserves to be
- * called. The detector writes that exact phrase as a heading *inside* the evidence summary, which
- * renders in the card immediately above this one — so the screen showed the same four words twice,
- * a few centimetres apart, over two different things. The backend's prose is not ours to reword,
- * so this end gives way.
- */
-const panelTitle = 'How the gate scored it'
 
 /**
  * Why this incident was opened, in the arithmetic the gate actually used.
@@ -35,6 +27,7 @@ const panelTitle = 'How the gate scored it'
  * and the match is then made on incidentId rather than on time.
  */
 export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
+  const t = useT().incidents.score
   const detectedAt = incident.detectedAt
 
   const query = useQuery({
@@ -66,7 +59,7 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{panelTitle}</CardTitle>
+          <CardTitle>{t.title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <Skeleton className="h-4 w-full" />
@@ -98,11 +91,8 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{panelTitle}</CardTitle>
-        <CardDescription>
-          A deterministic score, not a judgement call. Every term is recorded so the decision can
-          be argued with afterwards.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -110,9 +100,9 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
 
         <div className="flex items-baseline justify-between gap-3 border-t pt-3">
           <span className="text-sm font-medium">
-            {scored ? 'Total' : 'Confidence'}
+            {scored ? t.total : t.confidence}
             <span className="text-muted-foreground ml-2 text-xs font-normal">
-              {scored ? 'sum of the terms above, clamped to 1.00' : 'scoring was bypassed'}
+              {scored ? t.totalNote : t.confidenceNote}
             </span>
           </span>
           <span className="text-base font-semibold tabular-nums">{total.toFixed(2)}</span>
@@ -121,18 +111,18 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
         <p className="text-muted-foreground text-sm break-words">
           {/* The threshold is per-rule and not exposed, so this states what the outcome was
               rather than inventing the number it was compared against. */}
-          {signal.reason ?? 'It met the promotion threshold for its detection rule.'}
+          {signal.reason ?? t.defaultReason}
         </p>
 
         {signature && (
           <div className="space-y-1.5 border-t pt-3">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium">Signature</p>
+              <p className="text-sm font-medium">{t.signature}</p>
               {signature.isMuted && (
                 // Worth surfacing here specifically: `muted` is a scoring term, so a muted
                 // signature that was promoted anyway cleared the threshold despite a penalty.
                 <span className="bg-inert text-dim-foreground border-inert-border rounded-full border px-2 py-0.5 text-[11px]">
-                  muted
+                  {t.muted}
                 </span>
               )}
             </div>
@@ -146,9 +136,12 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
               {signature.normalizedMessage}
             </p>
             <p className="text-dim-foreground text-xs tabular-nums">
-              {signature.occurrenceCount} occurrence(s) recorded in total · promoted{' '}
-              {signature.promotionCount}×, {signature.confirmedRealCount} confirmed real,{' '}
-              {signature.falsePositiveCount} false positive
+              {t.occurrences(
+                signature.occurrenceCount,
+                signature.promotionCount,
+                signature.confirmedRealCount,
+                signature.falsePositiveCount,
+              )}
             </p>
           </div>
         )}
@@ -172,6 +165,7 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
  * printed numbers are what stay comparable between incidents.
  */
 function ScoreChart({ components }: { components: [string, number][] }) {
+  const t = useT().incidents.score
   const maxPositive = Math.max(0, ...components.map(([, value]) => value))
   const maxNegative = Math.max(0, ...components.map(([, value]) => -value))
   const span = maxPositive + maxNegative
@@ -197,7 +191,7 @@ function ScoreChart({ components }: { components: [string, number][] }) {
       {components.map(([name, value]) => {
         const magnitude = (Math.abs(value) / span) * 100
         const negative = value < 0
-        const help = scoreTermHelp[name]
+        const help = scoreTermHelp(name)
 
         return (
           <li key={name} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2">
@@ -205,7 +199,7 @@ function ScoreChart({ components }: { components: [string, number][] }) {
               <span className="truncate">{scoreTerm(name)}</span>
               {/* Only for terms this build has been taught. An unknown key still gets its row and
                   its number; what it does not get is an empty tooltip promising an explanation. */}
-              {help && <InfoHint label={`What ${scoreTerm(name)} measures`}>{help}</InfoHint>}
+              {help && <InfoHint label={t.measuresLabel(scoreTerm(name))}>{help}</InfoHint>}
             </span>
 
             <span

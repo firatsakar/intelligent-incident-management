@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useT } from '@/lib/i18n'
 import {
   incidentPriorities,
   maskedValue,
@@ -55,6 +56,11 @@ export function IntegrationDialog({
   onClose: () => void
   onSaved: () => void
 }) {
+  const dictionary = useT()
+  const { labels, settings } = dictionary
+  const t = settings.integrations
+  const channelName = labels.channel[channel]
+
   const [name, setName] = useState(integration?.name ?? '')
   const [minPriority, setMinPriority] = useState<string>(integration?.minPriority ?? anyValue)
   const [categoryFilter, setCategoryFilter] = useState(integration?.categoryFilter ?? '')
@@ -79,9 +85,9 @@ export function IntegrationDialog({
       withStrayFields(
         integrationFields[channel],
         stored,
-        'Stored on this integration; this form does not know its shape.',
+        settings.config.strayIntegration,
       ),
-    [channel, stored],
+    [channel, stored, settings.config.strayIntegration],
   )
 
   const save = useMutation({
@@ -98,7 +104,7 @@ export function IntegrationDialog({
         : integrationsApi.create({ ...input, channel, isEnabled: true })
     },
     onSuccess: () => {
-      toast.success(integration ? 'Integration updated' : `${channel} connected`)
+      toast.success(integration ? t.updated : t.connected(channelName))
       onSaved()
     },
   })
@@ -114,12 +120,12 @@ export function IntegrationDialog({
 
             <div className="min-w-0">
               <DialogTitle>
-                {integration ? `Edit ${channel} integration` : `Connect ${channel}`}
+                {integration ? t.editTitle(channelName) : t.connectTitle(channelName)}
               </DialogTitle>
               <DialogDescription>
                 {integration
-                  ? 'A secret left blank keeps the value already stored.'
-                  : entry?.summary}
+                  ? settings.shared.secretKept
+                  : entry && t.summary[entry.channel]}
               </DialogDescription>
             </div>
           </div>
@@ -127,18 +133,16 @@ export function IntegrationDialog({
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="integration-name">Name</Label>
+            <Label htmlFor="integration-name">{settings.shared.name}</Label>
             <Input
               id="integration-name"
               value={name}
-              placeholder={`${channel} — on-call`}
+              placeholder={t.namePlaceholder(channelName)}
               onChange={(event) => setName(event.target.value)}
             />
             {/* One channel can hold several integrations, so the name is what tells them apart in
                 every list on this screen. */}
-            <p className="text-muted-foreground text-xs">
-              How this destination is identified on the integrations page.
-            </p>
+            <p className="text-muted-foreground text-xs">{t.nameHint}</p>
           </div>
 
           <ConfigFields
@@ -151,21 +155,23 @@ export function IntegrationDialog({
           <div className="space-y-2">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Minimum priority</Label>
+                <Label>{t.minPriority}</Label>
                 <Select
                   value={minPriority}
                   onValueChange={(value) => setMinPriority(value ?? anyValue)}
                 >
                   <SelectTrigger>
                     <SelectValue>
-                      {minPriority === anyValue ? 'Any priority' : minPriority}
+                      {minPriority === anyValue
+                        ? t.anyPriority
+                        : labels.priority[minPriority as IncidentPriority]}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={anyValue}>Any priority</SelectItem>
+                    <SelectItem value={anyValue}>{t.anyPriority}</SelectItem>
                     {incidentPriorities.map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option} and above
+                        {t.andAbove(labels.priority[option])}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -173,11 +179,11 @@ export function IntegrationDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="integration-category">Category filter</Label>
+                <Label htmlFor="integration-category">{t.categoryFilter}</Label>
                 <Input
                   id="integration-category"
                   value={categoryFilter}
-                  placeholder="Any category"
+                  placeholder={t.categoryPlaceholder}
                   onChange={(event) => setCategoryFilter(event.target.value)}
                 />
               </div>
@@ -187,6 +193,7 @@ export function IntegrationDialog({
                 matters, and it moves as the operator types. */}
             <p className="text-muted-foreground text-xs" aria-live="polite">
               {describeFilters(
+                dictionary,
                 minPriority === anyValue ? null : (minPriority as IncidentPriority),
                 categoryFilter.trim() || null,
               )}
@@ -209,10 +216,14 @@ export function IntegrationDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {settings.shared.cancel}
           </Button>
           <Button disabled={!name.trim() || save.isPending} onClick={() => save.mutate()}>
-            {save.isPending ? 'Saving…' : integration ? 'Save changes' : 'Connect'}
+            {save.isPending
+              ? settings.shared.saving
+              : integration
+                ? settings.shared.saveChanges
+                : settings.shared.connect}
           </Button>
         </DialogFooter>
       </DialogContent>

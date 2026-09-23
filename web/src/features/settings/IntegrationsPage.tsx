@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { Integration, NotificationChannelType } from '@/types/api'
 
@@ -58,6 +59,8 @@ import {
 
 export function IntegrationsPage() {
   const queryClient = useQueryClient()
+  const { settings } = useT()
+  const t = settings.integrations
 
   const [editing, setEditing] = useState<{
     channel: NotificationChannelType
@@ -83,7 +86,7 @@ export function IntegrationsPage() {
       setDeleting(null)
       dismiss(id)
       void invalidate()
-      toast.success('Integration deleted')
+      toast.success(t.deleted)
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -106,9 +109,7 @@ export function IntegrationsPage() {
     onSuccess: (result, id) =>
       record(id, {
         ok: result.isSuccess,
-        detail: result.isSuccess
-          ? 'The channel accepted a test notification.'
-          : (result.error ?? 'The channel rejected the test.'),
+        detail: result.isSuccess ? t.testOk : (result.error ?? t.testRejected),
         at: new Date().toISOString(),
       }),
     // The 502 body carries the real reason — the customer's endpoint or credentials, not a bad
@@ -134,28 +135,23 @@ export function IntegrationsPage() {
       {/* h2, not h1: the settings layout owns the h1. The two levels of heading are the same two
           levels the rail and the sub-navigation draw. */}
       <div className="max-w-2xl">
-        <h2 className="text-lg font-medium tracking-tight">Integrations</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Where a notification goes when an analysis completes. One destination type can hold
-          several integrations — two Email entries with different filters is a normal setup.
-        </p>
+        <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t.intro}</p>
       </div>
 
       {query.isSuccess && <Silence total={integrations.length} enabled={enabledCount} />}
 
       {query.isError && (
         <Notice tone="bad">
-          Could not load integrations. {query.error.message}
+          {t.loadError} {query.error.message}
         </Notice>
       )}
 
       <section className="space-y-3">
         <SectionHeading
-          title="Available now"
+          title={settings.shared.availableNow}
           detail={
-            query.isSuccess
-              ? `${integrations.length} connected · ${enabledCount} active`
-              : undefined
+            query.isSuccess ? settings.shared.counts(integrations.length, enabledCount) : undefined
           }
         />
 
@@ -183,17 +179,16 @@ export function IntegrationsPage() {
       </section>
 
       <section className="space-y-3">
-        <SectionHeading title="Coming soon" />
+        <SectionHeading title={settings.shared.comingSoon} />
 
-        <p className="text-muted-foreground max-w-2xl text-sm">
-          Planned destinations with nothing behind them yet — there is nothing here to configure.
-          Until they land, a custom endpoint is reachable through Webhook, which posts this
-          platform's own JSON rather than any vendor's payload format.
-        </p>
+        <p className="text-muted-foreground max-w-2xl text-sm">{t.comingSoonNote}</p>
 
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           {planned.map((entry) => (
-            <PlannedRow key={entry.name} entry={entry} />
+            <PlannedRow
+              key={entry.id}
+              entry={{ name: entry.name, mark: entry.mark, summary: t.planned[entry.id] }}
+            />
           ))}
         </div>
       </section>
@@ -231,15 +226,13 @@ export function IntegrationsPage() {
  * never doing the work alone.
  */
 function Silence({ total, enabled }: { total: number; enabled: number }) {
+  const t = useT().settings.integrations
+
   if (enabled > 0) return null
 
   return (
     <Notice tone="warn">
-      {total === 0
-        ? 'Nothing is connected. When an analysis completes, no one is told.'
-        : total === 1
-          ? 'The only integration is paused. When an analysis completes, no one is told.'
-          : `All ${total} integrations are paused. When an analysis completes, no one is told.`}
+      {total === 0 ? t.silenceNone : total === 1 ? t.silenceOne : t.silenceMany(total)}
     </Notice>
   )
 }
@@ -271,6 +264,10 @@ function ChannelTile({
   onDelete: (integration: Integration) => void
   onDismiss: (id: string) => void
 }) {
+  const { labels, settings } = useT()
+  const t = settings.integrations
+  const name = labels.channel[entry.channel]
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -280,17 +277,19 @@ function ChannelTile({
           </span>
 
           <div className="min-w-0 flex-1">
-            <CardTitle>{entry.name}</CardTitle>
+            <CardTitle>{name}</CardTitle>
             {/* Two lines' worth whether it needs them or not, so the rule above the instance list
                 falls at the same height across a row of tiles. Only once there is a row: in a
                 single column it would just be a hole. */}
-            <CardDescription className="mt-0.5 text-xs md:min-h-8">{entry.summary}</CardDescription>
+            <CardDescription className="mt-0.5 text-xs md:min-h-8">
+              {t.summary[entry.channel]}
+            </CardDescription>
           </div>
 
           {instances.length > 0 && (
             <span className="bg-secondary text-secondary-foreground shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
               {instances.length}
-              <span className="sr-only"> connected</span>
+              <span className="sr-only">{settings.shared.connected}</span>
             </span>
           )}
         </div>
@@ -302,7 +301,7 @@ function ChannelTile({
             <Skeleton className="h-9 w-full" />
           </div>
         ) : instances.length === 0 ? (
-          <p className="text-muted-foreground px-4 text-sm">Not connected.</p>
+          <p className="text-muted-foreground px-4 text-sm">{settings.shared.notConnected}</p>
         ) : (
           // Ruled above only. A bottom rule would close a box that the footer then re-opens, and
           // in a tile that is shorter than its neighbours the gap between the two reads as an
@@ -334,7 +333,7 @@ function ChannelTile({
           onClick={onConnect}
         >
           <PlusIcon aria-hidden />
-          {instances.length > 0 ? `Add another ${entry.name}` : `Connect ${entry.name}`}
+          {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
         </Button>
       </CardFooter>
     </Card>
@@ -362,13 +361,17 @@ function InstanceRow({
   onDelete: () => void
   onDismiss: () => void
 }) {
+  const dictionary = useT()
+  const { settings } = dictionary
+  const t = settings.integrations
+
   return (
     <li className="px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <Switch
           checked={integration.isEnabled}
           disabled={toggling}
-          aria-label={`${integration.name} enabled`}
+          aria-label={settings.shared.enabledSwitch(integration.name)}
           onCheckedChange={(isEnabled) => onToggle(Boolean(isEnabled))}
         />
 
@@ -384,15 +387,15 @@ function InstanceRow({
 
         <div className="flex shrink-0 items-center gap-1">
           <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
-            {testing ? 'Testing…' : 'Test'}
+            {testing ? settings.shared.testing : settings.shared.test}
           </Button>
           <Button variant="outline" size="sm" onClick={onEdit}>
-            Edit
+            {settings.shared.edit}
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Delete ${integration.name}`}
+            aria-label={settings.shared.deleteAria(integration.name)}
             onClick={onDelete}
           >
             <TrashIcon aria-hidden />
@@ -404,11 +407,13 @@ function InstanceRow({
           someone who cannot see the toggle, and it changes what the filter line means. */}
       <p className="text-muted-foreground mt-1 text-xs">
         {integration.isEnabled ? (
-          `${describeFilters(integration.minPriority, integration.categoryFilter)}.`
+          `${describeFilters(dictionary, integration.minPriority, integration.categoryFilter)}.`
         ) : (
           <>
-            <span className="text-foreground font-medium">Paused</span> — nothing is sent here.{' '}
-            {describeFilters(integration.minPriority, integration.categoryFilter)} when resumed.
+            <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
+            {t.pausedNote}{' '}
+            {describeFilters(dictionary, integration.minPriority, integration.categoryFilter)}{' '}
+            {t.whenResumed}
           </>
         )}
       </p>
@@ -416,8 +421,8 @@ function InstanceRow({
       {outcome && (
         <TestReport
           outcome={outcome}
-          okLabel="Test sent"
-          failLabel="Test failed"
+          okLabel={t.testOkLabel}
+          failLabel={t.testFailLabel}
           onDismiss={onDismiss}
         />
       )}
@@ -441,24 +446,26 @@ function DeleteDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const { labels, settings } = useT()
+  const t = settings.integrations
+
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete “{integration.name}”?</DialogTitle>
+          <DialogTitle>{settings.shared.deleteTitle(integration.name)}</DialogTitle>
           <DialogDescription>
-            This {integration.channel} destination and the credentials stored with it are removed.
-            Delivery history for incidents already sent is kept.
+            {t.deleteBody(labels.channel[integration.channel])}
           </DialogDescription>
         </DialogHeader>
 
         <DialogFooter>
           {/* Cancel first, so the destructive control is never what focus lands on. */}
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {settings.shared.cancel}
           </Button>
           <Button variant="destructive" disabled={pending} onClick={onConfirm}>
-            {pending ? 'Deleting…' : 'Delete integration'}
+            {pending ? settings.shared.deleting : t.deleteConfirm}
           </Button>
         </DialogFooter>
       </DialogContent>

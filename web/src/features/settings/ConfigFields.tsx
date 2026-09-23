@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT } from '@/lib/i18n'
 import { maskedValue } from '@/types/api'
 
 import type { ConfigField } from './configSchema'
@@ -24,15 +25,22 @@ export function ConfigFields({
   stored: Record<string, string> | null
   onChange: (key: string, value: string) => void
 }) {
+  const t = useT().settings.config
+
   return (
     <div className="space-y-3">
       {fields.map((field) => {
         const alreadySet = field.secret && stored?.[field.key] === maskedValue
+        // A declared field's hint is in the dictionary; a stray carries its own, because what
+        // there is to say about it is that the form does not know its shape.
+        const hint = field.id ? t.hints[field.id] : field.hint
 
         return (
           <div key={field.key} className="space-y-1.5">
             <Label htmlFor={field.key}>
-              {field.label}
+              {/* A stray has no id, so it renders under its own config key — there is nothing
+                  else to call a setting this form was never taught about. */}
+              {field.id ? t.fields[field.id] : field.key}
               {field.required && <span className="text-destructive ml-1">*</span>}
             </Label>
 
@@ -40,12 +48,12 @@ export function ConfigFields({
               id={field.key}
               type={field.secret ? 'password' : 'text'}
               value={values[field.key] ?? ''}
-              placeholder={alreadySet ? 'Leave blank to keep the current value' : field.placeholder}
+              placeholder={alreadySet ? t.keepCurrent : field.placeholder}
               onChange={(event) => onChange(field.key, event.target.value)}
               autoComplete="off"
             />
 
-            {field.hint && <p className="text-muted-foreground text-xs">{field.hint}</p>}
+            {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
           </div>
         )
       })}
@@ -108,7 +116,6 @@ export function withStrayFields(
     .filter((key) => !declared.some((field) => field.key === key))
     .map<ConfigField>((key) => ({
       key,
-      label: key,
       secret: stored[key] === maskedValue,
       hint,
     }))

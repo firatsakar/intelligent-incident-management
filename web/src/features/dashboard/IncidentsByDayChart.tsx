@@ -10,6 +10,7 @@ import {
   stackOffsets,
 } from '@/components/chart/scale'
 import { formatUtcDay, formatUtcDayLong, priorityFill } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { incidentPriorities, type IncidentDayBucket } from '@/types/api'
 
@@ -42,6 +43,9 @@ const labelGap = 52
 const maxStep = 56
 
 export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
+  const { dashboard, labels } = useT()
+  const t = dashboard.chart
+
   // Which day the readout is describing. Hover wins while the pointer is over the plot; otherwise
   // the keyboard cursor does, and only while the plot actually holds focus — a cursor left showing
   // after focus has gone is a readout that disagrees with the screen.
@@ -97,23 +101,22 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           <>
             <span className="font-medium">{formatUtcDayLong(activeDay.day)}</span>
             <span className="text-muted-foreground"> · </span>
-            <span className="tabular-nums">
-              {activeDay.total} incident{activeDay.total === 1 ? '' : 's'}
-            </span>
+            <span className="tabular-nums">{t.dayTotal(activeDay.total)}</span>
             {activeDay.total > 0 && (
               <span className="text-muted-foreground tabular-nums">
                 {' — '}
                 {incidentPriorities
                   .filter((priority) => (activeDay.byPriority[priority] ?? 0) > 0)
-                  .map((priority) => `${activeDay.byPriority[priority]} ${priority}`)
+                  .map((priority) => `${activeDay.byPriority[priority]} ${labels.priority[priority]}`)
                   .join(' · ')}
               </span>
             )}
           </>
         ) : (
           <span className="text-muted-foreground tabular-nums">
-            {windowTotal} opened across {count} day{count === 1 ? '' : 's'}
-            {busiest > 0 && ` · busiest day ${busiest}`} · hover or focus the chart for one day
+            {t.summary(windowTotal, count)}
+            {busiest > 0 && t.busiest(busiest)}
+            {t.hint}
           </span>
         )}
       </p>
@@ -121,7 +124,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
       <div
         tabIndex={0}
         role="group"
-        aria-label={`Incidents opened per UTC day across ${count} day${count === 1 ? '' : 's'}. Use the arrow keys to read one day at a time.`}
+        aria-label={t.ariaLabel(count)}
         onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={(event) => {
@@ -159,7 +162,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
                     className="text-muted-foreground pointer-events-none absolute flex items-center justify-center px-4 text-center text-sm"
                     style={{ left: plot.x, top: plot.y, width: plot.width, height: plot.height }}
                   >
-                    Nothing opened in this window. Every day in it is empty.
+                    {t.emptyPlot}
                   </p>
                 )}
               </>
@@ -219,14 +222,14 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           enough to answer "which day was worst" — so the data is here in full rather than being
           approximated in a longer label. */}
       <table className="sr-only">
-        <caption>Incidents opened per UTC day, by priority.</caption>
+        <caption>{t.caption}</caption>
         <thead>
           <tr>
-            <th scope="col">Day (UTC)</th>
-            <th scope="col">Total</th>
+            <th scope="col">{t.columnDay}</th>
+            <th scope="col">{t.columnTotal}</th>
             {incidentPriorities.map((priority) => (
               <th key={priority} scope="col">
-                {priority}
+                {labels.priority[priority]}
               </th>
             ))}
           </tr>
@@ -323,6 +326,8 @@ function DayColumn({
 
 /** In stacking order, bottom of the bar first, because that is the order the bars are in. */
 function Legend() {
+  const { dashboard, labels } = useT()
+
   return (
     <ul className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
       {incidentPriorities.map((priority) => (
@@ -330,10 +335,10 @@ function Legend() {
           <svg width="10" height="10" aria-hidden className="shrink-0">
             <rect width="10" height="10" rx="2" className={priorityFill[priority]} />
           </svg>
-          {priority}
+          {labels.priority[priority]}
         </li>
       ))}
-      <li className="text-dim-foreground">Critical at the base of each bar</li>
+      <li className="text-dim-foreground">{dashboard.chart.legendNote}</li>
     </ul>
   )
 }

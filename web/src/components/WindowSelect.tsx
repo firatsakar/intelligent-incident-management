@@ -7,7 +7,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { windowLabel, windowPresets } from '@/lib/window'
+import { useT } from '@/lib/i18n'
+import { resolveWindowPreset, windowPresets } from '@/lib/window'
 
 /**
  * The time window picker, reading and writing the `window` search param itself.
@@ -26,6 +27,7 @@ import { windowLabel, windowPresets } from '@/lib/window'
  */
 export function WindowSelect({ value, className }: { value: string; className?: string }) {
   const [params, setParams] = useSearchParams()
+  const { window: text } = useT()
 
   return (
     <Select
@@ -37,16 +39,16 @@ export function WindowSelect({ value, className }: { value: string; className?: 
         setParams(updated)
       }}
     >
-      <SelectTrigger className={className ?? 'w-44'} aria-label="Time window">
+      <SelectTrigger className={className ?? 'w-44'} aria-label={text.label}>
         {/* Passed explicitly: left to itself the trigger prints the raw value, so the control
             reads "24h" rather than English. */}
-        <SelectValue>{windowLabel(value)}</SelectValue>
+        <SelectValue>{text.option[resolveWindowPreset(value)]}</SelectValue>
       </SelectTrigger>
 
       <SelectContent>
         {windowPresets.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {option.label}
+            {text.option[option.value]}
           </SelectItem>
         ))}
       </SelectContent>

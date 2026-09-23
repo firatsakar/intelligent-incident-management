@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WindowSelect } from '@/components/WindowSelect'
-import { formatCount, severityClass, signalStatusClass, signalStatusLabel } from '@/lib/format'
+import { formatCount, severityClass, signalStatusClass } from '@/lib/format'
+import { T, useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { windowLabel } from '@/lib/window'
+import { resolveWindowPreset } from '@/lib/window'
 import { logSeverities, type Funnel, type LogSeverity, type SignalStatus } from '@/types/api'
 
 import { defaultStatsWindow, useTelemetryStats } from './queries'
@@ -39,21 +40,20 @@ import { defaultStatsWindow, useTelemetryStats } from './queries'
  */
 export function FunnelPage() {
   const [params] = useSearchParams()
+  const { telemetry, window: windowText } = useT()
+  const t = telemetry.funnel
 
   const preset = params.get('window') ?? defaultStatsWindow
   const query = useTelemetryStats(preset)
 
-  const scope = windowLabel(preset).toLowerCase()
+  const scope = windowText.scope[resolveWindowPreset(preset)]
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Signal funnel</h1>
-          <p className="text-muted-foreground text-sm">
-            Everything the platform read, what it folded together, and how much of it it decided
-            was not worth waking anybody for.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <WindowSelect value={preset} />
@@ -62,7 +62,7 @@ export function FunnelPage() {
       {query.isError && (
         <Card>
           <CardContent className="text-alarm-ink py-6 text-sm">
-            {query.error instanceof Error ? query.error.message : 'Could not load the funnel'}
+            {query.error instanceof Error ? query.error.message : t.loadError}
           </CardContent>
         </Card>
       )}
@@ -96,19 +96,21 @@ export function FunnelPage() {
   )
 }
 
-const plural = (count: number, word: string) => `${word}${count === 1 ? '' : 's'}`
+// The hand-rolled `plural` this file used to carry is gone: an English "s" appended to a word
+// is not a rule any other language shares, and the dictionary's own `plural` knows which language
+// it is writing in.
 
 function RestraintCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
+  const t = useT().telemetry.funnel
+
   const deduplicated = funnel.signalsByStatus.Deduplicated ?? 0
   const actedOn = funnel.signals - funnel.notRaised
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Not raised</CardTitle>
-        <CardDescription>
-          Signals the gate scored and deliberately left alone — {scope}.
-        </CardDescription>
+        <CardTitle>{t.notRaised}</CardTitle>
+        <CardDescription>{t.notRaisedDescription(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -129,7 +131,7 @@ function RestraintCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
                 {formatCount(funnel.notRaised)}
               </span>
               <span className="text-muted-foreground text-sm">
-                of {formatCount(funnel.signals)} {plural(funnel.signals, 'signal')} the gate scored
+                {t.ofScored(funnel.signals)}
               </span>
             </p>
 
@@ -149,13 +151,13 @@ function RestraintCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
             <dl className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-sm">
               <Split
                 fill="bg-foreground/70"
-                label="held back"
+                label={t.heldBack}
                 value={funnel.notRaised}
                 total={funnel.signals}
               />
               <Split
                 fill="bg-foreground/25"
-                label="acted on"
+                label={t.actedOn}
                 value={actedOn}
                 total={funnel.signals}
               />
@@ -163,22 +165,17 @@ function RestraintCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
 
             <p className="text-muted-foreground max-w-3xl text-sm">
               {funnel.notRaised === 0 ? (
-                <>
-                  Everything the gate scored in this window, it acted on — all{' '}
-                  {formatCount(funnel.signals)} crossed the threshold, so there was nothing left to
-                  hold back.{' '}
-                  <strong className="text-foreground font-medium">
-                    A zero here means the gate refused nothing, not that it looked at nothing.
-                  </strong>{' '}
-                  What it looked at is the number beside it, and the stages below.
-                </>
+                <T
+                  text={t.zeroHeldBack}
+                  values={{
+                    count: formatCount(funnel.signals),
+                    emphasis: (
+                      <strong className="text-foreground font-medium">{t.zeroEmphasis}</strong>
+                    ),
+                  }}
+                />
               ) : (
-                <>
-                  {formatCount(funnel.notRaised)} of {formatCount(funnel.signals)} were scored and
-                  left where they were: no incident, no page, no email. That is the thing an
-                  alerting rule cannot do — decide, on arithmetic you can read back, that this one
-                  was not worth a human.
-                </>
+                t.someHeldBack(formatCount(funnel.notRaised), formatCount(funnel.signals))
               )}
             </p>
 
@@ -186,9 +183,7 @@ function RestraintCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
               // The exclusion is deliberate on the server and is worth showing rather than
               // hiding: it is the difference between restraint and a claim of restraint.
               <p className="text-muted-foreground max-w-3xl text-sm">
-                {formatCount(deduplicated)} deduplicated {plural(deduplicated, 'signal')} count as
-                acted on, not as held back. Each was folded into an incident that was already open,
-                so somebody was woken — just earlier.
+                {t.deduplicated(deduplicated)}
               </p>
             )}
           </>
@@ -227,71 +222,65 @@ function Split({
  * so they get different sentences rather than a shared "no data".
  */
 function NothingScored({ funnel }: { funnel: Funnel }) {
+  const t = useT().telemetry.funnel
+
   return (
     <>
-      <p className="text-muted-foreground text-sm">Nothing was scored in this window.</p>
+      <p className="text-muted-foreground text-sm">{t.nothingScored}</p>
 
       <p className="max-w-3xl text-sm">
-        {funnel.logRecords > 0 ? (
-          <>
-            {formatCount(funnel.logRecords)} log {plural(funnel.logRecords, 'record')} arrived and
-            none of them crossed a detection rule, so no burst ever reached the score. The
-            filtering here happened a stage earlier than this number measures — the stages below
-            are where to read it.
-          </>
-        ) : (
-          <>
-            No telemetry arrived in this window at all, so the gate had nothing to look at. A quiet
-            window and a source that is not being read look the same from here — Settings ›
-            Telemetry says which.
-          </>
-        )}
+        {funnel.logRecords > 0
+          ? t.nothingScoredRecords(formatCount(funnel.logRecords), funnel.logRecords)
+          : t.nothingArrived}
       </p>
     </>
   )
 }
 
 function StagesCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
+  const t = useT().telemetry.funnel
+
   const stages: BarRow[] = [
     {
       key: 'logRecords',
-      label: 'Log records',
+      label: t.stageLogRecords,
       value: funnel.logRecords,
       display: formatCount(funnel.logRecords),
     },
     {
       key: 'signatures',
-      label: 'Signatures',
+      label: t.stageSignatures,
       value: funnel.signatures,
       display: formatCount(funnel.signatures),
     },
-    { key: 'signals', label: 'Signals', value: funnel.signals, display: formatCount(funnel.signals) },
+    {
+      key: 'signals',
+      label: t.stageSignals,
+      value: funnel.signals,
+      display: formatCount(funnel.signals),
+    },
   ]
 
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>From log records to signals</CardTitle>
-        <CardDescription>
-          The three stages, on one scale — {scope}. They count different things: records are lines
-          of log, signatures are distinct fingerprints cut from them, and signals are bursts the
-          gate was asked to score.
-        </CardDescription>
+        <CardTitle>{t.stagesTitle}</CardTitle>
+        <CardDescription>{t.stagesDescription(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <BarRows
           rows={stages}
-          label={`Pipeline stages. ${formatCount(funnel.logRecords)} log records, ${formatCount(funnel.signatures)} signatures, ${formatCount(funnel.signals)} signals.`}
+          label={t.stagesChartLabel(
+            formatCount(funnel.logRecords),
+            formatCount(funnel.signatures),
+            formatCount(funnel.signals),
+          )}
         />
 
         <ul className="space-y-2">
-          <Transition
-            from={funnel.logRecords}
-            to={funnel.signatures}
-            text={describeFolding(funnel)}
-          />
-          <Transition from={funnel.signatures} to={funnel.signals} text={describeBursting(funnel)} />
+          <Transition from={funnel.logRecords} to={funnel.signatures} text={describeFolding(t, funnel)} />
+          <Transition from={funnel.signatures} to={funnel.signals} text={describeBursting(t, funnel)} />
         </ul>
 
         <Severities funnel={funnel} />
@@ -311,32 +300,47 @@ function Transition({ from, to, text }: { from: number; to: number; text: string
   )
 }
 
-/** The drop fingerprinting bought, stated as the ratio rather than left to be inferred from a bar
- *  that is two pixels wide. */
-function describeFolding(funnel: Funnel): string {
-  if (funnel.logRecords === 0) return 'Nothing arrived, so there was nothing to fingerprint.'
+/**
+ * The drop fingerprinting bought, stated as the ratio rather than left to be inferred from a bar
+ * that is two pixels wide.
+ *
+ * Takes the dictionary rather than calling `useT` — these are plain functions called from a render
+ * body, not components, and making them hooks would put a hook behind the `funnel.signals === 0`
+ * branch above them.
+ */
+type FunnelText = Dictionary['telemetry']['funnel']
 
-  if (funnel.signatures === 0)
-    return 'Nothing in this window was fingerprinted, which should not happen — the records arrived without one.'
+function describeFolding(t: FunnelText, funnel: Funnel): string {
+  if (funnel.logRecords === 0) return t.nothingToFingerprint
+  if (funnel.signatures === 0) return t.nothingFingerprinted
 
   const perSignature = Math.round(funnel.logRecords / funnel.signatures)
 
-  return `About ${formatCount(perSignature)} records per signature. That fold is what fingerprinting bought: the gate reasons about ${formatCount(funnel.signatures)} ${plural(funnel.signatures, 'thing')}, not ${formatCount(funnel.logRecords)}.`
+  return t.folding(
+    formatCount(perSignature),
+    formatCount(funnel.signatures),
+    formatCount(funnel.logRecords),
+    funnel.signatures,
+  )
 }
 
 /** The one stage that can widen, which a funnel drawn without saying so would quietly misreport. */
-function describeBursting(funnel: Funnel): string {
-  if (funnel.signals === 0)
-    return 'No burst crossed a detection rule, so the gate was never asked to score anything.'
+function describeBursting(t: FunnelText, funnel: Funnel): string {
+  if (funnel.signals === 0) return t.neverScored
 
-  const base = `${formatCount(funnel.signatures)} ${plural(funnel.signatures, 'signature')} produced ${formatCount(funnel.signals)} ${plural(funnel.signals, 'burst')} for the gate to score.`
+  const base = t.bursting(
+    formatCount(funnel.signatures),
+    funnel.signatures,
+    formatCount(funnel.signals),
+    funnel.signals,
+  )
 
-  return funnel.signals > funnel.signatures
-    ? `${base} A signature can fire more than once, which is why this stage is wider than the one above it rather than narrower.`
-    : base
+  return funnel.signals > funnel.signatures ? `${base}${t.burstingWider}` : base
 }
 
 function Severities({ funnel }: { funnel: Funnel }) {
+  const { labels, telemetry } = useT()
+
   // The rollup comes back keyed and sparse, so the reading order is imposed here. Anything the
   // server sends that this file has not been taught still renders, at the end: a severity dropped
   // because it was unrecognised would make the counts above stop adding up.
@@ -350,11 +354,11 @@ function Severities({ funnel }: { funnel: Funnel }) {
   return (
     <div className="space-y-1.5">
       <p className="text-muted-foreground text-[0.6875rem] font-medium tracking-wider uppercase">
-        What arrived
+        {telemetry.funnel.whatArrived}
       </p>
 
       {rows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No log record arrived in this window.</p>
+        <p className="text-muted-foreground text-sm">{telemetry.funnel.noLogRecord}</p>
       ) : (
         <dl className="flex flex-wrap items-baseline gap-x-5 gap-y-1 text-sm">
           {rows.map((key) => {
@@ -362,7 +366,9 @@ function Severities({ funnel }: { funnel: Funnel }) {
 
             return (
               <div key={key} className="flex items-baseline gap-1.5">
-                <dt className={cn('text-sm', severityClass[key as LogSeverity])}>{key}</dt>
+                <dt className={cn('text-sm', severityClass[key as LogSeverity])}>
+                  {labels.severity[key as LogSeverity] ?? key}
+                </dt>
                 <dd className={cn('font-medium tabular-nums', count === 0 && 'text-dim-foreground')}>
                   {formatCount(count)}
                 </dd>
@@ -375,43 +381,28 @@ function Severities({ funnel }: { funnel: Funnel }) {
   )
 }
 
-/**
- * What each verdict means, in the operator's language rather than the enum's.
- *
- * Says what the gate *did*, not how it scored: the weights live in SignalScoring and a number
- * copied into the frontend is a number that goes stale without anyone noticing.
- */
-const verdictMeaning: Record<SignalStatus, string> = {
-  Promoted: 'Cleared the line, and the gate opened an incident for it.',
-  Deduplicated: 'Folded into an incident that was already open. Somebody was woken — earlier.',
-  Weak: 'Scored, and scored under the line. Kept where you can see it; nobody was called.',
-  Recorded: 'Kept for the record and nothing more.',
-  Suppressed: 'The signature is muted, so the gate scored it and then silenced it on purpose.',
-}
-
 // Grouped by the one distinction the number above rests on, in that order. Promoted and
 // Deduplicated are what "acted on" means; the other three are exactly what "not raised" counts.
-const verdictGroups: { heading: string; note: string; bands: SignalStatus[] }[] = [
-  {
-    heading: 'Somebody was woken',
-    note: 'Not counted as held back.',
-    bands: ['Promoted', 'Deduplicated'],
-  },
-  {
-    heading: 'Nobody was woken',
-    note: 'These three are what "not raised" counts.',
-    bands: ['Weak', 'Recorded', 'Suppressed'],
-  },
+// The headings are keyed rather than spelled: the grouping is the screen's whole argument, and a
+// group that lost its words in one language would lose the argument with them.
+const verdictGroups: { id: 'woken' | 'notWoken'; bands: SignalStatus[] }[] = [
+  { id: 'woken', bands: ['Promoted', 'Deduplicated'] },
+  { id: 'notWoken', bands: ['Weak', 'Recorded', 'Suppressed'] },
 ]
 
 function VerdictsCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
+  const t = useT().telemetry.funnel
+
+  const groupText = {
+    woken: { heading: t.wokenHeading, note: t.wokenNote },
+    notWoken: { heading: t.notWokenHeading, note: t.notWokenNote },
+  }
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>How the gate ruled</CardTitle>
-        <CardDescription>
-          Every verdict the gate can reach, and how many landed on each — {scope}.
-        </CardDescription>
+        <CardTitle>{t.verdictsTitle}</CardTitle>
+        <CardDescription>{t.verdictsDescription(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -419,18 +410,16 @@ function VerdictsCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
           // The five stay on screen with their zeros rather than being replaced by one blank
           // sentence: an operator reading this at 3am still learns what the gate can decide, and
           // a list of zeros says "none of these happened" far more precisely than an absence does.
-          <p className="text-muted-foreground text-sm">
-            The gate scored nothing in this window, so it reached none of these.
-          </p>
+          <p className="text-muted-foreground text-sm">{t.noVerdicts}</p>
         )}
 
         {verdictGroups.map((group) => (
-          <div key={group.heading} className="space-y-2">
+          <div key={group.id} className="space-y-2">
             <p className="flex flex-wrap items-baseline gap-x-2">
               <span className="text-[0.6875rem] font-medium tracking-wider uppercase">
-                {group.heading}
+                {groupText[group.id].heading}
               </span>
-              <span className="text-muted-foreground text-xs">{group.note}</span>
+              <span className="text-muted-foreground text-xs">{groupText[group.id].note}</span>
             </p>
 
             <ul className="space-y-2.5">
@@ -451,13 +440,15 @@ function VerdictsCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
 }
 
 function Verdict({ band, count, total }: { band: SignalStatus; count: number; total: number }) {
+  const { labels, telemetry } = useT()
+
   const share = total > 0 ? Math.round((count / total) * 100) : 0
 
   return (
     <li className="space-y-1">
       <div className="flex items-baseline justify-between gap-3">
         <Badge variant="outline" className={cn('border', signalStatusClass[band])}>
-          {signalStatusLabel[band]}
+          {labels.signalStatus[band]}
         </Badge>
 
         <span
@@ -477,7 +468,7 @@ function Verdict({ band, count, total }: { band: SignalStatus; count: number; to
         <div className="bg-foreground/55 h-full rounded-full" style={{ width: `${share}%` }} />
       </div>
 
-      <p className="text-muted-foreground text-xs">{verdictMeaning[band]}</p>
+      <p className="text-muted-foreground text-xs">{telemetry.funnel.verdict[band]}</p>
     </li>
   )
 }

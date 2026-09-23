@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { organizationName } from '@/features/auth/session'
+import { useT } from '@/lib/i18n'
 
 /**
  * Identity in the chrome, and the one honest qualifier on it.
@@ -25,13 +27,14 @@ import { useAuth } from '@/features/auth/AuthProvider'
  */
 export function UserMenu() {
   const { user, organization, signOut } = useAuth()
+  const { account, common } = useT()
 
   if (!user) return null
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label={`Account — ${user.name}`} />}
+        render={<Button variant="ghost" size="icon-sm" aria-label={account.menu(user.name)} />}
       >
         <Avatar size="sm">
           <AvatarFallback className="bg-primary text-primary-foreground text-[0.6875rem] font-medium">
@@ -51,7 +54,9 @@ export function UserMenu() {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{user.name}</p>
             {organization && (
-              <p className="text-muted-foreground truncate text-xs">{organization.name}</p>
+              <p className="text-muted-foreground truncate text-xs">
+                {organizationName(organization)}
+              </p>
             )}
           </div>
         </div>
@@ -61,11 +66,10 @@ export function UserMenu() {
         <div className="px-1.5 py-1">
           <p className="text-caution-foreground flex items-center gap-1.5 text-xs font-medium">
             <ShieldAlertIcon className="size-3.5 shrink-0" aria-hidden />
-            Unverified session
+            {account.unverifiedTitle}
           </p>
           <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            Nothing checked who you are. This name labels the session; the services behind the
-            console answer anyone who can reach them.
+            {account.unverified}
           </p>
         </div>
 
@@ -73,7 +77,7 @@ export function UserMenu() {
 
         <DropdownMenuItem onClick={signOut}>
           <LogOutIcon />
-          Sign out
+          {common.signOut}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

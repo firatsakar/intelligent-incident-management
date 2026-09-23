@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { TelemetrySource, TelemetrySourceKind } from '@/types/api'
 
@@ -47,6 +48,8 @@ import { connectable, describeSchedule, planned, type SourceCatalogueEntry } fro
 
 export function TelemetrySourcesPage() {
   const queryClient = useQueryClient()
+  const { settings } = useT()
+  const t = settings.telemetry
 
   const [editing, setEditing] = useState<{
     kind: TelemetrySourceKind
@@ -72,7 +75,7 @@ export function TelemetrySourcesPage() {
       setDeleting(null)
       dismiss(id)
       void invalidate()
-      toast.success('Source deleted')
+      toast.success(t.deleted)
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -95,7 +98,7 @@ export function TelemetrySourcesPage() {
     onSuccess: (result, id) =>
       record(id, {
         ok: result.isSuccess,
-        detail: result.isSuccess ? describeProbe(result.matchedEvents) : (result.error ?? 'The source rejected the probe.'),
+        detail: result.isSuccess ? describeProbe(t, result.matchedEvents) : (result.error ?? t.probeRejected),
         at: new Date().toISOString(),
       }),
     // The 502 body carries the real reason — the customer's instance or its API key, not a bad
@@ -119,22 +122,23 @@ export function TelemetrySourcesPage() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h2 className="text-lg font-medium tracking-tight">Telemetry</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Where detection reads from. The platform pulls from your own log store on a schedule — it
-          never watches itself, and nothing reaches it that you have not connected here.
-        </p>
+        <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{t.intro}</p>
       </div>
 
       {query.isSuccess && <Blindness total={sources.length} enabled={enabledCount} />}
 
-      {query.isError && <Notice tone="bad">Could not load sources. {query.error.message}</Notice>}
+      {query.isError && (
+        <Notice tone="bad">
+          {t.loadError} {query.error.message}
+        </Notice>
+      )}
 
       <section className="space-y-3">
         <SectionHeading
-          title="Available now"
+          title={settings.shared.availableNow}
           detail={
-            query.isSuccess ? `${sources.length} connected · ${enabledCount} active` : undefined
+            query.isSuccess ? settings.shared.counts(sources.length, enabledCount) : undefined
           }
         />
 
@@ -160,18 +164,20 @@ export function TelemetrySourcesPage() {
       </section>
 
       <section className="space-y-3">
-        <SectionHeading title="Coming soon" />
+        <SectionHeading title={settings.shared.comingSoon} />
 
-        <p className="text-muted-foreground text-sm">
-          Both of these are the general answer to “my logs are not in Seq”, and neither is built
-          yet — there is nothing here to configure. The intent is deliberately not a connector per
-          vendor: one standard wire format, and the long tail handled by the shipper you already
-          run.
-        </p>
+        <p className="text-muted-foreground text-sm">{t.comingSoonNote}</p>
 
         <div className="grid gap-3 sm:grid-cols-2">
           {planned.map((entry) => (
-            <PlannedRow key={entry.name} entry={entry} />
+            <PlannedRow
+              key={entry.id}
+              entry={{
+                name: t.planned[entry.id].name,
+                mark: entry.mark,
+                summary: t.planned[entry.id].summary,
+              }}
+            />
           ))}
         </div>
       </section>
@@ -206,14 +212,14 @@ export function TelemetrySourcesPage() {
  * A source that answers but shows nothing is a filter problem or a quiet window, and telling the
  * operator only "Connected" leaves them to discover that later, from an empty incident list.
  */
-function describeProbe(matchedEvents: number | null | undefined): string {
-  if (matchedEvents === null || matchedEvents === undefined) return 'The source answered the probe.'
+function describeProbe(
+  t: Dictionary['settings']['telemetry'],
+  matchedEvents: number | null | undefined,
+): string {
+  if (matchedEvents === null || matchedEvents === undefined) return t.probeAnswered
+  if (matchedEvents === 0) return t.probeNoMatch
 
-  if (matchedEvents === 0) {
-    return 'The source answered, but nothing matched the filter in the window probed. Either the window is quiet or the filter is too narrow.'
-  }
-
-  return `The source answered with ${matchedEvents} matching event(s) visible.`
+  return t.probeMatched(matchedEvents)
 }
 
 /**
@@ -224,15 +230,13 @@ function describeProbe(matchedEvents: number | null | undefined): string {
  * input, so the incident list stays empty and reads as "quiet" rather than as "deaf".
  */
 function Blindness({ total, enabled }: { total: number; enabled: number }) {
+  const t = useT().settings.telemetry
+
   if (enabled > 0) return null
 
   return (
     <Notice tone="warn">
-      {total === 0
-        ? 'No source is connected. Nothing is being read, so nothing will ever be detected.'
-        : total === 1
-          ? 'The only source is paused. Nothing is being read, so nothing will be detected.'
-          : `All ${total} sources are paused. Nothing is being read, so nothing will be detected.`}
+      {total === 0 ? t.blindnessNone : total === 1 ? t.blindnessOne : t.blindnessMany(total)}
     </Notice>
   )
 }
@@ -264,6 +268,10 @@ function KindTile({
   onDelete: (source: TelemetrySource) => void
   onDismiss: (id: string) => void
 }) {
+  const { labels, settings } = useT()
+  const t = settings.telemetry
+  const name = labels.telemetryKind[entry.kind]
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -273,14 +281,14 @@ function KindTile({
           </span>
 
           <div className="min-w-0 flex-1">
-            <CardTitle>{entry.name}</CardTitle>
-            <CardDescription className="mt-0.5 text-xs">{entry.summary}</CardDescription>
+            <CardTitle>{name}</CardTitle>
+            <CardDescription className="mt-0.5 text-xs">{t.summary[entry.kind]}</CardDescription>
           </div>
 
           {instances.length > 0 && (
             <span className="bg-secondary text-secondary-foreground shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums">
               {instances.length}
-              <span className="sr-only"> connected</span>
+              <span className="sr-only">{settings.shared.connected}</span>
             </span>
           )}
         </div>
@@ -292,7 +300,7 @@ function KindTile({
             <Skeleton className="h-9 w-full" />
           </div>
         ) : instances.length === 0 ? (
-          <p className="text-muted-foreground px-4 text-sm">Not connected.</p>
+          <p className="text-muted-foreground px-4 text-sm">{settings.shared.notConnected}</p>
         ) : (
           <ul className="divide-border border-border divide-y border-t">
             {instances.map((source) => (
@@ -320,7 +328,7 @@ function KindTile({
           onClick={onConnect}
         >
           <PlusIcon aria-hidden />
-          {instances.length > 0 ? `Add another ${entry.name} source` : `Connect ${entry.name}`}
+          {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
         </Button>
       </CardFooter>
     </Card>
@@ -348,6 +356,10 @@ function SourceRow({
   onDelete: () => void
   onDismiss: () => void
 }) {
+  const dictionary = useT()
+  const { settings } = dictionary
+  const t = settings.telemetry
+
   const url = source.config.Url
 
   return (
@@ -356,7 +368,7 @@ function SourceRow({
         <Switch
           checked={source.isEnabled}
           disabled={toggling}
-          aria-label={`${source.name} enabled`}
+          aria-label={settings.shared.enabledSwitch(source.name)}
           onCheckedChange={(isEnabled) => onToggle(Boolean(isEnabled))}
         />
 
@@ -372,15 +384,15 @@ function SourceRow({
 
         <div className="flex shrink-0 items-center gap-1">
           <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
-            {testing ? 'Testing…' : 'Test'}
+            {testing ? settings.shared.testing : settings.shared.test}
           </Button>
           <Button variant="outline" size="sm" onClick={onEdit}>
-            Edit
+            {settings.shared.edit}
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label={`Delete ${source.name}`}
+            aria-label={settings.shared.deleteAria(source.name)}
             onClick={onDelete}
           >
             <TrashIcon aria-hidden />
@@ -401,11 +413,11 @@ function SourceRow({
           someone who cannot see the toggle, and it changes what the schedule line means. */}
       <p className="text-muted-foreground mt-1 text-xs">
         {source.isEnabled ? (
-          `${describeSchedule(source)}.`
+          `${describeSchedule(dictionary, source)}.`
         ) : (
           <>
-            <span className="text-foreground font-medium">Paused</span> — nothing is read from
-            here. {describeSchedule(source)} when resumed.
+            <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
+            {t.pausedNote} {describeSchedule(dictionary, source)} {t.whenResumed}
           </>
         )}
       </p>
@@ -413,8 +425,8 @@ function SourceRow({
       {outcome && (
         <TestReport
           outcome={outcome}
-          okLabel="Probe succeeded"
-          failLabel="Probe failed"
+          okLabel={t.testOkLabel}
+          failLabel={t.testFailLabel}
           onDismiss={onDismiss}
         />
       )}
@@ -438,26 +450,24 @@ function DeleteDialog({
   onCancel: () => void
   onConfirm: () => void
 }) {
+  const { labels, settings } = useT()
+  const t = settings.telemetry
+
   return (
     <Dialog open onOpenChange={(open) => !open && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete “{source.name}”?</DialogTitle>
-          <DialogDescription>
-            This {source.kind} source and the credentials stored with it are removed, and detection
-            stops reading from it immediately. Logs and signatures already ingested are kept — they
-            are the evidence behind incidents already opened. A source connected here again starts
-            from its initial lookback window rather than from where this one stopped.
-          </DialogDescription>
+          <DialogTitle>{settings.shared.deleteTitle(source.name)}</DialogTitle>
+          <DialogDescription>{t.deleteBody(labels.telemetryKind[source.kind])}</DialogDescription>
         </DialogHeader>
 
         <DialogFooter>
           {/* Cancel first, so the destructive control is never what focus lands on. */}
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {settings.shared.cancel}
           </Button>
           <Button variant="destructive" disabled={pending} onClick={onConfirm}>
-            {pending ? 'Deleting…' : 'Delete source'}
+            {pending ? settings.shared.deleting : t.deleteConfirm}
           </Button>
         </DialogFooter>
       </DialogContent>

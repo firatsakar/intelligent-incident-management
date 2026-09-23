@@ -6,7 +6,11 @@ import { useAuth } from '@/features/auth/AuthProvider'
 
 import { connect, hubs } from './realtime'
 
-type Status = 'connecting' | 'live' | 'reconnecting' | 'offline'
+/** Exported so the dictionary can be forced to be total over it: a status with no word
+ *  for it would be announced as an empty chip. */
+export type RealtimeStatus = 'connecting' | 'live' | 'reconnecting' | 'offline'
+
+type Status = RealtimeStatus
 
 const RealtimeContext = createContext<Status>('connecting')
 

@@ -2,14 +2,17 @@ import { Building2Icon, ListChecksIcon, RouteIcon, ScaleIcon, ShieldAlertIcon } 
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 
-import { BrandMark } from '@/components/BrandMark'
+import { LanguageToggle } from '@/app/LanguageToggle'
+import { ThemeToggle } from '@/app/ThemeToggle'
+import { BrandMark, productName } from '@/components/BrandMark'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useT, type Dictionary } from '@/lib/i18n'
 
 import { useAuth } from './AuthProvider'
-import { defaultOrganization, rememberedName } from './session'
+import { defaultOrganization, organizationName, rememberedName } from './session'
 
 /**
  * The first screen anyone sees, and the only one that is nothing but design — everywhere else the
@@ -26,26 +29,12 @@ import { defaultOrganization, rememberedName } from './session'
  */
 
 // True of this product, and the reason it is not an alerting rule. Each line names something an
-// operator can actually go and look at once they are through this screen.
-const points = [
-  {
-    icon: ScaleIcon,
-    title: 'A gate you can read',
-    detail:
-      'Signals are scored by explicit rules before any model is involved, and the arithmetic stays on the incident — including the components that came out negative.',
-  },
-  {
-    icon: ListChecksIcon,
-    title: 'And what it did not raise',
-    detail:
-      'Weak and suppressed signals stay on the record next to the detection latency, so a quiet hour reads as quiet rather than as unexplained.',
-  },
-  {
-    icon: RouteIcon,
-    title: 'Routed, not broadcast',
-    detail:
-      'A finished analysis reaches the destinations you configured, filtered by priority, and every attempt keeps its delivery result.',
-  },
+// operator can actually go and look at once they are through this screen. The icons stay here and
+// the claims live in the dictionary — an id that has no copy behind it will not compile.
+const points: { icon: typeof ScaleIcon; id: keyof Dictionary['login']['points'] }[] = [
+  { icon: ScaleIcon, id: 'gate' },
+  { icon: ListChecksIcon, id: 'restraint' },
+  { icon: RouteIcon, id: 'routing' },
 ]
 
 // A static ground: a wash of the accent off the top-left corner and a hairline grid, masked out
@@ -65,6 +54,7 @@ const ground: CSSProperties = {
 export function LoginPage() {
   const { isAuthenticated, signIn } = useAuth()
   const location = useLocation()
+  const { login } = useT()
 
   const [name, setName] = useState(rememberedName)
   const [error, setError] = useState<string | null>(null)
@@ -86,7 +76,7 @@ export function LoginPage() {
     if (!trimmed) {
       // A required field, not a rejected credential. The message says what is missing and why it
       // is wanted, and never implies that something was checked.
-      setError('Enter a name. It is only used to label this session.')
+      setError(login.nameRequired)
       field.current?.focus()
 
       return
@@ -106,27 +96,26 @@ export function LoginPage() {
 
         <div className="relative flex items-center gap-2.5">
           <BrandMark className="size-7" />
-          <span className="text-sm font-semibold tracking-tight">Incident Management</span>
+          <span className="text-sm font-semibold tracking-tight">{productName}</span>
         </div>
 
         <div className="relative my-12 max-w-lg">
           <p className="text-3xl leading-tight font-semibold tracking-tight text-balance xl:text-4xl">
-            It shows its work.
+            {login.tagline}
           </p>
           <p className="text-muted-foreground mt-4 text-base leading-relaxed">
-            The platform watches your log store, decides on the record whether something is worth
-            waking a human for, and then explains the decision it reached.
+            {login.taglineDetail}
           </p>
         </div>
 
         <ul className="border-sidebar-border relative max-w-lg space-y-5 border-t pt-8">
           {points.map((point) => (
-            <li key={point.title} className="flex gap-3">
+            <li key={point.id} className="flex gap-3">
               <point.icon className="text-primary mt-0.5 size-4 shrink-0" aria-hidden />
               <div>
-                <p className="text-sm font-medium">{point.title}</p>
+                <p className="text-sm font-medium">{login.points[point.id].title}</p>
                 <p className="text-muted-foreground mt-0.5 text-sm leading-relaxed">
-                  {point.detail}
+                  {login.points[point.id].detail}
                 </p>
               </div>
             </li>
@@ -134,20 +123,28 @@ export function LoginPage() {
         </ul>
       </aside>
 
-      <main className="flex items-center justify-center px-4 py-10 sm:px-6">
+      <main className="relative flex items-center justify-center px-4 py-10 sm:px-6">
+        {/* There is no header on this screen, so the two display preferences take a corner of
+            their own. Language belongs here rather than only behind the sign-in: somebody who
+            cannot read the prompt cannot reach a settings page on the other side of it. */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 sm:top-6 sm:right-6">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
+
         <div className="w-full max-w-sm">
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
             <BrandMark className="size-7" />
-            <span className="text-sm font-semibold tracking-tight">Incident Management</span>
+            <span className="text-sm font-semibold tracking-tight">{productName}</span>
           </div>
 
           <form onSubmit={onSubmit} noValidate>
             <Card>
               <CardHeader>
-                <h1 className="font-heading text-lg leading-snug font-medium">Sign in</h1>
-                <p className="text-muted-foreground text-sm">
-                  Choose the name this session runs under.
-                </p>
+                <h1 className="font-heading text-lg leading-snug font-medium">
+                  {login.heading}
+                </h1>
+                <p className="text-muted-foreground text-sm">{login.subheading}</p>
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -158,19 +155,20 @@ export function LoginPage() {
                   <Building2Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
                   <div className="min-w-0">
                     <p className="text-muted-foreground text-[0.6875rem] font-medium tracking-wider uppercase">
-                      Organisation
+                      {login.organisation}
                     </p>
-                    <p className="truncate text-sm font-medium">{defaultOrganization.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {organizationName(defaultOrganization)}
+                    </p>
                   </div>
                 </div>
 
                 <p className="text-muted-foreground text-xs leading-relaxed">
-                  Incidents, signals and integrations belong to the organisation rather than to the
-                  person who opened them. This build has one.
+                  {login.ownership}
                 </p>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="session-name">Your name</Label>
+                  <Label htmlFor="session-name">{login.nameLabel}</Label>
 
                   <Input
                     id="session-name"
@@ -189,7 +187,7 @@ export function LoginPage() {
                   />
 
                   <p id="session-name-hint" className="text-muted-foreground text-xs">
-                    Labels this session in the console. Nothing checks it.
+                    {login.nameHint}
                   </p>
 
                   {error && (
@@ -205,19 +203,15 @@ export function LoginPage() {
                 <div className="bg-caution text-caution-foreground border-caution-border rounded-lg border px-3 py-2.5">
                   <p className="flex items-center gap-2 text-sm font-medium">
                     <ShieldAlertIcon className="size-4 shrink-0" aria-hidden />
-                    No password, because nothing would check it
+                    {login.noPasswordTitle}
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed">
-                    This build has no authentication. The services behind this console answer
-                    anyone who can reach them, and signing in here only decides whose name the
-                    session carries. Real sign-in arrives with the gateway.
-                  </p>
+                  <p className="mt-1 text-xs leading-relaxed">{login.noPassword}</p>
                 </div>
               </CardContent>
 
               <CardFooter>
                 <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
-                  Enter the console
+                  {login.submit}
                 </Button>
               </CardFooter>
             </Card>

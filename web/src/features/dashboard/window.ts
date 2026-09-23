@@ -39,7 +39,5 @@ export function dayRange(days: DayWindow): { from: string; to: string } {
   }
 }
 
-/** How the window is named in a card's own scope line. */
-export function dayWindowLabel(days: DayWindow): string {
-  return `last ${days} days`
-}
+// How the window is named in a card's own scope line is `window.dayScope` in the dictionary:
+// it is text, and this file is arithmetic.

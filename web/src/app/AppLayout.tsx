@@ -13,7 +13,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 
-import { BrandMark } from '@/components/BrandMark'
+import { BrandMark, productName } from '@/components/BrandMark'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -24,15 +24,20 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { organizationName } from '@/features/auth/session'
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import { RealtimeIndicator } from './RealtimeIndicator'
+import { LanguageToggle } from './LanguageToggle'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
 interface NavItem {
   to: string
-  label: string
+  /** Keyed into the dictionary rather than spelled here: a destination cannot be added to the
+   *  rail without a label existing in both languages, and the compiler is what says so. */
+  id: keyof Dictionary['nav']['items']
   icon: LucideIcon
   /**
    * Match this path exactly. Only the dashboard needs it: it sits at `/`, which is a prefix of
@@ -45,7 +50,7 @@ interface NavItem {
 
 interface NavGroup {
   /** Omitted for a group whose only entry already says what the heading would have said. */
-  label?: string
+  id?: keyof Dictionary['nav']['groups']
   items: NavItem[]
 }
 
@@ -70,26 +75,26 @@ interface NavGroup {
 // other two are where you go when it raises a question — which service, and did anyone hear.
 const navigation: NavGroup[] = [
   {
-    label: 'Operations',
+    id: 'operations',
     items: [
       // First, and in this group rather than above it: it is a view of the same work, not a
       // different kind of destination, and a heading over one row is hierarchy printed twice.
-      { to: '/', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
-      { to: '/incidents', label: 'Incidents', icon: SirenIcon },
-      { to: '/signals', label: 'Signals', icon: ActivityIcon },
-      { to: '/evidence', label: 'Evidence', icon: ScrollTextIcon },
+      { to: '/', id: 'dashboard', icon: LayoutDashboardIcon, end: true },
+      { to: '/incidents', id: 'incidents', icon: SirenIcon },
+      { to: '/signals', id: 'signals', icon: ActivityIcon },
+      { to: '/evidence', id: 'evidence', icon: ScrollTextIcon },
     ],
   },
   {
-    label: 'Pipeline',
+    id: 'pipeline',
     items: [
-      { to: '/funnel', label: 'Funnel', icon: FunnelIcon },
-      { to: '/services', label: 'Services', icon: ServerIcon },
-      { to: '/deliveries', label: 'Deliveries', icon: SendIcon },
+      { to: '/funnel', id: 'funnel', icon: FunnelIcon },
+      { to: '/services', id: 'services', icon: ServerIcon },
+      { to: '/deliveries', id: 'deliveries', icon: SendIcon },
     ],
   },
   {
-    items: [{ to: '/settings', label: 'Settings', icon: SettingsIcon }],
+    items: [{ to: '/settings', id: 'settings', icon: SettingsIcon }],
   },
 ]
 
@@ -102,11 +107,15 @@ const navigation: NavGroup[] = [
  */
 function Brand({ className, organization }: { className?: string; organization?: string }) {
   return (
-    <span className={cn('flex items-center gap-2.5', className)}>
+    // min-w-0 on the outer span too, not only on the inner one. A flex item's default minimum is
+    // its content, so without it the inner `truncate` has nothing to truncate against and the
+    // whole name pushes the header wider than the viewport. Found at 320px in Turkish, where the
+    // realtime chip is a word longer than "offline" and spent the slack that hid it.
+    <span className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <BrandMark />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold tracking-tight">
-          Incident Management
+          {productName}
         </span>
         {organization && (
           <span className="text-muted-foreground block truncate text-xs">{organization}</span>
@@ -117,13 +126,15 @@ function Brand({ className, organization }: { className?: string; organization?:
 }
 
 function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: boolean }) {
+  const { nav } = useT()
+
   return (
     <>
       {navigation.map((group) => (
-        <div key={group.label ?? group.items[0].to} className="mb-5 last:mb-0">
-          {group.label && (
+        <div key={group.id ?? group.items[0].to} className="mb-5 last:mb-0">
+          {group.id && (
             <p className="text-muted-foreground mb-1 px-2.5 text-[0.6875rem] font-medium tracking-wider uppercase">
-              {group.label}
+              {nav.groups[group.id]}
             </p>
           )}
 
@@ -151,7 +162,7 @@ function NavItems({ onNavigate, touch }: { onNavigate?: () => void; touch?: bool
                   }
                 >
                   <item.icon className="size-4 shrink-0" />
-                  {item.label}
+                  {nav.items[item.id]}
                 </NavLink>
               </li>
             ))}
@@ -167,6 +178,7 @@ export function AppLayout() {
   // Never null in practice — RequireAuth is the only route that renders this — but the context is
   // typed for the login screen too, where it is.
   const { organization } = useAuth()
+  const { nav } = useT()
 
   return (
     <div className="bg-background text-foreground min-h-svh">
@@ -174,7 +186,7 @@ export function AppLayout() {
         href="#content"
         className="bg-primary text-primary-foreground focus:ring-ring sr-only rounded-md px-3 py-2 text-sm focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:ring-2"
       >
-        Skip to content
+        {nav.skip}
       </a>
 
       {/* A rail rather than a top bar: the section list grows (Settings gains sub-navigation next
@@ -188,11 +200,11 @@ export function AppLayout() {
             to="/"
             className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
           >
-            <Brand organization={organization?.name} />
+            <Brand organization={organization ? organizationName(organization) : undefined} />
           </NavLink>
         </div>
 
-        <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3 py-3">
+        <nav aria-label={nav.sections} className="flex-1 overflow-y-auto px-3 py-3">
           <NavItems />
         </nav>
       </aside>
@@ -207,7 +219,7 @@ export function AppLayout() {
                     variant="ghost"
                     size="icon-sm"
                     className="lg:hidden"
-                    aria-label="Open navigation"
+                    aria-label={nav.open}
                   />
                 }
               >
@@ -217,14 +229,14 @@ export function AppLayout() {
               <SheetContent side="left" className="w-72 sm:max-w-none">
                 <SheetHeader className="h-14 justify-center px-4 py-0">
                   <SheetTitle>
-                    <Brand organization={organization?.name} />
+                    <Brand
+                      organization={organization ? organizationName(organization) : undefined}
+                    />
                   </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Move between the console's sections.
-                  </SheetDescription>
+                  <SheetDescription className="sr-only">{nav.drawer}</SheetDescription>
                 </SheetHeader>
 
-                <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3 pb-4">
+                <nav aria-label={nav.sections} className="flex-1 overflow-y-auto px-3 pb-4">
                   <NavItems onNavigate={() => setMenuOpen(false)} touch />
                 </nav>
               </SheetContent>
@@ -232,8 +244,9 @@ export function AppLayout() {
 
             <Brand className="lg:hidden" />
 
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <RealtimeIndicator />
+              <LanguageToggle />
               <ThemeToggle />
               <UserMenu />
             </div>

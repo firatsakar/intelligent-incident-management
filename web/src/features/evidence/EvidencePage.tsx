@@ -23,10 +23,15 @@ import {
   formatTime,
   severityClass,
   signalStatusClass,
-  signalStatusLabel,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { defaultWindow, resolveWindow, windowLabel, windowPresets } from '@/lib/window'
+import {
+  defaultWindow,
+  resolveWindow,
+  resolveWindowPreset,
+  windowPresets,
+} from '@/lib/window'
 import type { ErrorSignature, IngestionTick, LogRecord, Signal } from '@/types/api'
 
 /**
@@ -35,6 +40,8 @@ import type { ErrorSignature, IngestionTick, LogRecord, Signal } from '@/types/a
  * which is why the log column is the wide one — everything to its right is a summary of it.
  */
 export function EvidencePage() {
+  const { window: windowText, telemetry } = useT()
+  const t = telemetry.evidence
   const [params, setParams] = useSearchParams()
 
   const preset = params.get('window') ?? defaultWindow
@@ -89,10 +96,8 @@ export function EvidencePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Evidence</h1>
-          <p className="text-muted-foreground text-sm">
-            The raw material: what was logged, what it rolled up into, and what that produced.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -105,8 +110,8 @@ export function EvidencePage() {
               // making this a controlled input.
               key={service}
               defaultValue={service}
-              placeholder="Filter by service"
-              aria-label="Filter by service"
+              placeholder={t.filterService}
+              aria-label={t.filterService}
               className={cn('w-48', service && 'pr-8')}
               onBlur={(event) => setParam('service', event.target.value.trim())}
               onKeyDown={(event) => {
@@ -118,7 +123,7 @@ export function EvidencePage() {
               <button
                 type="button"
                 onClick={() => setParam('service', null)}
-                aria-label="Clear the service filter"
+                aria-label={t.clearService}
                 className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 absolute inset-y-0 right-0 grid w-8 place-items-center rounded-r-lg outline-none focus-visible:ring-[3px]"
               >
                 <XIcon className="size-3.5" aria-hidden />
@@ -127,13 +132,13 @@ export function EvidencePage() {
           </div>
 
           <Select value={preset} onValueChange={(value) => setParam('window', value)}>
-            <SelectTrigger className="w-44" aria-label="Time window">
-              <SelectValue>{windowLabel(preset)}</SelectValue>
+            <SelectTrigger className="w-44" aria-label={windowText.label}>
+              <SelectValue>{windowText.option[resolveWindowPreset(preset)]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {windowPresets.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {windowText.option[option.value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -146,7 +151,7 @@ export function EvidencePage() {
       {query.isError && (
         <Card>
           <CardContent className="text-alarm-ink py-6 text-sm">
-            {query.error instanceof Error ? query.error.message : 'Could not load evidence'}
+            {query.error instanceof Error ? query.error.message : t.loadError}
           </CardContent>
         </Card>
       )}
@@ -168,13 +173,13 @@ export function EvidencePage() {
               than truncate inside its cell. */}
           <Card className="min-w-0 lg:col-span-2">
             <CardHeader>
-              <CardTitle>Log records</CardTitle>
+              <CardTitle>{t.logRecords}</CardTitle>
               <CardDescription>
                 {/* The endpoint caps at 200 but reports the true total, so a truncated view is
                     shown as truncated rather than quietly lying about the volume. */}
                 {query.data.logRecords.length < query.data.totalLogRecords
-                  ? `Showing the most recent ${query.data.logRecords.length} of ${query.data.totalLogRecords}`
-                  : `${query.data.totalLogRecords} in this window`}
+                  ? t.showingRecent(query.data.logRecords.length, query.data.totalLogRecords)
+                  : t.inWindow(query.data.totalLogRecords)}
                 {service && ` · ${service}`}
               </CardDescription>
             </CardHeader>
@@ -182,12 +187,8 @@ export function EvidencePage() {
             <CardContent>
               {query.data.logRecords.length === 0 ? (
                 <Empty
-                  title="Nothing logged in this window."
-                  detail={
-                    service
-                      ? `No record from "${service}" in the window. Either it was quiet, or nothing by that name is being read — the name has to match what the source reports.`
-                      : 'Detection reads from your own log store on a schedule, so an empty window means either a quiet period or a source that is not being read.'
-                  }
+                  title={t.emptyLogTitle}
+                  detail={service ? t.emptyLogForService(service) : t.emptyLog}
                 />
               ) : (
                 // Two hundred fixed-height rows is about three screens of document, and the two
@@ -200,7 +201,7 @@ export function EvidencePage() {
                 <ul
                   tabIndex={0}
                   role="group"
-                  aria-label="Log records in this window"
+                  aria-label={t.logListLabel}
                   className="divide-border/60 focus-visible:ring-ring/50 -my-1 max-h-[36rem] divide-y overflow-y-auto rounded-sm text-sm outline-none focus-visible:ring-[3px]"
                 >
                   {query.data.logRecords.map((record) => (
@@ -217,30 +218,26 @@ export function EvidencePage() {
           <div className="min-w-0 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Signatures</CardTitle>
+                <CardTitle>{t.signatures}</CardTitle>
                 {/* The one collection here whose count is not a cap being hit. It is derived from
                     the signals panel below — the distinct signatures those signals point at — so
                     when the signals are truncated this list is truncated with them, and saying
                     "12 in this window" would be claiming a completeness the response never had. */}
                 <CardDescription>
-                  {query.data.totalSignatures} distinct error(s) behind the signals below
-                  {query.data.signals.length < query.data.totalSignals &&
-                    ' — behind the ones shown, not behind the whole window'}
-                  . The counters on each span all time, not this window.
+                  {t.signaturesCount(query.data.totalSignatures)}
+                  {query.data.signals.length < query.data.totalSignals && t.signaturesTruncated}
+                  {t.signaturesAllTime}
                 </CardDescription>
               </CardHeader>
 
               <CardContent>
                 {query.data.signatures.length === 0 ? (
-                  <Empty
-                    title="No signatures here."
-                    detail="A signature is created the first time an error is normalised, so an empty list means nothing in the window was an error."
-                  />
+                  <Empty title={t.emptySignaturesTitle} detail={t.emptySignatures} />
                 ) : (
                   <ul
                     tabIndex={0}
                     role="group"
-                    aria-label="Signatures behind the signals in this window"
+                    aria-label={t.signaturesListLabel}
                     className="divide-border focus-visible:ring-ring/50 -my-2.5 max-h-[28rem] divide-y overflow-y-auto rounded-sm outline-none focus-visible:ring-[3px]"
                   >
                     {query.data.signatures.map((signature) => (
@@ -253,29 +250,26 @@ export function EvidencePage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Signals</CardTitle>
+                <CardTitle>{t.signals}</CardTitle>
                 {/* Signals were the collection here that never had a cap, so this panel used to
                     be the only one that could not lie about its own size. Now that it has one, it
                     gets the same sentence the log records have had all along. */}
                 <CardDescription>
-                  What the gate made of those signatures in this window ·{' '}
+                  {t.signalsDescription} ·{' '}
                   {query.data.signals.length < query.data.totalSignals
-                    ? `the most recent ${query.data.signals.length} of ${query.data.totalSignals}`
-                    : `${query.data.totalSignals} in this window`}
+                    ? t.signalsRecent(query.data.signals.length, query.data.totalSignals)
+                    : t.inWindow(query.data.totalSignals)}
                 </CardDescription>
               </CardHeader>
 
               <CardContent>
                 {query.data.signals.length === 0 ? (
-                  <Empty
-                    title="No signals here."
-                    detail="Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide."
-                  />
+                  <Empty title={t.emptySignalsTitle} detail={t.emptySignals} />
                 ) : (
                   <ul
                     tabIndex={0}
                     role="group"
-                    aria-label="Signals in this window"
+                    aria-label={t.signalsListLabel}
                     className="divide-border focus-visible:ring-ring/50 -my-2.5 max-h-[28rem] divide-y overflow-y-auto rounded-sm outline-none focus-visible:ring-[3px]"
                   >
                     {query.data.signals.map((signal) => (
@@ -317,6 +311,8 @@ function Arrivals({
   refreshing: boolean
   onRefresh: () => void
 }) {
+  const t = useT().telemetry.evidence
+
   return (
     <div
       // Assertive would interrupt; this is news that can wait for a pause.
@@ -324,12 +320,12 @@ function Arrivals({
       className="bg-info border-info-border text-info-foreground flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 text-sm"
     >
       <span className="min-w-0 tabular-nums">
-        {records} new log record(s) ingested since this window was read
-        {polls > 1 && `, across ${polls} polls`}.
+        {t.arrived(records)}
+        {polls > 1 && t.acrossPolls(polls)}.
         {/* The tick counts records, not records matching a filter: the summary is per source, and
             the service a record belongs to is not in it. Saying so beats a number that silently
             means something else than the panel below it. */}
-        {service && ' Counted across all services, not just the one filtered here.'}
+        {service && t.allServicesNote}
       </span>
 
       <Button
@@ -339,7 +335,7 @@ function Arrivals({
         onClick={onRefresh}
         className="ml-auto"
       >
-        {refreshing ? 'Re-reading…' : 'Re-read the window'}
+        {refreshing ? t.rereading : t.reread}
       </Button>
     </div>
   )
@@ -364,6 +360,8 @@ function Empty({ title, detail }: { title: string; detail: string }) {
  * going to the incident for the stack trace anyway.
  */
 function LogLine({ record, showService }: { record: LogRecord; showService: boolean }) {
+  const { labels, telemetry } = useT()
+
   return (
     <li className="flex items-baseline gap-3 py-1.5">
       <span className="text-muted-foreground shrink-0 tabular-nums">
@@ -371,7 +369,7 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
       </span>
 
       <span className={cn('w-[5.5rem] shrink-0 text-xs', severityClass[record.severity])}>
-        {record.severity}
+        {labels.severity[record.severity]}
       </span>
 
       {showService && (
@@ -387,7 +385,7 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
       {record.hasClockSkew && (
         // Recorded rather than rejected upstream, so it should be visible here.
         <Badge variant="outline" className="shrink-0 text-xs">
-          clock skew
+          {telemetry.evidence.clockSkew}
         </Badge>
       )}
 
@@ -396,7 +394,7 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
           record that nothing displayed. Its own column so it reads down the list. */}
       <span
         className="text-dim-foreground hidden w-16 shrink-0 text-right text-xs tabular-nums md:block"
-        title="Ingestion lag — from the source's timestamp to ours"
+        title={telemetry.evidence.ingestionLag}
       >
         +{formatDuration(record.timestamp, record.ingestedAt)}
       </span>
@@ -405,6 +403,8 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
 }
 
 function SignatureRow({ signature }: { signature: ErrorSignature }) {
+  const t = useT().telemetry.evidence
+
   return (
     <li className="space-y-1 py-2.5">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -414,7 +414,7 @@ function SignatureRow({ signature }: { signature: ErrorSignature }) {
           // A muted signature is still scored and still counted; it is just heavily penalised.
           // Worth a marker here because it explains a low confidence downstream.
           <Badge variant="outline" className="shrink-0">
-            muted
+            {t.muted}
           </Badge>
         )}
       </div>
@@ -435,19 +435,25 @@ function SignatureRow({ signature }: { signature: ErrorSignature }) {
       </p>
 
       <p className="text-muted-foreground text-xs tabular-nums">
-        {signature.occurrenceCount} total · promoted {signature.promotionCount}× ·{' '}
-        {signature.confirmedRealCount} real, {signature.falsePositiveCount} false
+        {t.signatureCounts(
+          signature.occurrenceCount,
+          signature.promotionCount,
+          signature.confirmedRealCount,
+          signature.falsePositiveCount,
+        )}
       </p>
     </li>
   )
 }
 
 function SignalSummary({ signal }: { signal: Signal }) {
+  const { labels, telemetry } = useT()
+
   return (
     <li className="space-y-1 py-2.5">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <Badge variant="outline" className={cn('border', signalStatusClass[signal.status])}>
-          {signalStatusLabel[signal.status]}
+          {labels.signalStatus[signal.status]}
         </Badge>
 
         <span className="ml-auto text-sm font-medium tabular-nums">
@@ -458,11 +464,14 @@ function SignalSummary({ signal }: { signal: Signal }) {
       {/* Which error this signal was about. Without it the row was a verdict attached to nothing,
           which made the panel impossible to read against the signatures directly above it. */}
       <p className="text-muted-foreground truncate text-sm" title={signal.normalizedMessage ?? ''}>
-        {signal.exceptionType ?? signal.normalizedMessage ?? 'unknown error'}
+        {signal.exceptionType ?? signal.normalizedMessage ?? telemetry.unknownError}
       </p>
 
       <p className="text-dim-foreground text-xs tabular-nums">
-        {signal.occurrenceCount} occurrence(s) · {formatDateTime(signal.detectedAt)}
+        {telemetry.evidence.signalCounts(
+          signal.occurrenceCount,
+          formatDateTime(signal.detectedAt),
+        )}
       </p>
     </li>
   )

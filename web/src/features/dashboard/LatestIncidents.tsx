@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatRelative, incidentStatusLabel, priorityClass } from '@/lib/format'
+import { formatRelative, priorityClass } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 // The one import that crosses a feature boundary, and the reason is the cache rather than
 // convenience. `incidentCreated` invalidates `['incidents']` and `incidentChanged` patches every
@@ -17,16 +18,15 @@ import { useIncidents } from '@/features/incidents/queries'
 const rows = 6
 
 export function LatestIncidents() {
+  const { dashboard, labels } = useT()
+  const t = dashboard.latest
   const query = useIncidents({ pageNumber: 1, pageSize: rows })
 
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Latest incidents</CardTitle>
-        <CardDescription>
-          The {rows} most recent, whenever they were opened. Arrives over the socket — no refresh,
-          and no window.
-        </CardDescription>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(rows)}</CardDescription>
       </CardHeader>
 
       <CardContent className="flex-1">
@@ -40,17 +40,15 @@ export function LatestIncidents() {
 
         {query.isError && (
           <p className="text-alarm-ink text-sm">
-            {query.error instanceof Error ? query.error.message : 'Could not load incidents'}
+            {query.error instanceof Error ? query.error.message : t.loadError}
           </p>
         )}
 
         {query.isSuccess &&
           (query.data.items.length === 0 ? (
             <div className="py-6">
-              <p className="text-sm font-medium">No incidents on record.</p>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Nothing has been opened by hand, and nothing has crossed a detection rule yet.
-              </p>
+              <p className="text-sm font-medium">{t.emptyTitle}</p>
+              <p className="text-muted-foreground mt-1 text-sm">{t.empty}</p>
             </div>
           ) : (
             <ul className="divide-border -my-2 divide-y">
@@ -60,7 +58,7 @@ export function LatestIncidents() {
                     variant="outline"
                     className={cn('border', priorityClass[incident.priority])}
                   >
-                    {incident.priority}
+                    {labels.priority[incident.priority]}
                   </Badge>
 
                   <span className="min-w-0 flex-1">
@@ -71,7 +69,8 @@ export function LatestIncidents() {
                       <span className="block truncate">{incident.title}</span>
                     </Link>
                     <span className="text-muted-foreground block truncate text-xs">
-                      {incidentStatusLabel[incident.status]} · {incident.source}
+                      {labels.incidentStatus[incident.status]} ·{' '}
+                      {labels.incidentSource[incident.source]}
                     </span>
                   </span>
 
@@ -92,7 +91,7 @@ export function LatestIncidents() {
             to="/incidents"
             className="text-primary focus-visible:ring-ring/50 -mx-1 inline-flex min-h-6 items-center gap-1 rounded-sm px-1 text-sm font-medium outline-none hover:underline focus-visible:ring-[3px]"
           >
-            All {query.data.totalCount} incidents
+            {t.all(query.data.totalCount)}
             <ArrowRightIcon className="size-3.5" aria-hidden />
           </Link>
         </CardContent>
