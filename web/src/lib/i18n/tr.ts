@@ -274,7 +274,7 @@ export const tr: Dictionary = {
       clockDisagreement: 'Saat uyuşmazlığı',
       latencyHintLabel: 'Tespit gecikmesi neyi ölçüyor',
       latencyHint:
-        'Kaynağın damgaladığı ilk log satırından bu kaydın açıldığı ana kadar — log deposunun saatinden bizimkine. İçinde poll aralığı, tespit geçişi ve puanlama var; platformun bunu kendi başına fark etmek için harcadığı sürenin tamamı bu.',
+        'Kaynağın damgaladığı ilk log satırından bu kaydın açıldığı ana kadar — log deposunun saatinden bizimkine. İçinde sorgulama aralığı, tespit geçişi ve puanlama var; platformun bunu kendi başına fark etmek için harcadığı sürenin tamamı bu.',
       skewHint:
         'Kaynak, bunun biz kaydı açtıktan sonra başladığını bildiriyor; bu ancak iki saatin uyuşmadığı anlamına gelir. Gördüğünüz rakam bir gecikme değil, o uyuşmazlığın büyüklüğü.',
       noticed: 'söylenmeden fark edildi',
@@ -511,7 +511,7 @@ export const tr: Dictionary = {
 
       arrived: (records: number) =>
         `Bu pencere okunduğundan beri ${records} yeni log kaydı alındı`,
-      acrossPolls: (polls: number) => `, ${polls} poll boyunca`,
+      acrossPolls: (polls: number) => `, ${polls} sorgulamada`,
       allServicesNote: ' Yalnızca burada süzülen servis için değil, tüm servisler için sayıldı.',
       reread: 'Pencereyi yeniden oku',
       rereading: 'Yeniden okunuyor…',
@@ -667,7 +667,7 @@ export const tr: Dictionary = {
       description: (scope: string) => `${scope}, UTC.`,
       empty:
         'Bu pencerede olay yok, yani fark edilmiş olacak bir şey de yok. Daha uzun bir pencere deneyin.',
-      share: 'platformun kendisi fark etti',
+      share: 'platform kendi fark etti',
       noticed: 'Fark edildi',
       filed: 'Elle açıldı',
       median: 'Medyan gecikme',
@@ -832,7 +832,7 @@ export const tr: Dictionary = {
         'jira.projectKey': 'Proje anahtarı',
         'jira.email': 'Hesap e-postası',
         'jira.apiToken': 'API token',
-        'jira.issueType': 'Issue tipi',
+        'jira.issueType': 'Issue türü',
         'seq.url': 'Seq URL',
         'seq.apiKey': 'API anahtarı',
         'seq.filter': 'Filtre',
@@ -850,7 +850,7 @@ export const tr: Dictionary = {
         'seq.serviceProperty':
           'Bir log satırının hangi servisten geldiğini söyleyen alanın adı.',
         'seq.initialLookback':
-          'İlk poll ne kadar geriye bakar. Sonraki pollar sonuncunun bıraktığı yerden devam eder.',
+          'İlk sorgulama ne kadar geriye bakar. Sonrakiler sonuncunun bıraktığı yerden devam eder.',
       },
     },
 
@@ -968,9 +968,9 @@ export const tr: Dictionary = {
       connectTitle: (kind: string) => `${kind} bağla`,
       namePlaceholder: (kind: string) => `${kind} — üretim`,
       nameHint: 'Bu kaynağın telemetri sayfasında ve tespit loglarında nasıl tanınacağı.',
-      pollLabel: 'Poll aralığı (saniye)',
+      pollLabel: 'Sorgulama aralığı (saniye)',
       pollInvalid: (minimum: number) =>
-        `Tam sayı olarak ${minimum} saniye ya da daha fazlasını girin. Bundan hızlı poll etmek kaynağı boşuna yorar.`,
+        `Tam sayı olarak ${minimum} saniye ya da daha fazlasını girin. Bundan daha sık sorgulamak kaynağı boşuna yorar.`,
 
       polls: (seconds: number, what: string) =>
         `${what} için her ${seconds} saniyede bir bakıyor`,
