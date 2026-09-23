@@ -18,6 +18,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
+    <!--
+      For PlatformJwtOptions and the claim names. The token this project mints is validated by
+      five other processes, so the names have to come from one place rather than be agreed on by
+      convention.
+    -->
+    <ProjectReference Include="..\..\..\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
     <ProjectReference Include="..\IdentityService.Application\IdentityService.Application.csproj" />
   </ItemGroup>
 

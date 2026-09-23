@@ -18,4 +18,17 @@ public interface IPasswordHasher
     /// change is a failed sign-in, not a failed request.
     /// </summary>
     bool Verify(string password, string hash);
+
+    /// <summary>
+    /// A valid hash of a value nobody knows, for verifying against when there is nothing to verify
+    /// against.
+    /// </summary>
+    /// <remarks>
+    /// Sign-in is deliberately slow, which makes it a timing oracle: returning early for an
+    /// address that has no account answers "does this person have an account here" in a few
+    /// milliseconds, to anyone who asks. Running the same work against this hash instead costs one
+    /// wasted verification on a request that was going to fail anyway, and makes the two paths
+    /// take the same time.
+    /// </remarks>
+    string DummyHash { get; }
 }

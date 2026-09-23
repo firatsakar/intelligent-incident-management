@@ -1,5 +1,6 @@
 using BuildingBlocks.Outbox;
 using IdentityService.Application.Abstractions;
+using IdentityService.Application.Sessions;
 using IdentityService.Infrastructure.Outbox;
 using IdentityService.Infrastructure.Persistence;
 using IdentityService.Infrastructure.Persistence.Repositories;
@@ -37,8 +38,18 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 
-        // The outbox mechanics are shared; the routing arrives with the handler in Parça 3.
+        // PlatformJwtOptions is registered by AddPlatformAuth, which every service including this
+        // one calls; this project is the only one that also mints.
+        services.AddSingleton<ITokenGenerator, JwtTokenGenerator>();
+
+        services.AddScoped<SessionIssuer>();
+
+        // The outbox mechanics are shared; only the routing is ours.
         services.AddScoped<IOutboxStore, IdentityOutboxStore>();
+        services.AddScoped<IOutboxMessageHandler, OrganizationCreatedOutboxHandler>();
+
+        services.AddHostedService<OutboxDispatcher>();
+        services.AddHostedService<OutboxCleanupService>();
 
         services.AddHostedService<IdentitySeeder>();
         services.AddHostedService<RefreshTokenCleanupService>();

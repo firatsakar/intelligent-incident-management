@@ -13,6 +13,14 @@ public sealed class BCryptPasswordHasher : IPasswordHasher
     // table is not a wordlist away from being readable.
     private const int WorkFactor = 12;
 
+    // Computed once per process, not per request: the point is to spend the same time as a real
+    // verification, and hashing a fresh value on every unknown address would spend twice.
+    private static readonly Lazy<string> Dummy = new(() =>
+        BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString(), WorkFactor)
+    );
+
+    public string DummyHash => Dummy.Value;
+
     public string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
 
     public bool Verify(string password, string hash)

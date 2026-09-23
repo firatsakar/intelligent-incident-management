@@ -50,7 +50,12 @@ public sealed class RabbitMqConnection : IAsyncDisposable
             _connection = await _connectionFactory.CreateConnectionAsync();
             if (IsConnected)
             {
-                _logger.LogInformation("RabbitMQ connection established: {Host}", _connectionFactory.Uri);
+                // Host and port, not ConnectionFactory.Uri. The Uri is the full AMQP string with
+                // the password in it, and this line goes to Seq, where it would sit in plain text
+                // in every one of the five services' startup logs.
+                _logger.LogInformation(
+                    "RabbitMQ connection established: {Endpoint}",
+                    $"{_connection.Endpoint.HostName}:{_connection.Endpoint.Port}");
             }
         });
 
