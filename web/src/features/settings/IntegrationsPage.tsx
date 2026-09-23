@@ -136,6 +136,8 @@ export function IntegrationsPage() {
           levels the rail and the sub-navigation draw. */}
       <div className="max-w-2xl">
         <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
+        {/* The second sentence is the only thing that explains the "Add another Email" button —
+            without it the tile grid reads as one integration per channel. */}
         <p className="text-muted-foreground mt-1 text-sm">{t.intro}</p>
       </div>
 

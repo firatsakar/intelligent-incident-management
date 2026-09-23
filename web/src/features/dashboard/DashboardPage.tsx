@@ -66,7 +66,6 @@ export function DashboardPage() {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{dashboard.title}</h1>
-          <p className="text-muted-foreground text-sm">{dashboard.intro}</p>
         </div>
 
         {/* A segmented group rather than a select: three short options, and showing all three at
@@ -247,7 +246,7 @@ function DetectionCard({ detection, days }: { detection: DetectionLatency; days:
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScope(days))}</CardDescription>
+        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -322,7 +321,7 @@ function SourcesCard({
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScope(days))}</CardDescription>
+        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent>

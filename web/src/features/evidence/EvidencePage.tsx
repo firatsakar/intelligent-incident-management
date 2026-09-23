@@ -97,7 +97,6 @@ export function EvidencePage() {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

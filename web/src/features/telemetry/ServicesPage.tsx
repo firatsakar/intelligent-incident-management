@@ -154,10 +154,9 @@ export function ServicesPage() {
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
           <p className="text-muted-foreground text-sm">
             {/* The count only once there is one. "0 services produced something" is a sentence
-                nobody writes, and the empty row below says the same thing properly. */}
-            {query.data && rows.length > 0
-              ? t.produced(formatCount(rows.length), rows.length)
-              : t.intro}
+                nobody writes, and the empty row below says the same thing properly — which is
+                also why there is no longer a fallback line here. */}
+            {query.data && rows.length > 0 && t.produced(formatCount(rows.length), rows.length)}
           </p>
         </div>
 
