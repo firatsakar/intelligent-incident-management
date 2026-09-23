@@ -65,7 +65,11 @@ export function PlannedRow({ entry }: { entry: PlannedEntry }) {
   const t = useT().settings.shared
 
   return (
-    <div className="border-inert-border flex items-center gap-3 rounded-xl border border-dashed px-3 py-2.5">
+    // min-w-0 because this is a grid item, and a grid track's floor is its content unless it is
+    // told otherwise — without it the `truncate` below has nothing to truncate against and the
+    // longest planned name widens the whole page. Found at 320px on the telemetry screen, where
+    // "OTLP log alımı" and its summary are longer than anything the integrations grid holds.
+    <div className="border-inert-border flex min-w-0 items-center gap-3 rounded-xl border border-dashed px-3 py-2.5">
       <span className="bg-muted/50 text-dim-foreground grid size-9 shrink-0 place-items-center rounded-lg">
         <entry.mark className="size-5" />
       </span>

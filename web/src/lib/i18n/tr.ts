@@ -50,6 +50,10 @@ export const tr: Dictionary = {
     signOut: 'Oturumu kapat',
   },
 
+  session: {
+    defaultOrganization: 'Varsayılan organizasyon',
+  },
+
   nav: {
     skip: 'İçeriğe geç',
     open: 'Menüyü aç',

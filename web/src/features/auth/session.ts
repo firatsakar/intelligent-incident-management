@@ -20,6 +20,8 @@
  *             precisely why none is made here.
  */
 
+import { activeDictionary } from '@/lib/i18n/active'
+
 export interface SessionUser {
   name: string
   /** Derived, never stored: one spelling of the name is enough to keep true. */
@@ -51,6 +53,21 @@ export interface Session {
 export const defaultOrganization: SessionOrganization = {
   id: 'default',
   name: 'Default organisation',
+}
+
+/**
+ * How an organisation's name reads on screen.
+ *
+ * The default one is a sentinel this console invented rather than a name a customer chose, so its
+ * display is translated while the stored value stays the key — exactly the treatment
+ * `(signature gone)` gets on the services screen. A real organisation's name arrives from the
+ * server with Adım 16 and must never be translated, which is why the test is on the id and not on
+ * the text.
+ */
+export function organizationName(organization: SessionOrganization): string {
+  return organization.id === defaultOrganization.id
+    ? activeDictionary().session.defaultOrganization
+    : organization.name
 }
 
 // Two keys on purpose. The session goes at sign-out; the name outlives it so signing back in is

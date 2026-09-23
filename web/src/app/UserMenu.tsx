@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { organizationName } from '@/features/auth/session'
 import { useT } from '@/lib/i18n'
 
 /**
@@ -53,7 +54,9 @@ export function UserMenu() {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{user.name}</p>
             {organization && (
-              <p className="text-muted-foreground truncate text-xs">{organization.name}</p>
+              <p className="text-muted-foreground truncate text-xs">
+                {organizationName(organization)}
+              </p>
             )}
           </div>
         </div>

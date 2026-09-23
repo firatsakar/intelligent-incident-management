@@ -24,6 +24,7 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { organizationName } from '@/features/auth/session'
 import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -106,7 +107,11 @@ const navigation: NavGroup[] = [
  */
 function Brand({ className, organization }: { className?: string; organization?: string }) {
   return (
-    <span className={cn('flex items-center gap-2.5', className)}>
+    // min-w-0 on the outer span too, not only on the inner one. A flex item's default minimum is
+    // its content, so without it the inner `truncate` has nothing to truncate against and the
+    // whole name pushes the header wider than the viewport. Found at 320px in Turkish, where the
+    // realtime chip is a word longer than "offline" and spent the slack that hid it.
+    <span className={cn('flex min-w-0 items-center gap-2.5', className)}>
       <BrandMark />
       <span className="min-w-0">
         <span className="block truncate text-sm font-semibold tracking-tight">
@@ -195,7 +200,7 @@ export function AppLayout() {
             to="/"
             className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
           >
-            <Brand organization={organization?.name} />
+            <Brand organization={organization ? organizationName(organization) : undefined} />
           </NavLink>
         </div>
 
@@ -224,7 +229,9 @@ export function AppLayout() {
               <SheetContent side="left" className="w-72 sm:max-w-none">
                 <SheetHeader className="h-14 justify-center px-4 py-0">
                   <SheetTitle>
-                    <Brand organization={organization?.name} />
+                    <Brand
+                      organization={organization ? organizationName(organization) : undefined}
+                    />
                   </SheetTitle>
                   <SheetDescription className="sr-only">{nav.drawer}</SheetDescription>
                 </SheetHeader>
@@ -237,7 +244,7 @@ export function AppLayout() {
 
             <Brand className="lg:hidden" />
 
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <RealtimeIndicator />
               <LanguageToggle />
               <ThemeToggle />

@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { useT, type Dictionary } from '@/lib/i18n'
 
 import { useAuth } from './AuthProvider'
-import { defaultOrganization, rememberedName } from './session'
+import { defaultOrganization, organizationName, rememberedName } from './session'
 
 /**
  * The first screen anyone sees, and the only one that is nothing but design — everywhere else the
@@ -157,7 +157,9 @@ export function LoginPage() {
                     <p className="text-muted-foreground text-[0.6875rem] font-medium tracking-wider uppercase">
                       {login.organisation}
                     </p>
-                    <p className="truncate text-sm font-medium">{defaultOrganization.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {organizationName(defaultOrganization)}
+                    </p>
                   </div>
                 </div>
 

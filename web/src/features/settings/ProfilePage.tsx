@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { organizationName } from '@/features/auth/session'
 import { languageName, languages, useLanguage, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -55,7 +56,7 @@ export function ProfilePage() {
       <Identity
         name={user.name}
         initials={user.initials}
-        organizationName={organization?.name}
+        organizationName={organization ? organizationName(organization) : undefined}
         onSignOut={signOut}
       />
 

@@ -74,6 +74,11 @@ export const en = {
     signOut: 'Sign out',
   },
 
+  session: {
+    /** The stored value stays 'Default organisation' — this is only how it reads. */
+    defaultOrganization: 'Default organisation',
+  },
+
   nav: {
     skip: 'Skip to content',
     open: 'Open navigation',

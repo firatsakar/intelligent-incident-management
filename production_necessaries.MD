@@ -1,4 +1,4 @@
-# Production Gereksinimleri
+﻿# Production Gereksinimleri
 
 > Adım 1–13 boyunca biriken, **ürün kullanımına geçmeden önce** ele alınması gereken her şey.
 > `PROGRESS.md` nerede olduğumuzu söyler; bu dosya neyin eksik olduğunu söyler.
@@ -324,6 +324,37 @@ Integration testleri (Testcontainers) Adım 18 kapsamı dışında bırakıldı 
   için sorunsuz; gerçek hacimde bucket'lama SQL'e itilmeli.
 - BM25 eş anlamlıları kaçırır; pgvector / hybrid search ertelendi (YAGNI).
 - `AnthropicAiAnalyzer` sapma halinde (fallback, tool-calling'siz, gövdede kullanılmıyor).
+
+---
+
+## 8.5 Dil (Adım 20.5, 2026-09-23)
+
+### ⚪ Ekranlar karışık dilli — bilinçli ve yazılı
+
+Konsol EN/TR konuşuyor ve **kendi metninin tamamı** çevrildi. Çevrilmeyen tek şey **servislerden
+gelen düzyazı**: `aiReasoning`, `signal.reason`, `delivery.lastError`, ve `ApiError`'ın RFC 9457
+gövdesinden çıkardığı mesaj. Yani Türkçe bir ekranda İngilizce paragraflar görünüyor.
+
+Bu bir eksiklik değil, alınmış bir karar: alternatifi ya backend i18n'i (ayrı bir iş) ya da
+**modelin gerekçesini uydurarak çevirmek**tir. Nerede durduğu profil ekranındaki Language
+kartında bir kez söyleniyor, her İngilizce paragrafın yanında dipnot olarak değil.
+
+**Kapatmanın maliyeti**, bir gün istenirse: `Accept-Language`'ın gateway'den (Adım 15) servislere
+taşınması · FluentValidation mesajlarının ve ProblemDetails başlıklarının kaynaklanması ·
+`SignalScoring`'in `Reason` metnini serbest metin yerine anahtar + parametre olarak üretmesi.
+**Model çıktısı buna dahil değil** — o Adım 20.6'nın konusu ve ayrı bir karar.
+
+### ⚪ Üçüncü dil eklemenin maliyeti bilerek düşük tutuldu
+
+`web/src/lib/i18n/tr.ts` `en.ts`'in şekliyle tiplenmiş, yani eksik bir anahtar **derleme
+hatası** — çalışma zamanında sessizce İngilizceye düşme yok. `web/scripts/find-untranslated.mjs`
+(`npm run check:i18n`) sözlüğe hiç girmemiş metni buluyor; derleyicinin göremediği yarı bu.
+Üçüncü bir dil, yeni bir dosya + `languages` dizisine bir üye demek.
+
+**Bilinmesi gereken iki şey:** `<html lang>` altında CSS `uppercase` **dile göre** büyütüyor
+(Türkçe'de `i` → `İ`), o yüzden case dönüşümünden geçen hiçbir yere veri konulmamalı — sekiz
+kullanım denetlendi, hepsi kabuk. Ve tarih/sayı biçimi dile bağlı: `lib/format.ts`'in `Intl`
+paketi aktif dile göre kuruluyor, tarayıcının diline göre değil.
 
 ---
 
