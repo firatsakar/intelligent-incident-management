@@ -71,7 +71,12 @@ export function InfoHint({
         </TooltipContent>
       </Tooltip>
 
-      <span id={describedBy} className="sr-only">
+      {/* normal-case because this hidden copy inherits whatever the annotated line is wearing, and
+          two of the places that use a hint are `uppercase` section labels — so a sentence written
+          to be read was being transformed into one. Invisible either way; the transform is not
+          reliably absent from what a screen reader is handed. Found on the incident detail's
+          detection strip during the Adım 20.5 acceptance run, in both languages. */}
+      <span id={describedBy} className="sr-only normal-case">
         {children}
       </span>
     </>

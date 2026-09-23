@@ -61,19 +61,29 @@ export function formatTime(value: string | null | undefined): string {
   return value ? intl().timeOnly.format(new Date(value)) : '—'
 }
 
-/** A span in the largest unit that still reads as a number. */
+/**
+ * A span in the largest unit that still reads as a number.
+ *
+ * The units come from the dictionary. They are as much text as "just now" is, and leaving them
+ * here put "20 sa önce" and "1m 30s" in adjacent columns of the same incident row.
+ */
 function renderSpan(ms: number): string {
+  const { span } = activeDictionary().format
+
   const abs = Math.abs(ms)
   const sign = ms < 0 ? '-' : ''
 
   // Rounded, because this branch is no longer only reached from two Dates. `formatSeconds` hands
   // it a double now — a dispatch median of 0.073502 seconds — and unrounded that prints as
   // "73.502ms", which claims a precision the measurement does not have.
-  if (abs < 1000) return `${sign}${Math.round(abs)}ms`
-  if (abs < 60_000) return `${sign}${(abs / 1000).toFixed(1)}s`
-  if (abs < 3_600_000) return `${sign}${Math.floor(abs / 60_000)}m ${Math.round((abs % 60_000) / 1000)}s`
+  if (abs < 1000) return `${sign}${span.milliseconds(Math.round(abs))}`
+  if (abs < 60_000) return `${sign}${span.seconds((abs / 1000).toFixed(1))}`
 
-  return `${sign}${Math.floor(abs / 3_600_000)}h ${Math.round((abs % 3_600_000) / 60_000)}m`
+  if (abs < 3_600_000) {
+    return `${sign}${span.minutesSeconds(Math.floor(abs / 60_000), Math.round((abs % 60_000) / 1000))}`
+  }
+
+  return `${sign}${span.hoursMinutes(Math.floor(abs / 3_600_000), Math.round((abs % 3_600_000) / 60_000))}`
 }
 
 /**

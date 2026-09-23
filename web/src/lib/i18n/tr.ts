@@ -1074,6 +1074,13 @@ export const tr: Dictionary = {
   },
 
   format: {
+    span: {
+      milliseconds: (value: number) => `${value}ms`,
+      seconds: (value: string) => `${value}sn`,
+      minutesSeconds: (minutes: number, seconds: number) => `${minutes}dk ${seconds}sn`,
+      hoursMinutes: (hours: number, minutes: number) => `${hours}sa ${minutes}dk`,
+    },
+
     justNow: 'az önce',
     minutesAgo: (minutes: number) => `${minutes} dk önce`,
     hoursAgo: (hours: number) => `${hours} sa önce`,

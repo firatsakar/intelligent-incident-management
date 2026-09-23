@@ -1216,6 +1216,21 @@ export const en = {
   },
 
   format: {
+    /**
+     * The units a duration is spelled with.
+     *
+     * Separate entries rather than a suffix table, because a language is free to put the number
+     * somewhere else. Found on the incident list, where a row was printing "20 sa önce" and
+     * "1m 30s" in adjacent columns — `formatRelative` had been translated and `renderSpan`, in
+     * the same file, had not.
+     */
+    span: {
+      milliseconds: (value: number) => `${value}ms`,
+      seconds: (value: string) => `${value}s`,
+      minutesSeconds: (minutes: number, seconds: number) => `${minutes}m ${seconds}s`,
+      hoursMinutes: (hours: number, minutes: number) => `${hours}h ${minutes}m`,
+    },
+
     justNow: 'just now',
     minutesAgo: (minutes: number) => `${minutes}m ago`,
     hoursAgo: (hours: number) => `${hours}h ago`,
