@@ -41,13 +41,9 @@ import type { Signal } from '@/types/api'
 import { buildHeatMap, errorKeyOf, otherKey } from './heatmap'
 import { SignalHeatMap } from './SignalHeatMap'
 
-/**
- * The same bucket name the map's breadcrumb uses. `other` is the literal in the URL and in the
- * cell key, and printing that literal as a heading was a bug the map had already fixed on its own
- * side — so the wording lives in one expression rather than being spelt out twice.
- */
-const describeErrorKey = (key: string) => (key === otherKey ? 'other signatures' : key)
-
+// The tail bucket's name now lives in the dictionary, where the map reads it too — `other` is
+// the literal in the URL and in the cell key, and printing that literal as a heading was a bug
+// the map had already fixed on its own side.
 /**
  * How much of the window the screen holds, and how it grows.
  *
@@ -81,7 +77,8 @@ const resolvePageSize = (value: string | null) => {
 }
 
 export function SignalsPage() {
-  const { window: windowText } = useT()
+  const { window: windowText, telemetry } = useT()
+  const t = telemetry.signals
   const [params, setParams] = useSearchParams()
 
   const preset = params.get('window') ?? defaultWindow
@@ -150,11 +147,8 @@ export function SignalsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Signals</h1>
-          <p className="text-muted-foreground text-sm">
-            Everything the detection gate looked at — including what it decided not to wake
-            anyone for.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
+          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <Select
@@ -183,7 +177,7 @@ export function SignalsPage() {
       {query.isError && (
         <Card>
           <CardContent className="text-alarm-ink py-6 text-sm">
-            {query.error instanceof Error ? query.error.message : 'Could not load signals'}
+            {query.error instanceof Error ? query.error.message : t.loadError}
           </CardContent>
         </Card>
       )}
@@ -202,8 +196,12 @@ export function SignalsPage() {
             <CardHeader>
               <CardTitle className="min-w-0 truncate">
                 {selected
-                  ? `${selected.service} · ${describeErrorKey(selected.errorKey)}`
-                  : 'All signals'}
+                  ? `${selected.service} · ${
+                      selected.errorKey === otherKey
+                        ? telemetry.otherSignatures
+                        : selected.errorKey
+                    }`
+                  : t.allSignals}
               </CardTitle>
 
               {/* Three numbers where there used to be two, because there are three facts: what
@@ -211,12 +209,9 @@ export function SignalsPage() {
                   contains. Collapsing the last two was the screen saying "12 of 50" about a
                   window holding 431. */}
               <CardDescription className="tabular-nums">
-                {selected && `${visible.length} shown · `}
-                {signals.length === total
-                  ? `${total} in this window`
-                  : `${signals.length} of ${total} loaded`}{' '}
-                · the chips are the gate's score components, and the confidence is what they add
-                up to
+                {selected && `${t.shown(visible.length)} · `}
+                {signals.length === total ? t.inWindow(total) : t.loaded(signals.length, total)}{' '}
+                · {t.chips}
               </CardDescription>
 
               {selected && (
@@ -226,7 +221,7 @@ export function SignalsPage() {
                     onClick={() => select(null)}
                     className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mx-1 inline-flex min-h-6 items-center rounded-sm px-1 text-sm outline-none hover:underline focus-visible:ring-[3px]"
                   >
-                    Clear filter
+                    {t.clearFilter}
                   </button>
                 </CardAction>
               )}
@@ -236,15 +231,13 @@ export function SignalsPage() {
               {visible.length === 0 ? (
                 <div className="py-6 text-center">
                   <p className="text-sm font-medium">
-                    {selected ? 'No signals for this tile.' : 'No signals in this window.'}
+                    {selected ? t.emptyTileTitle : t.emptyWindowTitle}
                   </p>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {selected
-                      ? // Two causes, and from here they are indistinguishable: the link may
-                        // carry a tile from another window, or the signatures may have been
-                        // re-ranked since, which moves the tail in and out of "other".
-                        'Nothing in the current window matches this tile. The link may have been made against a different window, or the signatures may have been re-ranked since.'
-                      : 'Nothing has crossed a detection rule yet. A quiet window and a source that is not being read look the same here — Settings › Telemetry says which.'}
+                    {/* Two causes, and from here they are indistinguishable: the link may
+                        carry a tile from another window, or the signatures may have been
+                        re-ranked since, which moves the tail in and out of "other". */}
+                    {selected ? t.emptyTile : t.emptyWindow}
                   </p>
                 </div>
               ) : (
@@ -270,18 +263,15 @@ export function SignalsPage() {
                 {canLoadMore ? (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <Button variant="outline" size="sm" onClick={loadMore}>
-                      Load {Math.min(pageStep, total - signals.length)} more
+                      {t.loadMore(Math.min(pageStep, total - signals.length))}
                     </Button>
                     <span className="text-muted-foreground text-sm tabular-nums">
-                      {total - signals.length} older signal(s) in this window are not loaded, so
-                      the map above does not count them.
+                      {t.notLoaded(total - signals.length)}
                     </span>
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm tabular-nums">
-                    {maxPage} is as much as this endpoint will hand over at once, and this window
-                    holds {total}. A shorter window is the way to see the rest — the remaining{' '}
-                    {total - signals.length} are older than everything above.
+                    {t.ceiling(maxPage, total, total - signals.length)}
                   </p>
                 )}
               </CardContent>
@@ -291,12 +281,6 @@ export function SignalsPage() {
       )}
     </div>
   )
-}
-
-/** `LogBurst` and `RateAnomaly` are fine in JSON and read as identifiers on screen. */
-const kindLabel: Record<Signal['kind'], string> = {
-  LogBurst: 'burst',
-  RateAnomaly: 'rate anomaly',
 }
 
 /**
@@ -309,7 +293,8 @@ const kindLabel: Record<Signal['kind'], string> = {
  * would be an alerting rule's output, which is the one thing this screen exists not to be.
  */
 function SignalRow({ signal }: { signal: Signal }) {
-  const { labels } = useT()
+  const { labels, telemetry } = useT()
+  const t = telemetry.signals
 
   // "total" is the sum the components add up to, not a component. Showing it alongside them
   // would make the arithmetic look wrong.
@@ -325,18 +310,18 @@ function SignalRow({ signal }: { signal: Signal }) {
         </Badge>
 
         <span className="min-w-0 text-sm font-medium break-words">
-          {signal.exceptionType ?? signal.normalizedMessage ?? 'unknown error'}
+          {signal.exceptionType ?? signal.normalizedMessage ?? telemetry.unknownError}
         </span>
 
         <span className="text-muted-foreground min-w-0 truncate text-xs">
-          {signal.service ?? 'unknown service'} · {kindLabel[signal.kind]}
+          {signal.service ?? telemetry.unknownService} · {labels.signalKind[signal.kind]}
         </span>
 
         <span className="ml-auto flex shrink-0 items-baseline gap-2 text-xs tabular-nums">
           <span className="text-foreground font-medium">
             {formatConfidence(signal.confidence)}
           </span>
-          <span className="text-muted-foreground">{signal.occurrenceCount} occurrence(s)</span>
+          <span className="text-muted-foreground">{t.occurrences(signal.occurrenceCount)}</span>
           <span className="text-dim-foreground">{formatRelative(signal.detectedAt)}</span>
         </span>
       </div>
@@ -379,7 +364,7 @@ function SignalRow({ signal }: { signal: Signal }) {
               to={`/incidents/${signal.incidentId}`}
               className="text-primary focus-visible:ring-ring/50 -mx-1 ml-auto inline-flex min-h-6 shrink-0 items-center gap-1 rounded-sm px-1 text-xs font-medium outline-none hover:underline focus-visible:ring-[3px]"
             >
-              View incident
+              {t.viewIncident}
               <ArrowRightIcon className="size-3" aria-hidden />
             </Link>
           )}

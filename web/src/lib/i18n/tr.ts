@@ -3,6 +3,12 @@ import type { Dictionary } from './en'
 /**
  * Türkçe.
  *
+ * Several entries take a parameter they never use — `_count`, `_word`, `_signatureCount`. That is
+ * not dead weight: Turkish does not inflect a noun after a numeral ("3 sinyal", never
+ * "3 sinyaller"), so a count English needs in order to choose a word form is simply not part of
+ * the Turkish sentence. The parameter stays because the signature is shared with `en.ts` and has
+ * to remain assignable to it; the underscore says the omission is deliberate.
+ *
  * Typed as `Dictionary`, so this file cannot be incomplete: a key that exists in `en.ts` and not
  * here fails the build, and so does one whose shape disagrees. Nothing falls back to English at
  * runtime, because nothing is allowed to be missing at compile time.
@@ -388,6 +394,254 @@ export const tr: Dictionary = {
     },
   },
 
+
+  telemetry: {
+    otherSignatures: 'diğer imzalar',
+    unknownError: 'bilinmeyen hata',
+    unknownService: 'bilinmeyen servis',
+
+    signals: {
+      title: 'Sinyaller',
+      intro:
+        'Tespit kapısının baktığı her şey — kimseyi uyandırmamaya karar verdikleri dahil.',
+      loadError: 'Sinyaller yüklenemedi',
+
+      allSignals: 'Tüm sinyaller',
+      shown: (count: number) => `${count} gösteriliyor`,
+      inWindow: (total: number) => `bu pencerede ${total} tane`,
+      loaded: (loaded: number, total: number) => `${total} sinyalden ${loaded} tanesi yüklü`,
+      chips: 'çipler kapının puan bileşenleri, güven ise onların toplamı',
+      clearFilter: 'Filtreyi temizle',
+
+      emptyTileTitle: 'Bu kutucuk için sinyal yok.',
+      emptyTile:
+        'Mevcut pencerede bu kutucuğa uyan bir şey yok. Bağlantı başka bir pencereye göre üretilmiş olabilir, ya da imzalar o zamandan beri yeniden sıralanmış olabilir.',
+      emptyWindowTitle: 'Bu pencerede sinyal yok.',
+      emptyWindow:
+        'Henüz hiçbir şey bir tespit kuralını aşmadı. Sakin bir pencere ile okunmayan bir kaynak buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
+
+      loadMore: (count: number) => `${count} tane daha yükle`,
+      notLoaded: (count: number) =>
+        `Bu pencerede ${count} daha eski sinyal yüklü değil, yani yukarıdaki harita onları saymıyor.`,
+      ceiling: (max: number, total: number, remaining: number) =>
+        `Bu uç bir seferde en fazla ${max} tane veriyor, bu pencerede ise ${total} var. Geri kalanı görmenin yolu daha kısa bir pencere — kalan ${remaining} tanesi yukarıdaki her şeyden daha eski.`,
+
+      occurrences: (count: number) => `${count} kez`,
+      viewIncident: 'Olaya git',
+    },
+
+    heatmap: {
+      title: 'Hatalar nerede',
+      description:
+        'Her kutucuk bir hata imzası. Boyut da renk de ne sıklıkta tetiklendiği — en büyük ve en kırmızı sol üstte — köşedeki işaret kapının onu nereye kadar götürdüğü, ve bir kutucuk kendisine ait bir sinyal geldiğinde kendini çerçeveliyor.',
+      partial: (loaded: number, total: number) =>
+        `Bu pencerenin ${total} sinyalinden en yeni ${loaded} tanesiyle kuruldu — aşağıdaki Daha fazla yükle bunu genişletir.`,
+      empty: 'Bu pencerede sinyal yok. Henüz hiçbir şey bir tespit kuralını aşmadı.',
+
+      allServices: 'Tüm servisler',
+      counts: (services: number, tiles: number, occurrences: number) =>
+        `${services} servis · ${tiles} kutucuk · ${occurrences} kez`,
+
+      band: {
+        Promoted: 'bir olay açtı',
+        Deduplicated: 'açık bir olayın içine sayıldı',
+        Weak: 'zayıf — gösterildi, yükseltilmedi',
+        Recorded: 'yalnızca kaydedildi',
+        Suppressed: 'bastırıldı (susturulmuş imza)',
+      },
+
+      tile: (
+        service: string,
+        label: string,
+        occurrences: number,
+        signals: number,
+        band: string,
+      ) => `${service} · ${label} — ${signals} sinyalde ${occurrences} kez — ${band}`,
+      justUpdated: ' — az önce güncellendi',
+
+      panelCounts: (_occurrences: number, signals: number) => `kez · ${signals} sinyal`,
+      incidentLink: 'Olay →',
+
+      legendOccurrences: 'görülme',
+      noMark: 'işaretsiz — yalnızca kaydedildi',
+      legendFlash: 'son birkaç saniyede güncellendi',
+      unplaced: (count: number) =>
+        `${count} sinyal yerleştirilemedi — imzaları artık yok.`,
+    },
+
+    evidence: {
+      title: 'Kanıt',
+      intro: 'Ham malzeme: ne loglandı, neye toplandı, ve bu ne üretti.',
+      loadError: 'Kanıt yüklenemedi',
+
+      filterService: 'Servise göre süz',
+      clearService: 'Servis filtresini temizle',
+
+      logRecords: 'Log kayıtları',
+      showingRecent: (shown: number, total: number) =>
+        `${total} kayıttan en yeni ${shown} tanesi gösteriliyor`,
+      inWindow: (total: number) => `bu pencerede ${total} tane`,
+      logListLabel: 'Bu penceredeki log kayıtları',
+      emptyLogTitle: 'Bu pencerede loglanan bir şey yok.',
+      emptyLogForService: (service: string) =>
+        `Pencerede "${service}" kaynağından kayıt yok. Ya sessizdi, ya da bu adla hiçbir şey okunmuyor — adın kaynağın bildirdiğiyle birebir eşleşmesi gerekiyor.`,
+      emptyLog:
+        'Tespit kendi log deponuzdan belirli aralıklarla okuyor, yani boş bir pencere ya sessiz bir dönem ya da okunmayan bir kaynak demek.',
+
+      signatures: 'İmzalar',
+      signaturesCount: (count: number) =>
+        `Aşağıdaki sinyallerin arkasındaki ${count} ayrı hata`,
+      signaturesTruncated: ' — pencerenin tamamının değil, gösterilenlerin arkasındaki',
+      signaturesAllTime: '. Her birinin sayaçları bu pencereyi değil tüm zamanı kapsıyor.',
+      signaturesListLabel: 'Bu penceredeki sinyallerin arkasındaki imzalar',
+      emptySignaturesTitle: 'Burada imza yok.',
+      emptySignatures:
+        'Bir imza, bir hata ilk kez normalize edildiğinde oluşur; yani boş bir liste penceredeki hiçbir şeyin hata olmadığı anlamına gelir.',
+
+      signals: 'Sinyaller',
+      signalsDescription: 'Kapının bu penceredeki o imzalardan çıkardığı sonuç',
+      signalsRecent: (shown: number, total: number) => `${total} taneden en yeni ${shown} tanesi`,
+      signalsListLabel: 'Bu penceredeki sinyaller',
+      emptySignalsTitle: 'Burada sinyal yok.',
+      emptySignals:
+        'Hatalar loglandı ama hiçbir patlama bir tespit kuralını aşmadı, yani kapının karar verecek bir şeyi olmadı.',
+
+      arrived: (records: number) =>
+        `Bu pencere okunduğundan beri ${records} yeni log kaydı alındı`,
+      acrossPolls: (polls: number) => `, ${polls} poll boyunca`,
+      allServicesNote: ' Yalnızca burada süzülen servis için değil, tüm servisler için sayıldı.',
+      reread: 'Pencereyi yeniden oku',
+      rereading: 'Yeniden okunuyor…',
+
+      clockSkew: 'saat kayması',
+      ingestionLag: 'Alım gecikmesi — kaynağın zaman damgasından bizimkine',
+      muted: 'susturulmuş',
+      signatureCounts: (
+        total: number,
+        promotions: number,
+        real: number,
+        falsePositive: number,
+      ) =>
+        `toplam ${total} · ${promotions}× terfi · ${real} gerçek, ${falsePositive} yanlış`,
+      signalCounts: (occurrences: number, when: string) => `${occurrences} kez · ${when}`,
+    },
+
+    funnel: {
+      title: 'Sinyal hunisi',
+      intro:
+        'Platformun okuduğu her şey, neyi bir araya katladığı, ve bunun ne kadarını birini uyandırmaya değmez bulduğu.',
+      loadError: 'Huni yüklenemedi',
+
+      notRaised: 'Yükseltilmedi',
+      notRaisedDescription: (scope: string) =>
+        `Kapının puanlayıp bilerek olduğu yerde bıraktığı sinyaller — ${scope}.`,
+      ofScored: (signals: number) => `/ kapının puanladığı ${signals} sinyal`,
+      heldBack: 'geri tutuldu',
+      actedOn: 'işlem yapıldı',
+
+      zeroHeldBack:
+        'Kapı bu pencerede puanladığı her şeye işlem yaptı — {count} tanesinin hepsi eşiği aştı, yani geri tutulacak bir şey kalmadı. {emphasis} Neye baktığı yanındaki sayı, ve aşağıdaki aşamalar.',
+      zeroEmphasis:
+        'Buradaki sıfır, kapının hiçbir şeyi reddetmediği anlamına gelir — hiçbir şeye bakmadığı değil.',
+      someHeldBack: (notRaised: string, signals: string) =>
+        `${signals} sinyalden ${notRaised} tanesi puanlandı ve olduğu yerde bırakıldı: olay yok, çağrı yok, e-posta yok. Bir alerting kuralının yapamayacağı şey tam olarak bu — geri okuyabileceğiniz bir aritmetiğe dayanarak, bunun bir insana değmediğine karar vermek.`,
+      deduplicated: (count: number) =>
+        `${count} tekilleştirilmiş sinyal, geri tutulmuş değil işlem yapılmış sayılıyor. Her biri zaten açık olan bir olayın içine katlandı, yani birisi uyandırıldı — sadece daha önce.`,
+
+      nothingScored: 'Bu pencerede hiçbir şey puanlanmadı.',
+      nothingScoredRecords: (records: string, _count: number) =>
+        `${records} log kaydı geldi ve hiçbiri bir tespit kuralını aşmadı, yani hiçbir patlama puanlamaya ulaşmadı. Buradaki süzme, bu sayının ölçtüğünden bir aşama önce oldu — onu okuyacağınız yer aşağıdaki aşamalar.`,
+      nothingArrived:
+        'Bu pencerede hiç telemetri gelmedi, yani kapının bakacak bir şeyi olmadı. Sakin bir pencere ile okunmayan bir kaynak buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
+
+      stagesTitle: 'Log kayıtlarından sinyallere',
+      stagesDescription: (scope: string) =>
+        `Üç aşama, tek ölçekte — ${scope}. Farklı şeyler sayıyorlar: kayıtlar log satırları, imzalar onlardan kesilmiş ayrı parmak izleri, sinyaller ise kapıdan puanlaması istenen patlamalar.`,
+      stageLogRecords: 'Log kayıtları',
+      stageSignatures: 'İmzalar',
+      stageSignals: 'Sinyaller',
+      stagesChartLabel: (records: string, signatures: string, signals: string) =>
+        `Boru hattı aşamaları. ${records} log kaydı, ${signatures} imza, ${signals} sinyal.`,
+
+      nothingToFingerprint: 'Hiçbir şey gelmedi, yani parmak izi çıkarılacak bir şey de yoktu.',
+      nothingFingerprinted:
+        'Bu pencerede hiçbir şeyin parmak izi çıkarılmamış, ki bu olmamalı — kayıtlar imzasız gelmiş.',
+      folding: (perSignature: string, signatures: string, records: string, _count: number) =>
+        `İmza başına yaklaşık ${perSignature} kayıt. Parmak izinin kazandırdığı katlama bu: kapı ${records} şey üzerine değil, ${signatures} şey üzerine akıl yürütüyor.`,
+
+      neverScored:
+        'Hiçbir patlama bir tespit kuralını aşmadı, yani kapıdan hiçbir zaman puanlama istenmedi.',
+      bursting: (
+        signatures: string,
+        _signatureCount: number,
+        signals: string,
+        _signalCount: number,
+      ) =>
+        `${signatures} imza, kapının puanlaması için ${signals} patlama üretti.`,
+      burstingWider:
+        ' Bir imza birden fazla kez tetiklenebilir; bu aşamanın üstündekinden dar değil geniş olmasının sebebi bu.',
+
+      whatArrived: 'Ne geldi',
+      noLogRecord: 'Bu pencereye hiç log kaydı gelmedi.',
+
+      verdictsTitle: 'Kapı nasıl karar verdi',
+      verdictsDescription: (scope: string) =>
+        `Kapının verebileceği her karar, ve her birine kaç tanesinin düştüğü — ${scope}.`,
+      noVerdicts: 'Kapı bu pencerede hiçbir şey puanlamadı, yani bunların hiçbirine ulaşmadı.',
+
+      wokenHeading: 'Birisi uyandırıldı',
+      wokenNote: 'Geri tutulmuş sayılmıyor.',
+      notWokenHeading: 'Kimse uyandırılmadı',
+      notWokenNote: '"Yükseltilmedi" tam olarak bu üçünü sayıyor.',
+
+      verdict: {
+        Promoted: 'Çizgiyi aştı, ve kapı onun için bir olay açtı.',
+        Deduplicated: 'Zaten açık olan bir olaya katlandı. Birisi uyandırıldı — daha önce.',
+        Weak: 'Puanlandı, ve çizginin altında puanlandı. Görebileceğiniz yerde tutuldu; kimse aranmadı.',
+        Recorded: 'Kayıt için tutuldu, fazlası değil.',
+        Suppressed: 'İmza susturulmuş, yani kapı onu puanladı ve sonra bilerek sustu.',
+      },
+    },
+
+    services: {
+      title: 'Servis sağlığı',
+      intro: 'Hataların nereden geldiği, ve boru hattında nereye kadar çıktığı.',
+      produced: (count: string, _raw: number) =>
+        `Bu pencerede ${count} servis bir şey üretti.`,
+      loadError: 'Servis sağlığı yüklenemedi',
+
+      caption: (scope: string) =>
+        `Servis başına log hacmi, sinyaller ve olaylar — ${scope}. En sık imza dışındaki her kolona göre sıralanabilir.`,
+
+      columnService: 'Servis',
+      columnLogRecords: 'Log kaydı',
+      columnSignals: 'Sinyal',
+      columnPromoted: 'Terfi',
+      columnIncidents: 'Olay',
+      columnTopSignature: 'En sık imza',
+      columnLastSignal: 'Son sinyal',
+
+      emptyTitle: 'Bu pencereye hiçbir şey gelmedi.',
+      empty:
+        'Hiçbir servis log kaydı yazmadı ve hiçbir şey bir tespit kuralını aşmadı. Gerçekten sakin bir pencere ile okunmayan bir telemetri kaynağı buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
+
+      goneHintLabel: '(imza silinmiş) ne demek',
+      goneHint:
+        'Bu sinyaller tespit edildi, ama arkalarındaki hata imzası o zamandan beri silindi — ve servis adı imzanın üstünde duruyordu. Sayılar gerçek; ait oldukları ad geri getirilemez.',
+
+      folded: (records: string, promoted: string, incidents: string) =>
+        `${records} kayıt · ${promoted} terfi · ${incidents} olay · `,
+      occurrences: (_count: number) => 'kez',
+      noSignal: 'Bu pencerede bu servisten sinyal yok',
+
+      signatureGone: 'imza artık kayıtta değil',
+      nothingCrossed: 'bu pencerede hiçbir şey bir tespit kuralını aşmadı',
+
+      footnote:
+        'Sinyal ve imza tarafından sayıldı. {incidents}, bu servisin sinyallerinin ulaştığı ayrı olay sayısı; yani elle açılmış bir olay hiçbir servise atfedilmiyor — bir olay kaydı servis taşımıyor, ve başlıktan okumaya çalışmak tahmin olurdu.',
+    },
+  },
+
   labels: {
     incidentStatus: {
       Open: 'Açık',
@@ -442,6 +696,8 @@ export const tr: Dictionary = {
       Webhook: 'Webhook',
       Jira: 'Jira',
     },
+
+    goneService: '(imza silinmiş)',
 
     telemetryKind: {
       Seq: 'Seq',

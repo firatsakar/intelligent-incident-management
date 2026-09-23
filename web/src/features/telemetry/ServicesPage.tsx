@@ -15,8 +15,8 @@ import {
 } from '@/components/ui/table'
 import { WindowSelect } from '@/components/WindowSelect'
 import { formatCount, formatDateTime, formatRelative } from '@/lib/format'
+import { T, useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { useT } from '@/lib/i18n'
 import { resolveWindowPreset } from '@/lib/window'
 import type { ServiceHealth } from '@/types/api'
 
@@ -52,9 +52,12 @@ type SortDirection = 'asc' | 'desc'
 const defaultSort: SortKey = 'incidents'
 const defaultDirection: SortDirection = 'desc'
 
+type ServicesText = Dictionary['telemetry']['services']
+
 interface Column {
   key: SortKey | 'topSignature'
-  label: string
+  /** Keyed into the dictionary: a column cannot be added without a heading in both languages. */
+  label: keyof ServicesText & `column${string}`
   /** Right-aligned, tabular, and a fresh click sorts it largest-first. */
   numeric: boolean
   /** Shared by the header and its cells so the two cannot drift apart on a breakpoint. */
@@ -62,34 +65,39 @@ interface Column {
 }
 
 const columns: Column[] = [
-  { key: 'service', label: 'Service', numeric: false, className: 'pl-4' },
+  { key: 'service', label: 'columnService', numeric: false, className: 'pl-4' },
   // The widths are set by the *headers*, not the figures: a sortable header is its label plus a
   // sort marker, and a column cut to fit "11" clips the word "Signals" above it.
   {
     key: 'logRecords',
-    label: 'Log records',
+    label: 'columnLogRecords',
     numeric: true,
     className: 'hidden w-32 text-right md:table-cell',
   },
-  { key: 'signals', label: 'Signals', numeric: true, className: 'w-24 text-right' },
+  { key: 'signals', label: 'columnSignals', numeric: true, className: 'w-24 text-right' },
   {
     key: 'promoted',
-    label: 'Promoted',
+    label: 'columnPromoted',
     numeric: true,
     className: 'hidden w-28 text-right md:table-cell',
   },
   {
     key: 'incidents',
-    label: 'Incidents',
+    label: 'columnIncidents',
     numeric: true,
     className: 'hidden w-28 text-right md:table-cell',
   },
   // Not sortable: it is a name, and ordering services by the alphabet of their worst exception
   // answers no question anybody has.
-  { key: 'topSignature', label: 'Top signature', numeric: false, className: 'hidden w-56 xl:table-cell' },
+  {
+    key: 'topSignature',
+    label: 'columnTopSignature',
+    numeric: false,
+    className: 'hidden w-56 xl:table-cell',
+  },
   {
     key: 'lastSignalAt',
-    label: 'Last signal',
+    label: 'columnLastSignal',
     numeric: true,
     className: 'w-32 pr-4 text-right',
   },
@@ -106,6 +114,8 @@ const columnClass = Object.fromEntries(
 
 export function ServicesPage() {
   const [params, setParams] = useSearchParams()
+  const { telemetry, window: windowText } = useT()
+  const t = telemetry.services
 
   const preset = params.get('window') ?? defaultStatsWindow
   const sort = resolveSort(params.get('sort'))
@@ -113,7 +123,7 @@ export function ServicesPage() {
 
   const query = useTelemetryStats(preset)
 
-  const scope = useT().window.scope[resolveWindowPreset(preset)]
+  const scope = windowText.scope[resolveWindowPreset(preset)]
   const rows = orderServices(query.data?.services ?? [], sort, direction)
 
   function sortBy(column: Column & { key: SortKey }) {
@@ -141,13 +151,13 @@ export function ServicesPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
-          <h1 className="text-2xl font-semibold tracking-tight">Service health</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
           <p className="text-muted-foreground text-sm">
             {/* The count only once there is one. "0 services produced something" is a sentence
                 nobody writes, and the empty row below says the same thing properly. */}
             {query.data && rows.length > 0
-              ? `${formatCount(rows.length)} ${rows.length === 1 ? 'service' : 'services'} produced something in this window.`
-              : 'Where the errors are coming from, and how far up the pipeline they got.'}
+              ? t.produced(formatCount(rows.length), rows.length)
+              : t.intro}
           </p>
         </div>
 
@@ -158,10 +168,7 @@ export function ServicesPage() {
         {/* table-fixed so the widths above are obeyed and long names truncate against the width
             they actually got, rather than widening the table until it scrolls sideways. */}
         <Table className="table-fixed">
-          <TableCaption className="sr-only">
-            Log volume, signals and incidents per service — {scope}.
-            Sortable by every column except the top signature.
-          </TableCaption>
+          <TableCaption className="sr-only">{t.caption(scope)}</TableCaption>
 
           <TableHeader>
             <TableRow>
@@ -189,11 +196,11 @@ export function ServicesPage() {
                         sort === column.key ? 'text-foreground' : 'text-muted-foreground',
                       )}
                     >
-                      {column.label}
+                      {t[column.label]}
                       <SortMark active={sort === column.key} direction={direction} />
                     </button>
                   ) : (
-                    column.label
+                    t[column.label]
                   )}
                 </TableHead>
               ))}
@@ -213,9 +220,7 @@ export function ServicesPage() {
             {query.isError && (
               <TableRow>
                 <TableCell colSpan={columns.length} className="text-alarm-ink px-4 py-8 text-center">
-                  {query.error instanceof Error
-                    ? query.error.message
-                    : 'Could not load service health'}
+                  {query.error instanceof Error ? query.error.message : t.loadError}
                 </TableCell>
               </TableRow>
             )}
@@ -223,12 +228,8 @@ export function ServicesPage() {
             {query.isSuccess && rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={columns.length} className="px-4 py-10 text-center">
-                  <p className="text-sm font-medium">Nothing arrived in this window.</p>
-                  <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">
-                    No service wrote a log record and nothing crossed a detection rule. A genuinely
-                    quiet window and a telemetry source that is not being read look the same from
-                    here — Settings › Telemetry says which.
-                  </p>
+                  <p className="text-sm font-medium">{t.emptyTitle}</p>
+                  <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">{t.empty}</p>
                 </TableCell>
               </TableRow>
             )}
@@ -241,10 +242,12 @@ export function ServicesPage() {
       </Card>
 
       <p className="text-muted-foreground max-w-3xl text-xs">
-        Counted from the signal and signature side. <strong className="font-medium">Incidents</strong>{' '}
-        is the number of distinct incidents this service's signals reached, so an incident somebody
-        opened by hand is attributed to no service — an incident record does not carry one, and
-        reading it out of the title would be a guess.
+        <T
+          text={t.footnote}
+          values={{
+            incidents: <strong className="font-medium">{t.columnIncidents}</strong>,
+          }}
+        />
       </p>
     </div>
   )
@@ -262,8 +265,11 @@ function SortMark({ active, direction }: { active: boolean; direction: SortDirec
 }
 
 function ServiceRow({ row }: { row: ServiceHealth }) {
+  const { labels, telemetry } = useT()
+  const t = telemetry.services
+
   const gone = row.service === goneService
-  const signature = describeTopSignature(row)
+  const signature = describeTopSignature(t, row)
 
   return (
     <TableRow>
@@ -274,16 +280,16 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
               'min-w-0 truncate font-medium',
               gone && 'text-muted-foreground font-normal',
             )}
-            title={row.service}
+            title={gone ? labels.goneService : row.service}
           >
-            {row.service}
+            {/* A sentinel rather than a name, so its display is translated the way an enum's is.
+                The literal stays the comparison key, which is what `gone` was decided from. */}
+            {gone ? labels.goneService : row.service}
           </span>
 
           {gone && (
-            <InfoHint label="What (signature gone) means" side="right" className="-my-1">
-              These signals were detected, but the error signature behind them has since been
-              deleted — and the service name lived on the signature. The counts are real; the name
-              they belong to is not recoverable.
+            <InfoHint label={t.goneHintLabel} side="right" className="-my-1">
+              {t.goneHint}
             </InfoHint>
           )}
         </span>
@@ -292,8 +298,11 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
             away only once every column it carries is on screen. */}
         <span className="text-muted-foreground mt-0.5 block text-xs whitespace-normal xl:hidden">
           <span className="md:hidden">
-            {formatCount(row.logRecords)} records · {formatCount(row.promoted)} promoted ·{' '}
-            {formatCount(row.incidents)} incidents ·{' '}
+            {t.folded(
+              formatCount(row.logRecords),
+              formatCount(row.promoted),
+              formatCount(row.incidents),
+            )}
           </span>
           {signature}
         </span>
@@ -312,7 +321,7 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
             </span>
             <span className="text-muted-foreground block text-xs tabular-nums">
               {formatCount(row.topSignatureOccurrences)}{' '}
-              {row.topSignatureOccurrences === 1 ? 'occurrence' : 'occurrences'}
+              {t.occurrences(row.topSignatureOccurrences)}
             </span>
           </>
         ) : (
@@ -325,7 +334,7 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
           <span title={formatDateTime(row.lastSignalAt)}>{formatRelative(row.lastSignalAt)}</span>
         ) : (
           // Never a date. There was no signal, so there is no time at which the last one was.
-          <span className="text-dim-foreground" title="No signal from this service in this window">
+          <span className="text-dim-foreground" title={t.noSignal}>
             —
           </span>
         )}
@@ -350,14 +359,12 @@ function Count({ className, value }: { className: string; value: number }) {
  * never fired on. A signature that fired and has since been deleted is the other, and it is the
  * only thing the `(signature gone)` bucket can ever say.
  */
-function describeTopSignature(row: ServiceHealth): string {
+function describeTopSignature(t: ServicesText, row: ServiceHealth): string {
   if (row.topSignature) {
     return `${row.topSignature} · ${formatCount(row.topSignatureOccurrences)}`
   }
 
-  return row.signals > 0
-    ? 'signature no longer on record'
-    : 'nothing crossed a detection rule in this window'
+  return row.signals > 0 ? t.signatureGone : t.nothingCrossed
 }
 
 /** The URL is the source of truth and anybody can type into it, so an unknown value is a default. */

@@ -3,6 +3,7 @@ import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useT } from '@/lib/i18n'
 import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
@@ -37,13 +38,8 @@ const heatFill = [
   'bg-heat-5',
 ]
 
-const bandTitle: Record<SignalStatus, string> = {
-  Promoted: 'opened an incident',
-  Deduplicated: 'counted into an open incident',
-  Weak: 'weak — shown, not raised',
-  Recorded: 'recorded only',
-  Suppressed: 'suppressed (muted signature)',
-}
+// The band phrases moved to the dictionary. What stays in this file is the shape each band
+// draws, which is the channel that does not depend on language.
 
 // Four shapes and one absence. Recorded is the calm baseline — most cells, most of the time — and
 // giving it a mark would put a glyph on the whole map to say "nothing happened". Suppressed does
@@ -142,6 +138,10 @@ export function SignalHeatMap({
   selected: { service: string; errorKey: string } | null
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
+  const { telemetry } = useT()
+  const t = telemetry.heatmap
+  const otherLabel = telemetry.otherSignatures
+
   const [ref, size] = useElementSize<HTMLDivElement>()
   const changes = useHeatChanges(map, scope)
 
@@ -180,18 +180,15 @@ export function SignalHeatMap({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Where the errors are</CardTitle>
+        <CardTitle>{t.title}</CardTitle>
         <CardDescription>
-          Every tile is one error signature. Size and colour are both how often it fired — biggest
-          and reddest top-left — the corner mark is how far the gate took it, and a tile outlines
-          itself when a signal for it has just arrived.{' '}
+          {t.description}{' '}
           {partial && (
             // Said on the map rather than only on the list below it. A treemap that claims to
             // show where the errors are while covering a third of the window is the kind of quiet
             // lie this screen exists not to tell.
             <span className="text-foreground tabular-nums">
-              Built from the {partial.loaded} most recent of {partial.total} signals in this
-              window — Load more below widens it.
+              {t.partial(partial.loaded, partial.total)}
             </span>
           )}
         </CardDescription>
@@ -201,9 +198,7 @@ export function SignalHeatMap({
         {map.services.length === 0 ? (
           // A freshly installed system has no signals, and a blank area reads as broken rather
           // than as empty.
-          <p className="text-muted-foreground py-10 text-center text-sm">
-            No signals in this window. Nothing has crossed a detection rule yet.
-          </p>
+          <p className="text-muted-foreground py-10 text-center text-sm">{t.empty}</p>
         ) : (
           <>
             <div className="text-muted-foreground mb-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-xs">
@@ -213,11 +208,11 @@ export function SignalHeatMap({
                   onClick={() => onSelect(null)}
                   className="hover:text-foreground -mx-1 inline-flex min-h-6 items-center rounded-sm px-1 hover:underline"
                 >
-                  All services
+                  {t.allServices}
                 </button>
               ) : (
                 <span className="text-foreground inline-flex min-h-6 items-center font-medium">
-                  All services
+                  {t.allServices}
                 </span>
               )}
 
@@ -229,14 +224,13 @@ export function SignalHeatMap({
                   </span>
                   <ChevronRight className="size-3 shrink-0" aria-hidden />
                   <span className="text-foreground max-w-56 truncate font-medium">
-                    {selected.errorKey === otherKey ? 'other signatures' : selected.errorKey}
+                    {selected.errorKey === otherKey ? otherLabel : selected.errorKey}
                   </span>
                 </>
               )}
 
               <span className="ml-auto tabular-nums">
-                {map.services.length} service(s) · {cells.length} tile(s) · {occurrences}{' '}
-                occurrence(s)
+                {t.counts(map.services.length, cells.length, occurrences)}
               </span>
             </div>
 
@@ -315,15 +309,22 @@ function Tile({
   selected: boolean
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
-  const label = cell.errorKey === otherKey ? 'other signatures' : cell.errorKey
+  const { telemetry } = useT()
+  const t = telemetry.heatmap
+
+  const label = cell.errorKey === otherKey ? telemetry.otherSignatures : cell.errorKey
   const detail = detailFor(rect)
   const panel = panelFor(rect)
 
   // Colour is never the only channel, and neither is an animation. A mark that can only be seen
   // by watching is a mark an operator who looked away has missed.
-  const description = `${cell.service} · ${label} — ${cell.occurrences} occurrence(s) across ${cell.signalCount} signal(s) — ${bandTitle[cell.band]}${
-    flash === undefined ? '' : ' — updated just now'
-  }`
+  const description = `${t.tile(
+    cell.service,
+    label,
+    cell.occurrences,
+    cell.signalCount,
+    t.band[cell.band],
+  )}${flash === undefined ? '' : t.justUpdated}`
 
   const markSize = detail === 'full' ? 10 : detail === 'compact' ? 9 : 7
   const showMark = rect.width >= 16 && rect.height >= 14
@@ -410,14 +411,14 @@ function Tile({
               <div className="flex items-baseline gap-1.5">
                 <span className="text-sm font-semibold tabular-nums">{cell.occurrences}</span>
                 <span className="text-muted-foreground truncate text-[11px]">
-                  occurrence(s) · {cell.signalCount} signal(s)
+                  {t.panelCounts(cell.occurrences, cell.signalCount)}
                 </span>
               </div>
 
               <div className="mt-0.5 flex items-center gap-1.5">
                 <span className="text-muted-foreground flex min-w-0 items-center gap-1 text-[11px]">
                   <BandMark band={cell.band} size={9} />
-                  <span className="truncate">{bandTitle[cell.band]}</span>
+                  <span className="truncate">{t.band[cell.band]}</span>
                 </span>
 
                 {cell.incidentId && (
@@ -425,7 +426,7 @@ function Tile({
                     to={`/incidents/${cell.incidentId}`}
                     className="text-primary pointer-events-auto ml-auto shrink-0 text-[11px] font-medium hover:underline"
                   >
-                    Incident →
+                    {t.incidentLink}
                   </Link>
                 )}
               </div>
@@ -451,13 +452,14 @@ function Tile({
 }
 
 function Legend({ map }: { map: HeatMap }) {
+  const t = useT().telemetry.heatmap
   const bounds = intensityBounds(map.max)
 
   return (
     <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-5 gap-y-3 text-[11px]">
       {bounds.length > 0 && (
         <div className="flex items-end gap-2">
-          <span className="pb-3.5">occurrences</span>
+          <span className="pb-3.5">{t.legendOccurrences}</span>
 
           <div className="flex items-end gap-px">
             {bounds.map((bound, index) => {
@@ -483,10 +485,10 @@ function Legend({ map }: { map: HeatMap }) {
         {bandLegend.map((band) => (
           <span key={band} className="flex items-center gap-1.5">
             <BandMark band={band} size={10} />
-            {bandTitle[band]}
+            {t.band[band]}
           </span>
         ))}
-        <span className="text-dim-foreground">no mark — recorded only</span>
+        <span className="text-dim-foreground">{t.noMark}</span>
 
         {/* The third channel gets a legend entry like the other two. A swatch rather than a live
             example: the legend is read when nothing is happening, which is precisely when the
@@ -496,14 +498,12 @@ function Legend({ map }: { map: HeatMap }) {
             aria-hidden
             className="bg-heat-2 size-2.5 shrink-0 shadow-[inset_0_0_0_2px_var(--heat-flash)]"
           />
-          updated in the last few seconds
+          {t.legendFlash}
         </span>
       </div>
 
       {map.unplaced > 0 && (
-        <span className="basis-full">
-          {map.unplaced} signal(s) could not be placed — their signature is gone.
-        </span>
+        <span className="basis-full">{t.unplaced(map.unplaced)}</span>
       )}
     </div>
   )

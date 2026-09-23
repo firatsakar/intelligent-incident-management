@@ -447,6 +447,282 @@ export const en = {
     }),
   },
 
+
+  telemetry: {
+    /** The tail bucket, named once: it is a cell key, a URL value and a heading, and spelling it
+     *  out in three places is how the three stop agreeing. */
+    otherSignatures: 'other signatures',
+    unknownError: 'unknown error',
+    unknownService: 'unknown service',
+
+    signals: {
+      title: 'Signals',
+      intro:
+        'Everything the detection gate looked at — including what it decided not to wake anyone for.',
+      loadError: 'Could not load signals',
+
+      allSignals: 'All signals',
+      shown: (count: number) => `${count} shown`,
+      inWindow: (total: number) => `${total} in this window`,
+      loaded: (loaded: number, total: number) => `${loaded} of ${total} loaded`,
+      chips:
+        'the chips are the gate’s score components, and the confidence is what they add up to',
+      clearFilter: 'Clear filter',
+
+      emptyTileTitle: 'No signals for this tile.',
+      // Two causes, and from here they are indistinguishable: the link may carry a tile from
+      // another window, or the signatures may have been re-ranked since.
+      emptyTile:
+        'Nothing in the current window matches this tile. The link may have been made against a different window, or the signatures may have been re-ranked since.',
+      emptyWindowTitle: 'No signals in this window.',
+      emptyWindow:
+        'Nothing has crossed a detection rule yet. A quiet window and a source that is not being read look the same here — Settings › Telemetry says which.',
+
+      loadMore: (count: number) => `Load ${count} more`,
+      notLoaded: (count: number) =>
+        `${count} older ${plural('en', count, { one: 'signal', other: 'signals' })} in this window ${plural('en', count, { one: 'is', other: 'are' })} not loaded, so the map above does not count them.`,
+      ceiling: (max: number, total: number, remaining: number) =>
+        `${max} is as much as this endpoint will hand over at once, and this window holds ${total}. A shorter window is the way to see the rest — the remaining ${remaining} are older than everything above.`,
+
+      occurrences: (count: number) =>
+        `${count} ${plural('en', count, { one: 'occurrence', other: 'occurrences' })}`,
+      viewIncident: 'View incident',
+    },
+
+    heatmap: {
+      title: 'Where the errors are',
+      description:
+        'Every tile is one error signature. Size and colour are both how often it fired — biggest and reddest top-left — the corner mark is how far the gate took it, and a tile outlines itself when a signal for it has just arrived.',
+      // Said on the map rather than only on the list below it. A treemap that claims to show
+      // where the errors are while covering a third of the window is a quiet lie.
+      partial: (loaded: number, total: number) =>
+        `Built from the ${loaded} most recent of ${total} signals in this window — Load more below widens it.`,
+      empty: 'No signals in this window. Nothing has crossed a detection rule yet.',
+
+      allServices: 'All services',
+      counts: (services: number, tiles: number, occurrences: number) =>
+        `${services} ${plural('en', services, { one: 'service', other: 'services' })} · ${tiles} ${plural('en', tiles, { one: 'tile', other: 'tiles' })} · ${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })}`,
+
+      /** What the gate did with the cell's signals, as a phrase rather than the enum name. */
+      band: byKey<SignalStatus>({
+        Promoted: 'opened an incident',
+        Deduplicated: 'counted into an open incident',
+        Weak: 'weak — shown, not raised',
+        Recorded: 'recorded only',
+        Suppressed: 'suppressed (muted signature)',
+      }),
+
+      // Colour is never the only channel, and neither is an animation: a mark that can only be
+      // seen by watching is a mark an operator who looked away has missed.
+      tile: (
+        service: string,
+        label: string,
+        occurrences: number,
+        signals: number,
+        band: string,
+      ) =>
+        `${service} · ${label} — ${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} across ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })} — ${band}`,
+      justUpdated: ' — updated just now',
+
+      panelCounts: (occurrences: number, signals: number) =>
+        `${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} · ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })}`,
+      incidentLink: 'Incident →',
+
+      legendOccurrences: 'occurrences',
+      noMark: 'no mark — recorded only',
+      legendFlash: 'updated in the last few seconds',
+      unplaced: (count: number) =>
+        `${count} ${plural('en', count, { one: 'signal', other: 'signals' })} could not be placed — their signature is gone.`,
+    },
+
+    evidence: {
+      title: 'Evidence',
+      intro: 'The raw material: what was logged, what it rolled up into, and what that produced.',
+      loadError: 'Could not load evidence',
+
+      filterService: 'Filter by service',
+      clearService: 'Clear the service filter',
+
+      logRecords: 'Log records',
+      // The endpoint caps at 200 but reports the true total, so a truncated view is shown as
+      // truncated rather than quietly lying about the volume.
+      showingRecent: (shown: number, total: number) =>
+        `Showing the most recent ${shown} of ${total}`,
+      inWindow: (total: number) => `${total} in this window`,
+      logListLabel: 'Log records in this window',
+      emptyLogTitle: 'Nothing logged in this window.',
+      emptyLogForService: (service: string) =>
+        `No record from "${service}" in the window. Either it was quiet, or nothing by that name is being read — the name has to match what the source reports.`,
+      emptyLog:
+        'Detection reads from your own log store on a schedule, so an empty window means either a quiet period or a source that is not being read.',
+
+      signatures: 'Signatures',
+      signaturesCount: (count: number) =>
+        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals below`,
+      signaturesTruncated: ' — behind the ones shown, not behind the whole window',
+      signaturesAllTime: '. The counters on each span all time, not this window.',
+      signaturesListLabel: 'Signatures behind the signals in this window',
+      emptySignaturesTitle: 'No signatures here.',
+      emptySignatures:
+        'A signature is created the first time an error is normalised, so an empty list means nothing in the window was an error.',
+
+      signals: 'Signals',
+      signalsDescription: 'What the gate made of those signatures in this window',
+      signalsRecent: (shown: number, total: number) => `the most recent ${shown} of ${total}`,
+      signalsListLabel: 'Signals in this window',
+      emptySignalsTitle: 'No signals here.',
+      emptySignals:
+        'Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide.',
+
+      arrived: (records: number) =>
+        `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested since this window was read`,
+      acrossPolls: (polls: number) => `, across ${polls} polls`,
+      // The tick counts records, not records matching a filter: the summary is per source, and
+      // the service a record belongs to is not in it.
+      allServicesNote: ' Counted across all services, not just the one filtered here.',
+      reread: 'Re-read the window',
+      rereading: 'Re-reading…',
+
+      clockSkew: 'clock skew',
+      ingestionLag: 'Ingestion lag — from the source’s timestamp to ours',
+      muted: 'muted',
+      signatureCounts: (
+        total: number,
+        promotions: number,
+        real: number,
+        falsePositive: number,
+      ) => `${total} total · promoted ${promotions}× · ${real} real, ${falsePositive} false`,
+      signalCounts: (occurrences: number, when: string) =>
+        `${occurrences} ${plural('en', occurrences, { one: 'occurrence', other: 'occurrences' })} · ${when}`,
+    },
+
+    funnel: {
+      title: 'Signal funnel',
+      intro:
+        'Everything the platform read, what it folded together, and how much of it it decided was not worth waking anybody for.',
+      loadError: 'Could not load the funnel',
+
+      notRaised: 'Not raised',
+      notRaisedDescription: (scope: string) =>
+        `Signals the gate scored and deliberately left alone — ${scope}.`,
+      // The denominator travels with the numerator. It is the whole defence against a zero here
+      // being read as an empty window, so it cannot be somewhere the eye can skip.
+      ofScored: (signals: number) =>
+        `of ${signals} ${plural('en', signals, { one: 'signal', other: 'signals' })} the gate scored`,
+      heldBack: 'held back',
+      actedOn: 'acted on',
+
+      zeroHeldBack:
+        'Everything the gate scored in this window, it acted on — all {count} crossed the threshold, so there was nothing left to hold back. {emphasis} What it looked at is the number beside it, and the stages below.',
+      zeroEmphasis: 'A zero here means the gate refused nothing, not that it looked at nothing.',
+      someHeldBack: (notRaised: string, signals: string) =>
+        `${notRaised} of ${signals} were scored and left where they were: no incident, no page, no email. That is the thing an alerting rule cannot do — decide, on arithmetic you can read back, that this one was not worth a human.`,
+      // The exclusion is deliberate on the server and is worth showing rather than hiding: it is
+      // the difference between restraint and a claim of restraint.
+      deduplicated: (count: number) =>
+        `${count} deduplicated ${plural('en', count, { one: 'signal', other: 'signals' })} count as acted on, not as held back. Each was folded into an incident that was already open, so somebody was woken — just earlier.`,
+
+      nothingScored: 'Nothing was scored in this window.',
+      nothingScoredRecords: (records: string, count: number) =>
+        `${records} log ${plural('en', count, { one: 'record', other: 'records' })} arrived and none of them crossed a detection rule, so no burst ever reached the score. The filtering here happened a stage earlier than this number measures — the stages below are where to read it.`,
+      nothingArrived:
+        'No telemetry arrived in this window at all, so the gate had nothing to look at. A quiet window and a source that is not being read look the same from here — Settings › Telemetry says which.',
+
+      stagesTitle: 'From log records to signals',
+      stagesDescription: (scope: string) =>
+        `The three stages, on one scale — ${scope}. They count different things: records are lines of log, signatures are distinct fingerprints cut from them, and signals are bursts the gate was asked to score.`,
+      stageLogRecords: 'Log records',
+      stageSignatures: 'Signatures',
+      stageSignals: 'Signals',
+      stagesChartLabel: (records: string, signatures: string, signals: string) =>
+        `Pipeline stages. ${records} log records, ${signatures} signatures, ${signals} signals.`,
+
+      nothingToFingerprint: 'Nothing arrived, so there was nothing to fingerprint.',
+      nothingFingerprinted:
+        'Nothing in this window was fingerprinted, which should not happen — the records arrived without one.',
+      // The drop fingerprinting bought, stated as a ratio rather than left to be inferred from a
+      // bar that is two pixels wide.
+      folding: (perSignature: string, signatures: string, records: string, count: number) =>
+        `About ${perSignature} records per signature. That fold is what fingerprinting bought: the gate reasons about ${signatures} ${plural('en', count, { one: 'thing', other: 'things' })}, not ${records}.`,
+
+      neverScored: 'No burst crossed a detection rule, so the gate was never asked to score anything.',
+      bursting: (signatures: string, signatureCount: number, signals: string, signalCount: number) =>
+        `${signatures} ${plural('en', signatureCount, { one: 'signature', other: 'signatures' })} produced ${signals} ${plural('en', signalCount, { one: 'burst', other: 'bursts' })} for the gate to score.`,
+      /** The one stage that can widen, which a funnel drawn without saying so would misreport. */
+      burstingWider:
+        ' A signature can fire more than once, which is why this stage is wider than the one above it rather than narrower.',
+
+      whatArrived: 'What arrived',
+      noLogRecord: 'No log record arrived in this window.',
+
+      verdictsTitle: 'How the gate ruled',
+      verdictsDescription: (scope: string) =>
+        `Every verdict the gate can reach, and how many landed on each — ${scope}.`,
+      noVerdicts: 'The gate scored nothing in this window, so it reached none of these.',
+
+      wokenHeading: 'Somebody was woken',
+      wokenNote: 'Not counted as held back.',
+      notWokenHeading: 'Nobody was woken',
+      notWokenNote: 'These three are what "not raised" counts.',
+
+      /**
+       * What each verdict means, in the operator's language rather than the enum's. Says what the
+       * gate *did*, not how it scored: the weights live in SignalScoring and a number copied into
+       * the frontend is a number that goes stale without anyone noticing.
+       */
+      verdict: byKey<SignalStatus>({
+        Promoted: 'Cleared the line, and the gate opened an incident for it.',
+        Deduplicated:
+          'Folded into an incident that was already open. Somebody was woken — earlier.',
+        Weak: 'Scored, and scored under the line. Kept where you can see it; nobody was called.',
+        Recorded: 'Kept for the record and nothing more.',
+        Suppressed:
+          'The signature is muted, so the gate scored it and then silenced it on purpose.',
+      }),
+    },
+
+    services: {
+      title: 'Service health',
+      intro: 'Where the errors are coming from, and how far up the pipeline they got.',
+      // The count only once there is one: "0 services produced something" is a sentence nobody
+      // writes, and the empty row says the same thing properly.
+      produced: (count: string, raw: number) =>
+        `${count} ${plural('en', raw, { one: 'service', other: 'services' })} produced something in this window.`,
+      loadError: 'Could not load service health',
+
+      caption: (scope: string) =>
+        `Log volume, signals and incidents per service — ${scope}. Sortable by every column except the top signature.`,
+
+      columnService: 'Service',
+      columnLogRecords: 'Log records',
+      columnSignals: 'Signals',
+      columnPromoted: 'Promoted',
+      columnIncidents: 'Incidents',
+      columnTopSignature: 'Top signature',
+      columnLastSignal: 'Last signal',
+
+      emptyTitle: 'Nothing arrived in this window.',
+      empty:
+        'No service wrote a log record and nothing crossed a detection rule. A genuinely quiet window and a telemetry source that is not being read look the same from here — Settings › Telemetry says which.',
+
+      goneHintLabel: 'What (signature gone) means',
+      goneHint:
+        'These signals were detected, but the error signature behind them has since been deleted — and the service name lived on the signature. The counts are real; the name they belong to is not recoverable.',
+
+      folded: (records: string, promoted: string, incidents: string) =>
+        `${records} records · ${promoted} promoted · ${incidents} incidents · `,
+      occurrences: (count: number) =>
+        plural('en', count, { one: 'occurrence', other: 'occurrences' }),
+      noSignal: 'No signal from this service in this window',
+
+      signatureGone: 'signature no longer on record',
+      nothingCrossed: 'nothing crossed a detection rule in this window',
+
+      footnote:
+        'Counted from the signal and signature side. {incidents} is the number of distinct incidents this service’s signals reached, so an incident somebody opened by hand is attributed to no service — an incident record does not carry one, and reading it out of the title would be a guess.',
+    },
+  },
+
   // ---- the enum vocabulary ---------------------------------------------------------------
   //
   // Display only. The wire value never changes: a filter still sends `InProgress`, and the badge
@@ -508,6 +784,10 @@ export const en = {
       Webhook: 'Webhook',
       Jira: 'Jira',
     }),
+
+    /** The server's own name for signals whose signature has since been deleted. A sentinel
+     *  rather than prose, so it is translated the way an enum is — the literal stays the key. */
+    goneService: '(signature gone)',
 
     telemetryKind: byKey<TelemetrySourceKind>({
       Seq: 'Seq',
