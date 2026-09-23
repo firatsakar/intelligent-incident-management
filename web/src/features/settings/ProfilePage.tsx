@@ -1,21 +1,30 @@
-import { Building2Icon, LogOutIcon, MonitorIcon, MoonIcon, ShieldAlertIcon, SunIcon } from 'lucide-react'
+import {
+  Building2Icon,
+  LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
+  ShieldAlertIcon,
+  SunIcon,
+} from 'lucide-react'
 import { useTheme } from 'next-themes'
+import type { ReactNode } from 'react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { languageName, languages, useLanguage, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
- * Who this session says you are, and the one thing on this console that is genuinely yours.
+ * Who this session says you are, and the two things on this console that are genuinely yours.
  *
- * The two halves of the screen are honest in opposite directions, which is the whole reason they
- * sit together. The identity is a label this browser made up and nothing checked; the appearance
- * setting is a real preference that really persists. Saying so on each of them, once, is what
- * stops the page reading as a settings screen where nothing works — the theme *does* work, and
- * putting it next to the qualified half is what proves the qualification is specific rather than a
- * blanket disclaimer over the product.
+ * The halves of the screen are honest in opposite directions, which is the whole reason they sit
+ * together. The identity is a label this browser made up and nothing checked; the appearance and
+ * language settings are real preferences that really persist. Saying so on each of them, once, is
+ * what stops the page reading as a settings screen where nothing works — two of the three *do*
+ * work, and putting them next to the qualified one is what proves the qualification is specific
+ * rather than a blanket disclaimer over the product.
  *
  * This is also the screen where a user would most reasonably expect the identity to be real, so it
  * is the screen that has to say plainly that it is not. Louder than the account menu's line, which
@@ -23,18 +32,14 @@ import { cn } from '@/lib/utils'
  */
 
 const themeOptions = [
-  { value: 'light', label: 'Light', icon: SunIcon, detail: 'Always the light palette.' },
-  { value: 'dark', label: 'Dark', icon: MoonIcon, detail: 'Always the dark palette.' },
-  {
-    value: 'system',
-    label: 'System',
-    icon: MonitorIcon,
-    detail: 'Follows your operating system.',
-  },
+  { value: 'light', icon: SunIcon },
+  { value: 'dark', icon: MoonIcon },
+  { value: 'system', icon: MonitorIcon },
 ] as const
 
 export function ProfilePage() {
   const { user, organization, signOut } = useAuth()
+  const { profile } = useT()
 
   // RequireAuth is the only route that renders this, so a null user is unreachable — but the
   // context is typed for the login screen too, where it is genuinely null.
@@ -43,11 +48,8 @@ export function ProfilePage() {
   return (
     <div className="max-w-3xl space-y-4">
       <div>
-        <h2 className="text-lg font-medium tracking-tight">Profile</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
-          The name this session runs under, the organisation everything on screen belongs to, and
-          how the console looks while you read it.
-        </p>
+        <h2 className="text-lg font-medium tracking-tight">{profile.title}</h2>
+        <p className="text-muted-foreground mt-1 text-sm">{profile.intro}</p>
       </div>
 
       <Identity
@@ -58,6 +60,7 @@ export function ProfilePage() {
       />
 
       <Appearance />
+      <LanguageCard />
     </div>
   )
 }
@@ -73,11 +76,13 @@ function Identity({
   organizationName: string | undefined
   onSignOut: () => void
 }) {
+  const { identity } = useT().profile
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Identity</CardTitle>
-        <CardDescription>Who this console thinks you are, and what that is worth.</CardDescription>
+        <CardTitle>{identity.title}</CardTitle>
+        <CardDescription>{identity.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -105,7 +110,7 @@ function Identity({
               means starting a session under a different one. */}
           <Button variant="outline" className="shrink-0" onClick={onSignOut}>
             <LogOutIcon aria-hidden />
-            Sign out
+            {identity.signOut}
           </Button>
         </div>
 
@@ -114,94 +119,162 @@ function Identity({
         <div className="bg-caution text-caution-foreground border-caution-border rounded-lg border px-3 py-2.5">
           <p className="flex items-center gap-2 text-sm font-medium">
             <ShieldAlertIcon className="size-4 shrink-0" aria-hidden />
-            This is not an account
+            {identity.notAnAccountTitle}
           </p>
-          <p className="mt-1 text-xs leading-relaxed">
-            The name above is stored in this browser and nothing verified it. There is no password,
-            no profile on any server, and no permission attached to it — the services behind this
-            console answer anyone who can reach them, whatever name a session carries. To run under
-            a different one, sign out and enter it. Real sign-in arrives with the gateway, and this
-            page is where it will land.
-          </p>
+          <p className="mt-1 text-xs leading-relaxed">{identity.notAnAccount}</p>
         </div>
 
         {/* The same sentence the login card uses, because it is the same fact and the product
             should not have two wordings for it. Not repeated with the organisation's name, which
             is already on the row above — what is missing there is what membership means. */}
-        <p className="text-muted-foreground text-xs leading-relaxed">
-          Incidents, signals, sources and integrations belong to the organisation rather than to the
-          person who opened them. This build has one.
-        </p>
+        <p className="text-muted-foreground text-xs leading-relaxed">{identity.ownership}</p>
       </CardContent>
     </Card>
   )
 }
 
+/**
+ * One tile layout, two settings.
+ *
+ * Real radios, hidden but focusable, with the tile as their label. A group of divs with onClick
+ * would take the keyboard away from the settings on this page that actually work, and arrow-key
+ * movement between options comes free from the radio group.
+ *
+ * Extracted when the second consumer arrived rather than in anticipation of it — the appearance
+ * card owned this markup alone until language needed exactly the same thing.
+ */
+function Choice<T extends string>({
+  name,
+  legend,
+  value,
+  options,
+  onChange,
+}: {
+  name: string
+  legend: string
+  value: T | undefined
+  options: { value: T; label: string; detail: string; icon?: ReactNode }[]
+  onChange: (value: T) => void
+}) {
+  const { common } = useT()
+
+  return (
+    <fieldset>
+      <legend className="sr-only">{legend}</legend>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        {options.map((option) => {
+          const selected = value === option.value
+
+          return (
+            <label
+              key={option.value}
+              className={cn(
+                'has-focus-visible:ring-ring/50 relative flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors has-focus-visible:ring-[3px]',
+                selected ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/60',
+              )}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={selected}
+                onChange={() => onChange(option.value)}
+                className="sr-only"
+              />
+
+              <span className="flex items-center gap-2 text-sm font-medium">
+                {option.icon}
+                {option.label}
+                {/* Selection is not left to the border colour alone. */}
+                {selected && (
+                  <span className="text-primary ml-auto text-xs font-medium">
+                    {common.selected}
+                  </span>
+                )}
+              </span>
+
+              <span className="text-muted-foreground text-xs">{option.detail}</span>
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
 function Appearance() {
   const { theme, setTheme, resolvedTheme } = useTheme()
+  const text = useT().theme
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Appearance</CardTitle>
-        <CardDescription>
-          Stored in this browser, not against your name — a second machine starts on System again.
-        </CardDescription>
+        <CardTitle>{text.title}</CardTitle>
+        <CardDescription>{text.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-2">
-        {/* Real radios, hidden but focusable, with the tile as their label. A group of divs with
-            onClick would take the keyboard away from the one setting on this page that works, and
-            arrow-key movement between options comes free from the radio group. */}
-        <fieldset>
-          <legend className="sr-only">Theme</legend>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            {themeOptions.map((option) => {
-              const selected = theme === option.value
-
-              return (
-                <label
-                  key={option.value}
-                  className={cn(
-                    'has-focus-visible:ring-ring/50 relative flex cursor-pointer flex-col gap-1 rounded-lg border p-3 transition-colors has-focus-visible:ring-[3px]',
-                    selected
-                      ? 'border-primary bg-primary/5'
-                      : 'border-border hover:bg-muted/60',
-                  )}
-                >
-                  <input
-                    type="radio"
-                    name="theme"
-                    value={option.value}
-                    checked={selected}
-                    onChange={() => setTheme(option.value)}
-                    className="sr-only"
-                  />
-
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <option.icon className="size-4 shrink-0" aria-hidden />
-                    {option.label}
-                    {/* Selection is not left to the border colour alone. */}
-                    {selected && (
-                      <span className="text-primary ml-auto text-xs font-medium">Selected</span>
-                    )}
-                  </span>
-
-                  <span className="text-muted-foreground text-xs">{option.detail}</span>
-                </label>
-              )
-            })}
-          </div>
-        </fieldset>
+        <Choice
+          name="theme"
+          legend={text.legend}
+          value={theme as 'light' | 'dark' | 'system' | undefined}
+          onChange={setTheme}
+          options={themeOptions.map((option) => ({
+            value: option.value,
+            label: text.options[option.value].label,
+            detail: text.options[option.value].detail,
+            icon: <option.icon className="size-4 shrink-0" aria-hidden />,
+          }))}
+        />
 
         {/* "System" is the default, and on its own it does not tell the operator which palette
-            they are actually going to get. resolvedTheme does, and is only read once it exists. */}
-        {theme === 'system' && resolvedTheme && (
+            they are actually going to get. resolvedTheme does, and is only read once it exists —
+            narrowed to the two it can be, because the word it supplies has to be translated and
+            a raw value would come out in English on a Turkish screen. */}
+        {theme === 'system' && (resolvedTheme === 'light' || resolvedTheme === 'dark') && (
           <p className="text-muted-foreground text-xs" aria-live="polite">
-            Your system is currently asking for the {resolvedTheme} palette.
+            {text.resolved(text.palette[resolvedTheme])}
           </p>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * The same tiles, plus one sentence the appearance card has no equivalent of.
+ *
+ * Where the translation stops is a fact about the product rather than a caveat to bury. An
+ * analysis's reasoning and a provider's error message arrive in the language they were written
+ * in, and are shown that way. Said here, once, on the screen where the choice is made — rather
+ * than as a footnote beside every English paragraph on an otherwise Turkish screen.
+ */
+function LanguageCard() {
+  const { language, setLanguage } = useLanguage()
+  const text = useT().language
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{text.title}</CardTitle>
+        <CardDescription>{text.description}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        <Choice
+          name="language"
+          legend={text.legend}
+          value={language}
+          onChange={setLanguage}
+          options={languages.map((option) => ({
+            value: option,
+            label: languageName[option],
+            detail: text.options[option],
+          }))}
+        />
+
+        <p className="text-muted-foreground text-xs leading-relaxed">{text.passthrough}</p>
       </CardContent>
     </Card>
   )

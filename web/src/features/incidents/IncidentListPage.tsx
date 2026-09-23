@@ -25,9 +25,9 @@ import {
   formatConfidence,
   formatDuration,
   formatRelative,
-  incidentStatusLabel,
   priorityClass,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   incidentPriorities,
@@ -46,6 +46,7 @@ const anyValue = 'any'
 const columnCount = 7
 
 export function IncidentListPage() {
+  const { labels } = useT()
   // Filters live in the URL, not in component state: a filtered view of an ops tool should be
   // shareable, and it should survive a refresh.
   const [params, setParams] = useSearchParams()
@@ -103,13 +104,13 @@ export function IncidentListPage() {
             <SelectTrigger className="w-36" aria-label="Filter by status">
               {/* The label is passed explicitly: left to itself the trigger renders the raw
                   value, so the filter reads "InProgress" and "any" rather than English. */}
-              <SelectValue>{status ? incidentStatusLabel[status] : 'Any status'}</SelectValue>
+              <SelectValue>{status ? labels.incidentStatus[status] : 'Any status'}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={anyValue}>Any status</SelectItem>
               {incidentStatuses.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {incidentStatusLabel[value]}
+                  {labels.incidentStatus[value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -197,7 +198,7 @@ export function IncidentListPage() {
                       <p className="text-sm font-medium">Nothing matches these filters.</p>
                       <p className="text-muted-foreground mt-1 text-sm">
                         There are incidents on record; none of them is both{' '}
-                        {status ? incidentStatusLabel[status] : 'any status'} and{' '}
+                        {status ? labels.incidentStatus[status] : 'any status'} and{' '}
                         {priority ?? 'any priority'}.
                       </p>
                       <Button variant="outline" className="mt-3" onClick={clearFilters}>
@@ -265,6 +266,7 @@ export function IncidentListPage() {
  * table into a horizontal scroll. Nothing is dropped; the same fields arrive in one place.
  */
 function IncidentRow({ incident }: { incident: Incident }) {
+  const { labels } = useT()
   // "Failed" is its own answer, not a slower kind of "awaiting". One of those resolves itself
   // and the other never will, and a scan down this column has to be able to tell them apart.
   const analysis = incident.aiAnalysisError
@@ -298,7 +300,7 @@ function IncidentRow({ incident }: { incident: Incident }) {
         {/* whitespace-normal because the cell's default is nowrap and this line is four fields
             long; on a phone it has to be allowed to wrap rather than truncate away the analysis. */}
         <span className="text-muted-foreground mt-0.5 block text-xs whitespace-normal md:hidden">
-          {incidentStatusLabel[incident.status]} · {incident.source} · {analysis}
+          {labels.incidentStatus[incident.status]} · {incident.source} · {analysis}
           {incident.detectedAt &&
             ` · +${formatDuration(incident.detectedAt, incident.createdAt)} to open`}
         </span>
@@ -309,7 +311,7 @@ function IncidentRow({ incident }: { incident: Incident }) {
       </TableCell>
 
       <TableCell className="text-muted-foreground hidden align-top text-sm md:table-cell">
-        {incidentStatusLabel[incident.status]}
+        {labels.incidentStatus[incident.status]}
       </TableCell>
 
       <TableCell className="hidden max-w-44 align-top text-sm md:table-cell">

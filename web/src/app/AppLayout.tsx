@@ -27,6 +27,7 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/utils'
 
 import { RealtimeIndicator } from './RealtimeIndicator'
+import { LanguageToggle } from './LanguageToggle'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 
@@ -234,6 +235,7 @@ export function AppLayout() {
 
             <div className="ml-auto flex items-center gap-1.5">
               <RealtimeIndicator />
+              <LanguageToggle />
               <ThemeToggle />
               <UserMenu />
             </div>

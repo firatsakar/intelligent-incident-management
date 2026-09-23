@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatRelative, incidentStatusLabel, priorityClass } from '@/lib/format'
+import { formatRelative, priorityClass } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 // The one import that crosses a feature boundary, and the reason is the cache rather than
 // convenience. `incidentCreated` invalidates `['incidents']` and `incidentChanged` patches every
@@ -17,6 +18,7 @@ import { useIncidents } from '@/features/incidents/queries'
 const rows = 6
 
 export function LatestIncidents() {
+  const { labels } = useT()
   const query = useIncidents({ pageNumber: 1, pageSize: rows })
 
   return (
@@ -71,7 +73,7 @@ export function LatestIncidents() {
                       <span className="block truncate">{incident.title}</span>
                     </Link>
                     <span className="text-muted-foreground block truncate text-xs">
-                      {incidentStatusLabel[incident.status]} · {incident.source}
+                      {labels.incidentStatus[incident.status]} · {incident.source}
                     </span>
                   </span>
 

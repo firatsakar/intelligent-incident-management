@@ -12,9 +12,10 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WindowSelect } from '@/components/WindowSelect'
-import { formatCount, severityClass, signalStatusClass, signalStatusLabel } from '@/lib/format'
+import { formatCount, severityClass, signalStatusClass } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { windowLabel } from '@/lib/window'
+import { useT } from '@/lib/i18n'
+import { resolveWindowPreset } from '@/lib/window'
 import { logSeverities, type Funnel, type LogSeverity, type SignalStatus } from '@/types/api'
 
 import { defaultStatsWindow, useTelemetryStats } from './queries'
@@ -43,7 +44,7 @@ export function FunnelPage() {
   const preset = params.get('window') ?? defaultStatsWindow
   const query = useTelemetryStats(preset)
 
-  const scope = windowLabel(preset).toLowerCase()
+  const scope = useT().window.scope[resolveWindowPreset(preset)]
 
   return (
     <div className="space-y-4">
@@ -451,13 +452,15 @@ function VerdictsCard({ funnel, scope }: { funnel: Funnel; scope: string }) {
 }
 
 function Verdict({ band, count, total }: { band: SignalStatus; count: number; total: number }) {
+  const { labels } = useT()
+
   const share = total > 0 ? Math.round((count / total) * 100) : 0
 
   return (
     <li className="space-y-1">
       <div className="flex items-baseline justify-between gap-3">
         <Badge variant="outline" className={cn('border', signalStatusClass[band])}>
-          {signalStatusLabel[band]}
+          {labels.signalStatus[band]}
         </Badge>
 
         <span

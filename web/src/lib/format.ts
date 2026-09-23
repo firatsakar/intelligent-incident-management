@@ -1,15 +1,46 @@
+import { activeDictionary, activeIntlLocale } from '@/lib/i18n/active'
 import type { DeliveryStatus, IncidentPriority, LogSeverity, SignalStatus } from '@/types/api'
 
-// Timestamps arrive as UTC ISO strings and are rendered in the operator's own zone. An incident
-// timeline that mixes zones is worse than useless.
-const dateTime = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'medium',
-})
+/**
+ * Every `Intl` object this file needs, built once per locale.
+ *
+ * They used to be module constants built with an `undefined` locale — the browser's. That was
+ * right while the console spoke one language and wrong the moment it spoke two: someone on an
+ * English browser who chooses Turkish would have read Turkish words above English dates. The
+ * locale now comes from the chosen language, and the bundle is rebuilt when that changes.
+ *
+ * Rebuilt lazily rather than pushed from the provider, so this file keeps no subscription and the
+ * i18n module keeps no knowledge of formatting. Constructing an `Intl.DateTimeFormat` is not free,
+ * which is the whole reason they were hoisted in the first place, so the bundle is cached and the
+ * cache is checked by locale rather than invalidated by hand.
+ */
+function buildFormatters(locale: string) {
+  return {
+    // Timestamps arrive as UTC ISO strings and are rendered in the operator's own zone. An
+    // incident timeline that mixes zones is worse than useless.
+    dateTime: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }),
+    timeOnly: new Intl.DateTimeFormat(locale, { timeStyle: 'medium' }),
+    wholeNumber: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
 
-const timeOnly = new Intl.DateTimeFormat(undefined, { timeStyle: 'medium' })
+    // Day buckets are cut in UTC on the server, so their labels are pinned to UTC here rather
+    // than passed through the operator's zone like every other timestamp in this file.
+    // Formatting them locally would move a bucket by a day for anyone west of Greenwich, and the
+    // label would then quietly disagree with the number it labels. The screens that draw these
+    // say "UTC" on the axis.
+    utcDay: new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' }),
+    utcDayLong: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }),
+  }
+}
 
-const wholeNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
+let cache: { locale: string; formatters: ReturnType<typeof buildFormatters> } | null = null
+
+function intl() {
+  const locale = activeIntlLocale()
+
+  if (!cache || cache.locale !== locale) cache = { locale, formatters: buildFormatters(locale) }
+
+  return cache.formatters
+}
 
 /**
  * A count, with whatever thousands separator the operator's locale uses.
@@ -19,15 +50,15 @@ const wholeNumber = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 
  * glance, and the aggregate screens exist to be glanced at.
  */
 export function formatCount(value: number): string {
-  return wholeNumber.format(value)
+  return intl().wholeNumber.format(value)
 }
 
 export function formatDateTime(value: string | null | undefined): string {
-  return value ? dateTime.format(new Date(value)) : '—'
+  return value ? intl().dateTime.format(new Date(value)) : '—'
 }
 
 export function formatTime(value: string | null | undefined): string {
-  return value ? timeOnly.format(new Date(value)) : '—'
+  return value ? intl().timeOnly.format(new Date(value)) : '—'
 }
 
 /** A span in the largest unit that still reads as a number. */
@@ -72,43 +103,34 @@ export function formatSeconds(seconds: number | null | undefined): string {
   return renderSpan(seconds * 1000)
 }
 
-// Day buckets are cut in UTC on the server, so their labels are pinned to UTC here rather than
-// passed through the operator's zone like every other timestamp in this file. Formatting them
-// locally would move a bucket by a day for anyone west of Greenwich, and the label would then
-// quietly disagree with the number it labels. The screens that draw these say "UTC" on the axis.
-const utcDay = new Intl.DateTimeFormat(undefined, {
-  month: 'short',
-  day: 'numeric',
-  timeZone: 'UTC',
-})
-
-const utcDayLong = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeZone: 'UTC' })
-
 /** A `YYYY-MM-DD` UTC bucket as a short axis label. */
 export function formatUtcDay(day: string): string {
-  return utcDay.format(new Date(`${day}T00:00:00Z`))
+  return intl().utcDay.format(new Date(`${day}T00:00:00Z`))
 }
 
 /** The same bucket spelled out, for a readout that has room for it. */
 export function formatUtcDayLong(day: string): string {
-  return utcDayLong.format(new Date(`${day}T00:00:00Z`))
+  return intl().utcDayLong.format(new Date(`${day}T00:00:00Z`))
 }
 
 export function formatRelative(value: string | null | undefined): string {
   if (!value) return '—'
 
+  const { format } = activeDictionary()
   const ms = Date.now() - new Date(value).getTime()
 
-  if (ms < 60_000) return 'just now'
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`
+  if (ms < 60_000) return format.justNow
+  if (ms < 3_600_000) return format.minutesAgo(Math.floor(ms / 60_000))
+  if (ms < 86_400_000) return format.hoursAgo(Math.floor(ms / 3_600_000))
 
-  return `${Math.floor(ms / 86_400_000)}d ago`
+  return format.daysAgo(Math.floor(ms / 86_400_000))
 }
 
 /** Null confidence means the analysis declined to give one, which is not the same as zero. */
 export function formatConfidence(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'not given' : `${Math.round(value * 100)}%`
+  return value === null || value === undefined
+    ? activeDictionary().format.notGiven
+    : `${Math.round(value * 100)}%`
 }
 
 /**
@@ -120,10 +142,13 @@ export function formatConfidence(value: number | null | undefined): string {
  */
 export function confidenceBand(value: number | null | undefined): string | null {
   if (value === null || value === undefined) return null
-  if (value >= 0.8) return 'high confidence'
-  if (value >= 0.5) return 'moderate confidence'
 
-  return 'low confidence'
+  const { confidence } = activeDictionary().format
+
+  if (value >= 0.8) return confidence.high
+  if (value >= 0.5) return confidence.moderate
+
+  return confidence.low
 }
 
 export function formatScore(value: number): string {
@@ -273,18 +298,6 @@ export const signalStatusClass: Record<SignalStatus, string> = {
   Deduplicated: statusTier.info,
 }
 
-/** Human labels for the enum names, which are fine in JSON and clumsy on screen. */
-export const signalStatusLabel: Record<SignalStatus, string> = {
-  Promoted: 'Promoted',
-  Weak: 'Weak',
-  Recorded: 'Recorded only',
-  Deduplicated: 'Deduplicated',
-  Suppressed: 'Suppressed',
-}
-
-export const incidentStatusLabel: Record<string, string> = {
-  Open: 'Open',
-  InProgress: 'In progress',
-  Resolved: 'Resolved',
-  Closed: 'Closed',
-}
+// The enum labels that used to live here are in the dictionary now — `labels.signalStatus`,
+// `labels.incidentStatus` and the seven others — because they are text on screen and this file
+// no longer owns text. What stays here is colour, which is not language.

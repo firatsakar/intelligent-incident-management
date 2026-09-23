@@ -16,7 +16,8 @@ import {
 import { WindowSelect } from '@/components/WindowSelect'
 import { formatCount, formatDateTime, formatRelative } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { windowLabel } from '@/lib/window'
+import { useT } from '@/lib/i18n'
+import { resolveWindowPreset } from '@/lib/window'
 import type { ServiceHealth } from '@/types/api'
 
 import { defaultStatsWindow, useTelemetryStats } from './queries'
@@ -111,6 +112,8 @@ export function ServicesPage() {
   const direction = resolveDirection(params.get('dir'))
 
   const query = useTelemetryStats(preset)
+
+  const scope = useT().window.scope[resolveWindowPreset(preset)]
   const rows = orderServices(query.data?.services ?? [], sort, direction)
 
   function sortBy(column: Column & { key: SortKey }) {
@@ -156,7 +159,7 @@ export function ServicesPage() {
             they actually got, rather than widening the table until it scrolls sideways. */}
         <Table className="table-fixed">
           <TableCaption className="sr-only">
-            Log volume, signals and incidents per service — {windowLabel(preset).toLowerCase()}.
+            Log volume, signals and incidents per service — {scope}.
             Sortable by every column except the top signature.
           </TableCaption>
 

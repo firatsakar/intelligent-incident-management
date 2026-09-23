@@ -8,11 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { useT } from '@/lib/i18n'
 
+// The icon is the part that is not language. The word beside it comes from the dictionary, which
+// is also what the appearance card on the profile screen reads — one wording for one setting.
 const options = [
-  { value: 'light', label: 'Light', icon: SunIcon },
-  { value: 'dark', label: 'Dark', icon: MoonIcon },
-  { value: 'system', label: 'System', icon: MonitorIcon },
+  { value: 'light', icon: SunIcon },
+  { value: 'dark', icon: MoonIcon },
+  { value: 'system', icon: MonitorIcon },
 ] as const
 
 /**
@@ -22,11 +25,12 @@ const options = [
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()
+  const { theme: text } = useT()
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button variant="ghost" size="icon-sm" aria-label="Change theme" />}
+        render={<Button variant="ghost" size="icon-sm" aria-label={text.change} />}
       >
         {/* Driven by the `.dark` class rather than by `resolvedTheme`, so the right icon is on
             screen in the first painted frame instead of after next-themes resolves. */}
@@ -38,7 +42,7 @@ export function ThemeToggle() {
         {options.map((option) => (
           <DropdownMenuItem key={option.value} onClick={() => setTheme(option.value)}>
             <option.icon />
-            {option.label}
+            {text.options[option.value].label}
             {theme === option.value && <CheckIcon className="text-muted-foreground ml-auto" />}
           </DropdownMenuItem>
         ))}

@@ -22,9 +22,9 @@ import {
   formatDateTime,
   formatDuration,
   formatRelative,
-  incidentStatusLabel,
   priorityClass,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { incidentStatuses, type Incident, type IncidentStatus } from '@/types/api'
 
@@ -45,6 +45,7 @@ import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './qu
  * would quietly break if either were confused for the other.
  */
 export function IncidentDetailPage() {
+  const { labels } = useT()
   const { id = '' } = useParams()
 
   const incident = useIncident(id)
@@ -103,7 +104,7 @@ export function IncidentDetailPage() {
               <Badge variant="outline" className={cn('border', priorityClass[data.priority])}>
                 {data.priority}
               </Badge>
-              <Badge variant="secondary">{incidentStatusLabel[data.status]}</Badge>
+              <Badge variant="secondary">{labels.incidentStatus[data.status]}</Badge>
               <Badge variant="secondary">{data.source}</Badge>
 
               {data.assignedTeam && (
@@ -131,12 +132,12 @@ export function IncidentDetailPage() {
               <SelectTrigger className="w-36" aria-label="Incident status">
                 {/* Explicit for the same reason as the list filters: the trigger otherwise shows
                     the raw enum name. */}
-                <SelectValue>{incidentStatusLabel[data.status]}</SelectValue>
+                <SelectValue>{labels.incidentStatus[data.status]}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {incidentStatuses.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {incidentStatusLabel[status]}
+                    {labels.incidentStatus[status]}
                   </SelectItem>
                 ))}
               </SelectContent>

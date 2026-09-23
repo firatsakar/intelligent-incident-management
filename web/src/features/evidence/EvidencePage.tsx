@@ -23,10 +23,15 @@ import {
   formatTime,
   severityClass,
   signalStatusClass,
-  signalStatusLabel,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { defaultWindow, resolveWindow, windowLabel, windowPresets } from '@/lib/window'
+import {
+  defaultWindow,
+  resolveWindow,
+  resolveWindowPreset,
+  windowPresets,
+} from '@/lib/window'
 import type { ErrorSignature, IngestionTick, LogRecord, Signal } from '@/types/api'
 
 /**
@@ -35,6 +40,7 @@ import type { ErrorSignature, IngestionTick, LogRecord, Signal } from '@/types/a
  * which is why the log column is the wide one — everything to its right is a summary of it.
  */
 export function EvidencePage() {
+  const { window: windowText } = useT()
   const [params, setParams] = useSearchParams()
 
   const preset = params.get('window') ?? defaultWindow
@@ -128,12 +134,12 @@ export function EvidencePage() {
 
           <Select value={preset} onValueChange={(value) => setParam('window', value)}>
             <SelectTrigger className="w-44" aria-label="Time window">
-              <SelectValue>{windowLabel(preset)}</SelectValue>
+              <SelectValue>{windowText.option[resolveWindowPreset(preset)]}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {windowPresets.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
-                  {option.label}
+                  {windowText.option[option.value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -443,11 +449,13 @@ function SignatureRow({ signature }: { signature: ErrorSignature }) {
 }
 
 function SignalSummary({ signal }: { signal: Signal }) {
+  const { labels } = useT()
+
   return (
     <li className="space-y-1 py-2.5">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <Badge variant="outline" className={cn('border', signalStatusClass[signal.status])}>
-          {signalStatusLabel[signal.status]}
+          {labels.signalStatus[signal.status]}
         </Badge>
 
         <span className="ml-auto text-sm font-medium tabular-nums">

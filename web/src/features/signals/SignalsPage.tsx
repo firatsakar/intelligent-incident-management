@@ -27,10 +27,15 @@ import {
   formatScore,
   scoreTerm,
   signalStatusClass,
-  signalStatusLabel,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { defaultWindow, resolveWindow, windowLabel, windowPresets } from '@/lib/window'
+import {
+  defaultWindow,
+  resolveWindow,
+  resolveWindowPreset,
+  windowPresets,
+} from '@/lib/window'
 import type { Signal } from '@/types/api'
 
 import { buildHeatMap, errorKeyOf, otherKey } from './heatmap'
@@ -76,6 +81,7 @@ const resolvePageSize = (value: string | null) => {
 }
 
 export function SignalsPage() {
+  const { window: windowText } = useT()
   const [params, setParams] = useSearchParams()
 
   const preset = params.get('window') ?? defaultWindow
@@ -160,12 +166,12 @@ export function SignalsPage() {
           }}
         >
           <SelectTrigger className="w-44">
-            <SelectValue>{windowLabel(preset)}</SelectValue>
+            <SelectValue>{windowText.option[resolveWindowPreset(preset)]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             {windowPresets.map((option) => (
               <SelectItem key={option.value} value={option.value}>
-                {option.label}
+                {windowText.option[option.value]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -303,6 +309,8 @@ const kindLabel: Record<Signal['kind'], string> = {
  * would be an alerting rule's output, which is the one thing this screen exists not to be.
  */
 function SignalRow({ signal }: { signal: Signal }) {
+  const { labels } = useT()
+
   // "total" is the sum the components add up to, not a component. Showing it alongside them
   // would make the arithmetic look wrong.
   const components = Object.entries(signal.scoreBreakdown)
@@ -313,7 +321,7 @@ function SignalRow({ signal }: { signal: Signal }) {
     <li className="space-y-1.5 py-3">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <Badge variant="outline" className={cn('border', signalStatusClass[signal.status])}>
-          {signalStatusLabel[signal.status]}
+          {labels.signalStatus[signal.status]}
         </Badge>
 
         <span className="min-w-0 text-sm font-medium break-words">

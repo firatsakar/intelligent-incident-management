@@ -2,6 +2,8 @@ import { Building2Icon, ListChecksIcon, RouteIcon, ScaleIcon, ShieldAlertIcon } 
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 
+import { LanguageToggle } from '@/app/LanguageToggle'
+import { ThemeToggle } from '@/app/ThemeToggle'
 import { BrandMark } from '@/components/BrandMark'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
@@ -134,7 +136,15 @@ export function LoginPage() {
         </ul>
       </aside>
 
-      <main className="flex items-center justify-center px-4 py-10 sm:px-6">
+      <main className="relative flex items-center justify-center px-4 py-10 sm:px-6">
+        {/* There is no header on this screen, so the two display preferences take a corner of
+            their own. Language belongs here rather than only behind the sign-in: somebody who
+            cannot read the prompt cannot reach a settings page on the other side of it. */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 sm:top-6 sm:right-6">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
+
         <div className="w-full max-w-sm">
           <div className="mb-6 flex items-center gap-2.5 lg:hidden">
             <BrandMark className="size-7" />

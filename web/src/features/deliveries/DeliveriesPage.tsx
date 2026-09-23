@@ -22,7 +22,8 @@ import {
   statusTier,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { windowLabel } from '@/lib/window'
+import { useT } from '@/lib/i18n'
+import { resolveWindowPreset } from '@/lib/window'
 import type { IntegrationHealth, NotificationStats } from '@/types/api'
 
 import { defaultDeliveryWindow, useNotificationStats } from './queries'
@@ -50,7 +51,7 @@ export function DeliveriesPage() {
   const preset = params.get('window') ?? defaultDeliveryWindow
   const query = useNotificationStats(preset)
 
-  const scope = windowLabel(preset).toLowerCase()
+  const scope = useT().window.scope[resolveWindowPreset(preset)]
 
   return (
     <div className="space-y-4">
