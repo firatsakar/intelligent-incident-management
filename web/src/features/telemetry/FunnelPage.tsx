@@ -46,14 +46,16 @@ export function FunnelPage() {
   const preset = params.get('window') ?? defaultStatsWindow
   const query = useTelemetryStats(preset)
 
-  const scope = windowText.scope[resolveWindowPreset(preset)]
+  const preset_ = resolveWindowPreset(preset)
+  const scope = windowText.scope[preset_]
+  // Same as the deliveries totals card: this one's description is the scope and nothing else.
+  const scopeCap = windowText.scopeCap[preset_]
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <WindowSelect value={preset} />
@@ -70,7 +72,7 @@ export function FunnelPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-12">
           {query.data ? (
-            <RestraintCard funnel={query.data.funnel} scope={scope} />
+            <RestraintCard funnel={query.data.funnel} scope={scopeCap} />
           ) : (
             <Skeleton className="h-44 w-full" />
           )}

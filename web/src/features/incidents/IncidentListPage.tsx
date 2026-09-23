@@ -90,11 +90,10 @@ export function IncidentListPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
           <p className="text-muted-foreground text-sm">
-            {query.data
-              ? filtered
-                ? t.matching(query.data.totalCount)
-                : t.onRecord(query.data.totalCount)
-              : t.intro}
+            {/* Nothing until the count arrives. The line this used to fall back to was a
+                sentence that named the table it sits above, and it was replaced half a second
+                later by the count anyway. */}
+            {query.data && (filtered ? t.matching(query.data.totalCount) : t.onRecord(query.data.totalCount))}
           </p>
         </div>
 

@@ -50,7 +50,6 @@ export function ProfilePage() {
     <div className="max-w-3xl space-y-4">
       <div>
         <h2 className="text-lg font-medium tracking-tight">{profile.title}</h2>
-        <p className="text-muted-foreground mt-1 text-sm">{profile.intro}</p>
       </div>
 
       <Identity
@@ -84,7 +83,6 @@ function Identity({
     <Card>
       <CardHeader>
         <CardTitle>{identity.title}</CardTitle>
-        <CardDescription>{identity.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">

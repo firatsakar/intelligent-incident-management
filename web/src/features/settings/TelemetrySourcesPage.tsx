@@ -123,6 +123,8 @@ export function TelemetrySourcesPage() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
+        {/* Not a description of the page. Operators assume an observability product monitors its
+            own services; this one does not, and nothing else in the product corrects that. */}
         <p className="text-muted-foreground mt-1 text-sm">{t.intro}</p>
       </div>
 

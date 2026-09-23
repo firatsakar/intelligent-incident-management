@@ -46,7 +46,6 @@ export function SettingsLayout() {
       <div className="space-y-4">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold tracking-tight">{settingsNav.title}</h1>
-          <p className="text-muted-foreground mt-1 text-sm">{settingsNav.intro}</p>
         </div>
 
         {/* overflow-x-auto is insurance rather than an expected state: three labels fit a phone.

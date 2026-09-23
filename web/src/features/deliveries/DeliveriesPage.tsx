@@ -52,7 +52,11 @@ export function DeliveriesPage() {
   const preset = params.get('window') ?? defaultDeliveryWindow
   const query = useNotificationStats(preset)
 
-  const scope = windowText.scope[resolveWindowPreset(preset)]
+  const preset_ = resolveWindowPreset(preset)
+  const scope = windowText.scope[preset_]
+  // The totals card's description is now only the scope, so it starts a line and takes the
+  // capitalised entry rather than being upper-cased here.
+  const scopeCap = windowText.scopeCap[preset_]
 
   return (
     <div className="space-y-4">
@@ -76,7 +80,7 @@ export function DeliveriesPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
           {query.data ? (
-            <TotalsCard stats={query.data} scope={scope} />
+            <TotalsCard stats={query.data} scope={scopeCap} />
           ) : (
             <Skeleton className="h-64 w-full" />
           )}
@@ -297,8 +301,6 @@ const verdictStyle: Record<Verdict, { className: string; icon: LucideIcon }> = {
 function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
   const t = useT().deliveries.byIntegration
 
-  const anyMissingMedian = stats.integrations.some((row) => row.medianDispatchSeconds === null)
-
   return (
     <Card>
       <CardHeader>
@@ -320,11 +322,10 @@ function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: s
           </ul>
         )}
 
-        {anyMissingMedian && (
-          // Said once, here, rather than on every row that has one. An em dash with no explanation
-          // invites the reader to supply one, and the one they supply is "zero".
-          <p className="text-muted-foreground text-xs">{t.medianNote}</p>
-        )}
+        {/* The em dash is explained by the dispatch card above rather than here. That card
+            renders `noneSucceeded` when every median is null and `dashNote` when only some are,
+            so exactly one of the two is already on screen whenever this note would have been —
+            the fact was being stated twice, always. */}
       </CardContent>
     </Card>
   )
