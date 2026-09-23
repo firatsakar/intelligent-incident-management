@@ -65,6 +65,17 @@ export function describeSchedule(t: Dictionary, source: TelemetrySource): string
   return describeDraftSchedule(t, source.pollIntervalSeconds, source.config.Filter ?? '')
 }
 
+/**
+ * What the source selects, with no cadence and no verb — the paused row builds its own sentence
+ * around it, and a language has to be free to put the interval somewhere else in that sentence.
+ */
+export function scheduleTarget(t: Dictionary, filter: string): string {
+  const text = t.settings.telemetry
+  const trimmed = filter.trim()
+
+  return trimmed ? text.matching(trimmed) : text.defaultFilter
+}
+
 /** The same sentence for a source that does not exist yet, where there is no stored config. */
 export function describeDraftSchedule(
   t: Dictionary,

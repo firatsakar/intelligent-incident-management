@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { WindowSelect } from '@/components/WindowSelect'
-import { formatCount, severityClass, signalStatusClass } from '@/lib/format'
+import { formatCount, formatPercent, severityClass, signalStatusClass } from '@/lib/format'
 import { T, useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { resolveWindowPreset } from '@/lib/window'
@@ -213,7 +213,7 @@ function Split({
       <span aria-hidden className={cn('size-2.5 shrink-0 rounded-[3px]', fill)} />
       <dt className="text-muted-foreground">{label}</dt>
       <dd className={cn('font-medium tabular-nums', value === 0 && 'text-dim-foreground')}>
-        {formatCount(value)} · {total > 0 ? Math.round((value / total) * 100) : 0}%
+        {formatCount(value)} · {formatPercent(total > 0 ? Math.round((value / total) * 100) : 0)}
       </dd>
     </div>
   )
@@ -459,7 +459,7 @@ function Verdict({ band, count, total }: { band: SignalStatus; count: number; to
             count === 0 ? 'text-dim-foreground' : 'text-muted-foreground',
           )}
         >
-          {formatCount(count)} · {share}%
+          {formatCount(count)} · {formatPercent(share)}
         </span>
       </div>
 

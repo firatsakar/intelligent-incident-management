@@ -108,7 +108,7 @@ export const tr: Dictionary = {
       offline: 'Ekranlar çalışmaya devam ediyor ama kendiliğinden güncellenmiyor.',
     },
 
-    suffix: '— canlı bağlantı',
+    suffix: '— gerçek zamanlı bağlantı',
   },
 
   settingsNav: {
@@ -210,8 +210,6 @@ export const tr: Dictionary = {
       filterPriority: 'Önceliğe göre süz',
       anyStatus: 'Her durum',
       anyPriority: 'Her öncelik',
-      anyStatusInline: 'herhangi bir durumda',
-      anyPriorityInline: 'herhangi bir öncelikte',
       clear: 'Temizle',
       clearFilters: 'Filtreleri temizle',
 
@@ -230,7 +228,10 @@ export const tr: Dictionary = {
 
       emptyFilteredTitle: 'Bu filtrelere uyan bir şey yok.',
       emptyFiltered: (status: string, priority: string) =>
-        `Kayıtta olaylar var; hiçbiri aynı anda hem ${status} hem ${priority} değil.`,
+        `Kayıtta olaylar var; hiçbiri aynı anda hem ${status} hem ${priority} öncelikli değil.`,
+      emptyFilteredStatus: (status: string) => `Kayıtta olaylar var; hiçbiri ${status} değil.`,
+      emptyFilteredPriority: (priority: string) =>
+        `Kayıtta olaylar var; hiçbiri ${priority} öncelikli değil.`,
       emptyTitle: 'Kayıtta hiç olay yok.',
       empty: 'Elle açılmış bir şey yok ve henüz hiçbir şey bir tespit kuralını aşmadı.',
 
@@ -266,9 +267,9 @@ export const tr: Dictionary = {
       openedByHand: 'Elle açıldı',
       openedByHandDetail:
         'Bunu hiçbir şey tespit etmedi, yani ölçülecek bir tespit gecikmesi de yok — platform fark etmedi, kendisine söylendi. Aşağıdaki puan dökümünün olmamasının sebebi de aynı.',
-      problemStarted: 'Sorun başladı',
+      problemStarted: 'Sorunun başlangıcı',
       sourceClock: 'kaynağın saatiyle',
-      incidentOpened: 'Olay açıldı',
+      incidentOpened: 'Olayın açılışı',
       ourClock: 'bizimkiyle',
       detectionLatency: 'Tespit gecikmesi',
       clockDisagreement: 'Saat uyuşmazlığı',
@@ -285,22 +286,22 @@ export const tr: Dictionary = {
       title: 'Zaman çizelgesi',
       description: 'Bir zaman eksikse, bu ekrandan değil kayıttan eksiktir.',
 
-      problemStarted: 'Sorun başladı',
+      problemStarted: 'Sorunun başlangıcı',
       onSourceClock: 'Kaynağın saatiyle, bizimkiyle değil.',
       notRecorded: 'Kaydedilmedi — bu olay elle açıldı.',
 
-      incidentOpened: 'Olay açıldı',
+      incidentOpened: 'Olayın açılışı',
       toDetect: (duration: string) => `tespit için +${duration}`,
       ourClockGap: 'Bizim saatimiz. Yukarıdaki aralık tespitin maliyeti.',
 
-      analysisApplied: 'Analiz işlendi',
+      analysisApplied: 'Analizin işlenmesi',
       categorised: (category: string, priority: string) =>
         `${category} olarak sınıflandı, öncelik ${priority} yapıldı`,
-      applied: 'İşlendi.',
+      applied: 'İşlendi — analiz kategori döndürmedi.',
       analysisFailed: 'Analiz çalıştı ve hiçbir şey döndürmedi. Sebebi için panele bakın.',
       analysisWaiting: 'Analiz servisi bekleniyor.',
 
-      peopleNotified: 'Bildirimler gönderildi',
+      peopleNotified: 'Bildirim gönderimi',
       afterOpening: (duration: string) => `açılıştan +${duration} sonra`,
       channelsDelivered: (sent: number, total: number) =>
         `${total} kanaldan ${sent} tanesi ulaştı`,
@@ -320,7 +321,7 @@ export const tr: Dictionary = {
       description: 'Bir yargı değil, belirlenimci bir puan.',
 
       total: 'Toplam',
-      totalNote: 'yukarıdaki terimlerin toplamı, 1.00 ile sınırlı',
+      totalNote: 'yukarıdaki terimlerin toplamı, 1,00 ile sınırlı',
       confidence: 'Güven',
       confidenceNote: 'puanlama atlandı',
 
@@ -510,14 +511,16 @@ export const tr: Dictionary = {
         'Hatalar loglandı ama hiçbir patlama bir tespit kuralını aşmadı, yani kapının karar verecek bir şeyi olmadı.',
 
       arrived: (records: number) =>
-        `Bu pencere okunduğundan beri ${records} yeni log kaydı alındı`,
-      acrossPolls: (polls: number) => `, ${polls} sorgulamada`,
+        `Bu pencere okunduğundan beri ${records} yeni log kaydı alındı.`,
+      arrivedAcrossPolls: (records: number, polls: number) =>
+        `Bu pencere okunduğundan beri ${polls} sorgulamada ${records} yeni log kaydı alındı.`,
       allServicesNote: ' Yalnızca burada süzülen servis için değil, tüm servisler için sayıldı.',
       reread: 'Pencereyi yeniden oku',
       rereading: 'Yeniden okunuyor…',
 
       clockSkew: 'saat kayması',
       ingestionLag: 'Alım gecikmesi — kaynağın zaman damgasından bizimkine',
+      lag: (duration: string) => `+${duration}`,
       muted: 'susturulmuş',
       signatureCounts: (
         total: number,
@@ -536,8 +539,8 @@ export const tr: Dictionary = {
       notRaised: 'Yükseltilmedi',
       notRaisedDescription: (scope: string) => `${scope}.`,
       ofScored: (signals: number) => `/ kapının puanladığı ${signals} sinyal`,
-      heldBack: 'geri tutuldu',
-      actedOn: 'işlem yapıldı',
+      heldBack: 'geri tutulan',
+      actedOn: 'işlem yapılan',
 
       zeroHeldBack:
         'Kapı bu pencerede puanladığı her şeye işlem yaptı — {count} tanesinin hepsi eşiği aştı, yani geri tutulacak bir şey kalmadı. {emphasis} Neye baktığı yanındaki sayı ve aşağıdaki aşamalar.',
@@ -546,7 +549,7 @@ export const tr: Dictionary = {
       someHeldBack: (notRaised: string, signals: string) =>
         `${signals} sinyalden ${notRaised} tanesi puanlandı ve olduğu yerde bırakıldı: olay yok, çağrı yok, e-posta yok. Bir alerting kuralının yapamayacağı şey tam olarak bu — geri okuyabileceğiniz bir aritmetiğe dayanarak, bunun bir insana değmediğine karar vermek.`,
       deduplicated: (count: number) =>
-        `${count} tekilleştirilmiş sinyal, geri tutulmuş değil işlem yapılmış sayılıyor. Her biri zaten açık olan bir olayın içine katlandı, yani birisi uyandırıldı — sadece daha önce.`,
+        `${count} tekilleştirilmiş sinyal, geri tutulmuş değil işlem yapılmış sayılıyor. Her biri zaten açık olan bir olayın içine katlandı, yani biri uyandırıldı — sadece daha önce.`,
 
       nothingScored: 'Bu pencerede hiçbir şey puanlanmadı.',
       nothingScoredRecords: (records: string, _count: number) =>
@@ -589,7 +592,7 @@ export const tr: Dictionary = {
         `Kapının verebileceği her karar ve her birine kaç tanesinin düştüğü — ${scope}.`,
       noVerdicts: 'Kapı bu pencerede hiçbir şey puanlamadı, yani bunların hiçbirine ulaşmadı.',
 
-      wokenHeading: 'Birisi uyandırıldı',
+      wokenHeading: 'Biri uyandırıldı',
       wokenNote: 'Geri tutulmuş sayılmıyor.',
       notWokenHeading: 'Kimse uyandırılmadı',
       notWokenNote: '"Yükseltilmedi" tam olarak bu üçünü sayıyor.',
@@ -629,9 +632,10 @@ export const tr: Dictionary = {
       goneHint:
         'Bu sinyaller tespit edildi, ama arkalarındaki hata imzası o zamandan beri silindi — ve servis adı imzanın üstünde duruyordu. Sayılar gerçek; ait oldukları ad geri getirilemez.',
 
-      folded: (records: string, promoted: string, incidents: string) =>
-        `${records} kayıt · ${promoted} terfi · ${incidents} olay · `,
-      occurrences: (_count: number) => 'kez',
+      folded: (records: string, promoted: string, incidents: string, signature: string) =>
+        `${records} kayıt · ${promoted} terfi · ${incidents} olay · ${signature}`,
+      occurrences: (count: string, _raw: number) => `${count} kez`,
+      topSignature: (signature: string, occurrences: string) => `${signature} · ${occurrences}`,
       noSignal: 'Bu pencerede bu servisten sinyal yok',
 
       signatureGone: 'imza artık kayıtta değil',
@@ -667,9 +671,9 @@ export const tr: Dictionary = {
       description: (scope: string) => `${scope}, UTC.`,
       empty:
         'Bu pencerede olay yok, yani fark edilmiş olacak bir şey de yok. Daha uzun bir pencere deneyin.',
-      share: 'platform kendi fark etti',
-      noticed: 'Fark edildi',
-      filed: 'Elle açıldı',
+      share: 'platformun kendi fark ettiği olaylar',
+      noticed: 'Fark edilen',
+      filed: 'Elle açılan',
       median: 'Medyan gecikme',
       p95: '95. yüzdelik',
       nothingNoticed:
@@ -733,8 +737,8 @@ export const tr: Dictionary = {
         `/ ${channels} entegrasyonda denenen ${total} teslimattan başarısız`,
 
       failed: 'başarısız',
-      sent: 'gönderildi',
-      pending: 'beklemede',
+      sent: 'gönderilen',
+      pending: 'bekleyen',
 
       someFailing: (failing: string, _count: number) =>
         `Bu pencerede ${failing} entegrasyon bir başarısızlık kaydetti. Hangisi, ne zaman ve kanalın ne cevap verdiği aşağıdaki satırlarda.`,
@@ -773,7 +777,7 @@ export const tr: Dictionary = {
       empty:
         'Bir entegrasyon burada ancak raporlayacak bir şeyi olduğunda görünür. Yapılandırılmış ve etkin ama bu pencerede hiç ulaşılmamış olan bu listede değildir — neyin var olduğunun listesi Ayarlar › Entegrasyonlar.',
 
-      disabled: 'duraklatılmış',
+      disabled: 'Duraklatıldı',
       deletedNote:
         'Bu entegrasyon silindi. Teslimatları bilerek saklanıyor — birine haber verildiğinin kaydı onlar — yani aşağıdaki sayılar hâlâ doğru, ait oldukları ad ve kanal ise yok.',
       id: (short: string) => `id ${short}`,
@@ -782,7 +786,7 @@ export const tr: Dictionary = {
       sent: 'Gönderildi',
       failed: 'Başarısız',
       pending: 'Beklemede',
-      median: 'Medyan gönderim',
+      median: 'Medyan süre',
       lastSent: 'Son gönderim',
     },
   },
@@ -902,17 +906,19 @@ export const tr: Dictionary = {
       connectTitle: (channel: string) => `${channel} bağla`,
       namePlaceholder: (channel: string) => `${channel} — nöbet`,
       nameHint: 'Bu entegrasyonun entegrasyonlar sayfasında nasıl tanınacağı.',
-      minPriority: 'Asgari öncelik',
+      minPriority: 'En düşük öncelik',
       anyPriority: 'Her öncelik',
       andAbove: (priority: string) => `${priority} ve üstü`,
       categoryFilter: 'Kategori filtresi',
       categoryPlaceholder: 'Her kategori',
 
-      sends: (parts: string) => `Gönderir: ${parts}`,
-      sendsEverything: 'Her olayı gönderir — filtre ayarlanmamış',
+      sends: (parts: string) => `Gönderir: ${parts}.`,
+      sendsEverything: 'Her olayı gönderir — filtre ayarlanmamış.',
       category: (value: string) => `kategori ${value}`,
-      pausedNote: (filters: string) =>
-        `— buraya bir şey gönderilmiyor; devam ettirilirse: ${filters}.`,
+      pausedNote: (parts: string) =>
+        `— buraya bir şey gönderilmiyor. Devam ettirilirse gönderecekleri: ${parts}.`,
+      pausedNoteEverything:
+        '— buraya bir şey gönderilmiyor. Devam ettirilirse her olayı gönderecek.',
     },
 
     telemetry: {
@@ -972,12 +978,14 @@ export const tr: Dictionary = {
       pollInvalid: (minimum: number) =>
         `Tam sayı olarak ${minimum} saniye ya da daha fazlasını girin. Bundan daha sık sorgulamak kaynağı boşuna yorar.`,
 
+      // "sorguluyor" rather than "bakıyor": the form label two rows above says "Sorgulama
+      // aralığı", and one screen should not have two verbs for one action.
       polls: (seconds: number, what: string) =>
-        `${what} için her ${seconds} saniyede bir bakıyor`,
+        `${what} için her ${seconds} saniyede bir sorguluyor.`,
       matching: (filter: string) => `${filter} ile eşleşen kayıtlar`,
       defaultFilter: 'hata ve ölümcül kayıtlar',
-      pausedNote: (schedule: string) =>
-        `— buradan bir şey okunmuyor; devam ettirilirse: ${schedule}.`,
+      pausedNote: (seconds: number, what: string) =>
+        `— buradan bir şey okunmuyor. Devam ettirilirse ${what} için her ${seconds} saniyede bir sorgulayacak.`,
     },
   },
 
@@ -1073,11 +1081,15 @@ export const tr: Dictionary = {
   },
 
   format: {
+    percent: (value: number) => `%${value}`,
+
+    // Turkish separates the abbreviation from the figure, and `minutesAgo` beside it already
+    // did — the two halves of one object were disagreeing.
     span: {
-      milliseconds: (value: number) => `${value}ms`,
-      seconds: (value: string) => `${value}sn`,
-      minutesSeconds: (minutes: number, seconds: number) => `${minutes}dk ${seconds}sn`,
-      hoursMinutes: (hours: number, minutes: number) => `${hours}sa ${minutes}dk`,
+      milliseconds: (value: number) => `${value} ms`,
+      seconds: (value: string) => `${value} sn`,
+      minutesSeconds: (minutes: number, seconds: number) => `${minutes} dk ${seconds} sn`,
+      hoursMinutes: (hours: number, minutes: number) => `${hours} sa ${minutes} dk`,
     },
 
     justNow: 'az önce',

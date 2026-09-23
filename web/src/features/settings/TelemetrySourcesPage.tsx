@@ -35,7 +35,13 @@ import {
   type TestOutcome,
 } from './SettingsCatalogue'
 import { TelemetrySourceDialog } from './TelemetrySourceDialog'
-import { connectable, describeSchedule, planned, type SourceCatalogueEntry } from './telemetryCatalogue'
+import {
+  connectable,
+  describeSchedule,
+  planned,
+  scheduleTarget,
+  type SourceCatalogueEntry,
+} from './telemetryCatalogue'
 
 // The same catalogue the integrations screen uses, pointed the other way: that page is where
 // findings go, this one is where they come from. A tile is a connector *type* holding its own
@@ -415,11 +421,14 @@ function SourceRow({
           someone who cannot see the toggle, and it changes what the schedule line means. */}
       <p className="text-muted-foreground mt-1 text-xs">
         {source.isEnabled ? (
-          `${describeSchedule(dictionary, source)}.`
+          describeSchedule(dictionary, source)
         ) : (
           <>
             <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
-            {t.pausedNote(describeSchedule(dictionary, source))}
+            {t.pausedNote(
+              source.pollIntervalSeconds,
+              scheduleTarget(dictionary, source.config.Filter ?? ''),
+            )}
           </>
         )}
       </p>

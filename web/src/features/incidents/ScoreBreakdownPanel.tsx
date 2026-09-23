@@ -4,7 +4,7 @@ import { telemetryApi } from '@/api/endpoints'
 import { InfoHint } from '@/components/InfoHint'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatScore, scoreTerm, scoreTermHelp } from '@/lib/format'
+import { formatDecimal, formatScore, scoreTerm, scoreTermHelp } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { Incident } from '@/types/api'
@@ -105,7 +105,7 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
               {scored ? t.totalNote : t.confidenceNote}
             </span>
           </span>
-          <span className="text-base font-semibold tabular-nums">{total.toFixed(2)}</span>
+          <span className="text-base font-semibold tabular-nums">{formatDecimal(total, 2)}</span>
         </div>
 
         <p className="text-muted-foreground text-sm break-words">

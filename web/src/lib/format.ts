@@ -22,6 +22,17 @@ function buildFormatters(locale: string) {
     timeOnly: new Intl.DateTimeFormat(locale, { timeStyle: 'medium' }),
     wholeNumber: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
 
+    // One fraction digit for a duration, two for a score. Fixed rather than maximum, because a
+    // score panel whose rows are 0,55 and 0,3 does not read as arithmetic.
+    oneDecimal: new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }),
+    twoDecimals: new Intl.NumberFormat(locale, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }),
+
     // Day buckets are cut in UTC on the server, so their labels are pinned to UTC here rather
     // than passed through the operator's zone like every other timestamp in this file.
     // Formatting them locally would move a bucket by a day for anyone west of Greenwich, and the
@@ -53,6 +64,27 @@ export function formatCount(value: number): string {
   return intl().wholeNumber.format(value)
 }
 
+/**
+ * A score, a total, anything with a fixed number of decimals.
+ *
+ * `toFixed` was doing this and always writes a dot. Turkish writes a comma, and the console was
+ * already writing a comma for thousands through `formatCount` — so the same screen had a dot
+ * meaning "decimal" and a dot meaning "thousands".
+ */
+export function formatDecimal(value: number, digits: 1 | 2): string {
+  return digits === 1 ? intl().oneDecimal.format(value) : intl().twoDecimals.format(value)
+}
+
+/**
+ * A percentage with its sign where the language puts it.
+ *
+ * English writes 38%, Turkish writes %38. It was a literal `%` in five components, which is a
+ * punctuation mark carrying a grammar rule.
+ */
+export function formatPercent(value: number): string {
+  return activeDictionary().format.percent(value)
+}
+
 export function formatDateTime(value: string | null | undefined): string {
   return value ? intl().dateTime.format(new Date(value)) : '—'
 }
@@ -77,7 +109,7 @@ function renderSpan(ms: number): string {
   // it a double now — a dispatch median of 0.073502 seconds — and unrounded that prints as
   // "73.502ms", which claims a precision the measurement does not have.
   if (abs < 1000) return `${sign}${span.milliseconds(Math.round(abs))}`
-  if (abs < 60_000) return `${sign}${span.seconds((abs / 1000).toFixed(1))}`
+  if (abs < 60_000) return `${sign}${span.seconds(formatDecimal(abs / 1000, 1))}`
 
   if (abs < 3_600_000) {
     return `${sign}${span.minutesSeconds(Math.floor(abs / 60_000), Math.round((abs % 60_000) / 1000))}`
@@ -140,7 +172,7 @@ export function formatRelative(value: string | null | undefined): string {
 export function formatConfidence(value: number | null | undefined): string {
   return value === null || value === undefined
     ? activeDictionary().format.notGiven
-    : `${Math.round(value * 100)}%`
+    : formatPercent(Math.round(value * 100))
 }
 
 /**
@@ -162,7 +194,7 @@ export function confidenceBand(value: number | null | undefined): string | null 
 }
 
 export function formatScore(value: number): string {
-  const rendered = value.toFixed(2)
+  const rendered = formatDecimal(value, 2)
 
   return value > 0 ? `+${rendered}` : rendered
 }

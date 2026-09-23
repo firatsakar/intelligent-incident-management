@@ -296,14 +296,18 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
         {/* What the narrow layouts drop, folded back in here rather than lost. The outer span goes
             away only once every column it carries is on screen. */}
         <span className="text-muted-foreground mt-0.5 block text-xs whitespace-normal xl:hidden">
+          {/* The whole folded line, separator included, is one entry now. It used to end with
+              a trailing ` · ` and let the component append the signature after it — a dictionary
+              string whose last characters punctuated something it could not see. */}
           <span className="md:hidden">
             {t.folded(
               formatCount(row.logRecords),
               formatCount(row.promoted),
               formatCount(row.incidents),
+              signature,
             )}
           </span>
-          {signature}
+          <span className="hidden md:inline">{signature}</span>
         </span>
       </TableCell>
 
@@ -319,8 +323,10 @@ function ServiceRow({ row }: { row: ServiceHealth }) {
               {row.topSignature}
             </span>
             <span className="text-muted-foreground block text-xs tabular-nums">
-              {formatCount(row.topSignatureOccurrences)}{' '}
-              {t.occurrences(row.topSignatureOccurrences)}
+              {t.occurrences(
+                formatCount(row.topSignatureOccurrences),
+                row.topSignatureOccurrences,
+              )}
             </span>
           </>
         ) : (
@@ -360,7 +366,12 @@ function Count({ className, value }: { className: string; value: number }) {
  */
 function describeTopSignature(t: ServicesText, row: ServiceHealth): string {
   if (row.topSignature) {
-    return `${row.topSignature} · ${formatCount(row.topSignatureOccurrences)}`
+    // Was assembled here with a bare count, which left the table cell reading "812 kez" and this
+    // line reading "812" — the same number, one with a unit and one without.
+    return t.topSignature(
+      row.topSignature,
+      t.occurrences(formatCount(row.topSignatureOccurrences), row.topSignatureOccurrences),
+    )
   }
 
   return row.signals > 0 ? t.signatureGone : t.nothingCrossed

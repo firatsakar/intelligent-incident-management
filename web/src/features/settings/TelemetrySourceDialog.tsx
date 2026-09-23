@@ -161,7 +161,7 @@ export function TelemetrySourceDialog({
               className={cn('text-xs', pollIsValid ? 'text-muted-foreground' : 'text-alarm-ink')}
             >
               {pollIsValid
-                ? `${describeDraftSchedule(dictionary, parsedPoll, values.Filter ?? '')}.`
+                ? describeDraftSchedule(dictionary, parsedPoll, values.Filter ?? '')
                 : t.pollInvalid(minimumPollSeconds)}
             </p>
           </div>

@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatSeconds, priorityBackground } from '@/lib/format'
+import { formatPercent, formatSeconds, priorityBackground } from '@/lib/format'
 import { T, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
@@ -255,7 +255,9 @@ function DetectionCard({ detection, days }: { detection: DetectionLatency; days:
         ) : (
           <>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl leading-none font-semibold tabular-nums">{share}%</span>
+              <span className="text-3xl leading-none font-semibold tabular-nums">
+                {formatPercent(share ?? 0)}
+              </span>
               <span className="text-muted-foreground text-sm">{t.share}</span>
             </div>
 
@@ -338,7 +340,7 @@ function SourcesCard({
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-sm font-medium">{labels.incidentSource[key]}</span>
                     <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
-                      {count} · {share}%
+                      {count} · {formatPercent(share)}
                     </span>
                   </div>
 

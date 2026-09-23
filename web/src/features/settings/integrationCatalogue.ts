@@ -70,3 +70,25 @@ export function describeFilters(
 
   return parts.length > 0 ? text.sends(parts.join(' · ')) : text.sendsEverything
 }
+
+/**
+ * The same filters as the *parts* of somebody else's sentence, with no verb and no full stop.
+ *
+ * The paused row needs to say "when resumed it will send X", and X cannot be a finished
+ * sentence — spliced in, the English bound "when resumed" to the wrong clause and the Turkish
+ * ended up with two colons. Null means there are no filters at all, which is a different
+ * sentence rather than an empty one.
+ */
+export function filterParts(
+  t: Dictionary,
+  minPriority: Integration['minPriority'],
+  categoryFilter: Integration['categoryFilter'],
+): string | null {
+  const text = t.settings.integrations
+  const parts: string[] = []
+
+  if (minPriority) parts.push(text.andAbove(t.labels.priority[minPriority]))
+  if (categoryFilter) parts.push(text.category(categoryFilter))
+
+  return parts.length > 0 ? parts.join(' · ') : null
+}

@@ -240,9 +240,6 @@ export const en = {
       filterPriority: 'Filter by priority',
       anyStatus: 'Any status',
       anyPriority: 'Any priority',
-      /** The same two, as they read inside the empty-state sentence rather than in a control. */
-      anyStatusInline: 'any status',
-      anyPriorityInline: 'any priority',
       clear: 'Clear',
       clearFilters: 'Clear filters',
 
@@ -261,8 +258,15 @@ export const en = {
 
       // Two different situations, and only one of them is fixable by touching the filters.
       emptyFilteredTitle: 'Nothing matches these filters.',
+      // One sentence per filter combination rather than one sentence with two holes. Spliced,
+      // the unset half read "none of them is both Open and any priority" — which says every
+      // incident has no priority, and the Turkish said it more explicitly still.
       emptyFiltered: (status: string, priority: string) =>
-        `There are incidents on record; none of them is both ${status} and ${priority}.`,
+        `There are incidents on record; none of them is both ${status} and ${priority} priority.`,
+      emptyFilteredStatus: (status: string) =>
+        `There are incidents on record; none of them is ${status}.`,
+      emptyFilteredPriority: (priority: string) =>
+        `There are incidents on record; none of them is ${priority} priority.`,
       emptyTitle: 'No incidents on record.',
       empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
 
@@ -331,7 +335,7 @@ export const en = {
       analysisApplied: 'Analysis applied',
       categorised: (category: string, priority: string) =>
         `Categorised as ${category}, priority set to ${priority}`,
-      applied: 'Applied.',
+      applied: 'Applied — the analysis returned no category.',
       analysisFailed: 'The analysis ran and returned nothing. See the panel for the reason.',
       analysisWaiting: 'Waiting on the analysis service.',
 
@@ -582,8 +586,12 @@ export const en = {
         'Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide.',
 
       arrived: (records: number) =>
-        `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested since this window was read`,
-      acrossPolls: (polls: number) => `, across ${polls} polls`,
+        `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested since this window was read.`,
+      // A whole second sentence rather than a clause appended after the full stop. Turkish puts
+      // the adverbial before the verb, and it could not move a fragment the component had
+      // already punctuated.
+      arrivedAcrossPolls: (records: number, polls: number) =>
+        `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested across ${polls} polls since this window was read.`,
       // The tick counts records, not records matching a filter: the summary is per source, and
       // the service a record belongs to is not in it.
       allServicesNote: ' Counted across all services, not just the one filtered here.',
@@ -592,6 +600,8 @@ export const en = {
 
       clockSkew: 'clock skew',
       ingestionLag: 'Ingestion lag — from the source’s timestamp to ours',
+      /** The column has no visible heading, so the affix is the whole of what it says. */
+      lag: (duration: string) => `+${duration}`,
       muted: 'muted',
       signatureCounts: (
         total: number,
@@ -713,10 +723,14 @@ export const en = {
       goneHint:
         'These signals were detected, but the error signature behind them has since been deleted — and the service name lived on the signature. The counts are real; the name they belong to is not recoverable.',
 
-      folded: (records: string, promoted: string, incidents: string) =>
-        `${records} records · ${promoted} promoted · ${incidents} incidents · `,
-      occurrences: (count: number) =>
-        plural('en', count, { one: 'occurrence', other: 'occurrences' }),
+      folded: (records: string, promoted: string, incidents: string, signature: string) =>
+        `${records} records · ${promoted} promoted · ${incidents} incidents · ${signature}`,
+      // Takes the count and embeds it, like `telemetry.signals.occurrences` — the two had the
+      // same name and opposite contracts, which is how the same number ended up printed with a
+      // unit in the table and without one on the folded line.
+      occurrences: (count: string, raw: number) =>
+        `${count} ${plural('en', raw, { one: 'occurrence', other: 'occurrences' })}`,
+      topSignature: (signature: string, occurrences: string) => `${signature} · ${occurrences}`,
       noSignal: 'No signal from this service in this window',
 
       signatureGone: 'signature no longer on record',
@@ -878,7 +892,7 @@ export const en = {
 
       // Only for an integration that still exists. A deleted one reads as disabled through the
       // same field, and saying "disabled" about something that is gone is two wrong words.
-      disabled: 'paused',
+      disabled: 'Paused',
       deletedNote:
         'This integration has been deleted. Its deliveries are kept on purpose — they are the record that somebody was told — so the counts below are still true, and the name and channel they belonged to are gone.',
       id: (short: string) => `id ${short}`,
@@ -1022,10 +1036,15 @@ export const en = {
 
       // An integration with no filters matches every incident. Left as two blank form controls
       // that is indistinguishable from an unfinished setup, so the rule is written out.
-      sends: (parts: string) => `Sends ${parts}`,
-      sendsEverything: 'Sends every incident — no filters set',
+      sends: (parts: string) => `Sends ${parts}.`,
+      sendsEverything: 'Sends every incident — no filters set.',
       category: (value: string) => `category ${value}`,
-      pausedNote: (filters: string) => `— nothing is sent here. ${filters} when resumed.`,
+      // Two whole sentences rather than one that splices a finished sentence into itself. The
+      // spliced version read "Sends every incident — no filters set when resumed", which binds
+      // the condition to the wrong clause.
+      pausedNote: (parts: string) =>
+        `— nothing is sent here. When resumed it will send ${parts}.`,
+      pausedNoteEverything: '— nothing is sent here. When resumed it will send every incident.',
     },
 
     telemetry: {
@@ -1090,10 +1109,11 @@ export const en = {
 
       // A source with no filter still reads something specific, and the pair of blank form
       // controls that produced it does not say what.
-      polls: (seconds: number, what: string) => `Polls every ${seconds}s for ${what}`,
+      polls: (seconds: number, what: string) => `Polls every ${seconds}s for ${what}.`,
       matching: (filter: string) => `events matching ${filter}`,
       defaultFilter: 'errors and fatals',
-      pausedNote: (schedule: string) => `— nothing is read from here. ${schedule} when resumed.`,
+      pausedNote: (seconds: number, what: string) =>
+        `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
     },
   },
 
@@ -1222,6 +1242,9 @@ export const en = {
      * "1m 30s" in adjacent columns — `formatRelative` had been translated and `renderSpan`, in
      * the same file, had not.
      */
+    /** English puts the sign after the figure; Turkish puts it before. */
+    percent: (value: number) => `${value}%`,
+
     span: {
       milliseconds: (value: number) => `${value}ms`,
       seconds: (value: string) => `${value}s`,

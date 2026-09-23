@@ -193,10 +193,14 @@ export function IncidentListPage() {
                     <>
                       <p className="text-sm font-medium">{t.emptyFilteredTitle}</p>
                       <p className="text-muted-foreground mt-1 text-sm">
-                        {t.emptyFiltered(
-                          status ? labels.incidentStatus[status] : t.anyStatusInline,
-                          priority ? labels.priority[priority] : t.anyPriorityInline,
-                        )}
+                        {status && priority
+                          ? t.emptyFiltered(
+                              labels.incidentStatus[status],
+                              labels.priority[priority],
+                            )
+                          : status
+                            ? t.emptyFilteredStatus(labels.incidentStatus[status])
+                            : t.emptyFilteredPriority(labels.priority[priority!])}
                       </p>
                       <Button variant="outline" className="mt-3" onClick={clearFilters}>
                         <FilterXIcon aria-hidden />

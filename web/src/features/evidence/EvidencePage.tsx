@@ -319,8 +319,7 @@ function Arrivals({
       className="bg-info border-info-border text-info-foreground flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 text-sm"
     >
       <span className="min-w-0 tabular-nums">
-        {t.arrived(records)}
-        {polls > 1 && t.acrossPolls(polls)}.
+        {polls > 1 ? t.arrivedAcrossPolls(records, polls) : t.arrived(records)}
         {/* The tick counts records, not records matching a filter: the summary is per source, and
             the service a record belongs to is not in it. Saying so beats a number that silently
             means something else than the panel below it. */}
@@ -395,7 +394,7 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
         className="text-dim-foreground hidden w-16 shrink-0 text-right text-xs tabular-nums md:block"
         title={telemetry.evidence.ingestionLag}
       >
-        +{formatDuration(record.timestamp, record.ingestedAt)}
+        {telemetry.evidence.lag(formatDuration(record.timestamp, record.ingestedAt))}
       </span>
     </li>
   )

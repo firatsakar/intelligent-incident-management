@@ -31,6 +31,7 @@ import { IntegrationDialog } from './IntegrationDialog'
 import {
   connectable,
   describeFilters,
+  filterParts,
   planned,
   type CatalogueEntry,
 } from './integrationCatalogue'
@@ -409,13 +410,19 @@ function InstanceRow({
           someone who cannot see the toggle, and it changes what the filter line means. */}
       <p className="text-muted-foreground mt-1 text-xs">
         {integration.isEnabled ? (
-          `${describeFilters(dictionary, integration.minPriority, integration.categoryFilter)}.`
+          describeFilters(dictionary, integration.minPriority, integration.categoryFilter)
         ) : (
           <>
             <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
-            {t.pausedNote(
-              describeFilters(dictionary, integration.minPriority, integration.categoryFilter),
-            )}
+            {(() => {
+              const parts = filterParts(
+                dictionary,
+                integration.minPriority,
+                integration.categoryFilter,
+              )
+
+              return parts === null ? t.pausedNoteEverything : t.pausedNote(parts)
+            })()}
           </>
         )}
       </p>
