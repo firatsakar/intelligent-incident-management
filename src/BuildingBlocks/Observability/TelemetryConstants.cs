@@ -9,6 +9,7 @@ public static class TelemetryConstants
         public const string TelemetryIngestionService = "telemetry-ingestion-service";
         public const string AgentOrchestrator = "agent-orchestrator";
         public const string Gateway = "gateway";
+        public const string IdentityService = "identity-service";
     }
 
     public static class ActivitySources

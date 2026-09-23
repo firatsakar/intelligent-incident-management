@@ -86,6 +86,23 @@ services:
       timeout: 10s
       retries: 5
 
+  postgres_identity:
+    image: postgres:16
+    container_name: postgres_identity
+    environment:
+      POSTGRES_USER: ${IDENTITY_DB_USER}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASS}
+      POSTGRES_DB: ${IDENTITY_DB_NAME}
+    volumes:
+      - postgres_identity_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER} -d ${IDENTITY_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   seq:
     image: datalust/seq:latest
     container_name: incident-management-seq
@@ -190,6 +207,7 @@ volumes:
   postgres_notification_data:
   postgres_telemetry_data:
   postgres_agent_data:
+  postgres_identity_data:
   incident-management-seq_data:
   incident-management-seq-demo_data:
   incident-management-pgadmin_data:

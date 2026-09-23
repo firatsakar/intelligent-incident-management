@@ -40,6 +40,12 @@
     <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.Domain/AgentOrchestrator.Domain.csproj" Id="7896ea44-b685-402e-832e-54ef0d1934ae" />
     <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.Infrastructure/AgentOrchestrator.Infrastructure.csproj" Id="44c1b631-5bf7-4f78-8595-35db98af1400" />
   </Folder>
+  <Folder Name="/src/Services/IdentityService/">
+    <Project Path="src/Services/IdentityService/IdentityService.API/IdentityService.API.csproj" />
+    <Project Path="src/Services/IdentityService/IdentityService.Application/IdentityService.Application.csproj" />
+    <Project Path="src/Services/IdentityService/IdentityService.Domain/IdentityService.Domain.csproj" />
+    <Project Path="src/Services/IdentityService/IdentityService.Infrastructure/IdentityService.Infrastructure.csproj" />
+  </Folder>
   <Folder Name="/src/Services/IncidentService/">
     <Project Path="src/Services/IncidentService/IncidentService.API/IncidentService.API.csproj" Id="dcc8fdc3-ef8f-43b5-87b8-c4679c45d746" />
     <Project Path="src/Services/IncidentService/IncidentService.Application/IncidentService.Application.csproj" Id="7ca64d40-6e91-4c2b-b196-67a2ad5cbabd" />
@@ -60,6 +66,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
+    <Project Path="tests/IdentityService.Tests/IdentityService.Tests.csproj" />
     <Project Path="tests/IncidentService.Tests/IncidentService.Tests.csproj" />
     <Project Path="tests/NotificationService.Tests/NotificationService.Tests.csproj" />
     <Project Path="tests/TelemetryIngestionService.Tests/TelemetryIngestionService.Tests.csproj" />

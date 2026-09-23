@@ -18,6 +18,18 @@
         "http"
       ],
       "port": 5100
+    },
+    {
+      "name": "identity",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Services/IdentityService/IdentityService.API",
+        "--launch-profile",
+        "http"
+      ],
+      "port": 5240
     }
   ]
 }
