@@ -25,6 +25,10 @@ public static class LoggingExtensions
                     .MinimumLevel.Information()
                     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
                     .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+                    // Same judgement as the two above: the gateway logs two Information lines per
+                    // proxied request, and every call the console makes is a proxied request. The
+                    // services that do not reference YARP are unaffected by this line.
+                    .MinimumLevel.Override("Yarp", LogEventLevel.Warning)
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Service", serviceName)
                     .WriteTo.Console()
