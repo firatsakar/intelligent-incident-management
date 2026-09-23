@@ -30,6 +30,9 @@
   <Folder Name="/src/BuildingBlocks/Web/">
     <Project Path="src/BuildingBlocks/Web/BuildingBlocks.Web.csproj" />
   </Folder>
+  <Folder Name="/src/Gateway/">
+    <Project Path="src/Gateway/Gateway.API/Gateway.API.csproj" />
+  </Folder>
   <Folder Name="/src/Services/" />
   <Folder Name="/src/Services/AgentOrchestrator/">
     <Project Path="src/Services/AgentOrchestrator/AgentOrchestrator.API/AgentOrchestrator.API.csproj" Id="fd70be3f-5762-40af-b17a-7cc4cb6f1a37" />
