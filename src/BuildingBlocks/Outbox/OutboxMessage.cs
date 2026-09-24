@@ -16,6 +16,18 @@ public sealed class OutboxMessage
     /// </remarks>
     public required Guid OrganizationId { get; init; }
 
+    /// <summary>
+    /// The W3C trace context the row was written inside, so the publish it becomes continues that
+    /// trace rather than starting a new one.
+    /// </summary>
+    /// <remarks>
+    /// On the row for the same reason as <see cref="OrganizationId"/>: the dispatcher picks the row
+    /// up later, on a timer, where nothing is in flight. Without it every outbox publish is the
+    /// root of a trace of its own, and the chain an incident travels breaks at every service that
+    /// writes one. Null when nothing was being traced at the time.
+    /// </remarks>
+    public string? TraceParent { get; init; }
+
     // The domain event's type name. The dispatcher routes on this, matching it against the
     // registered handlers.
     public required string Type { get; init; }

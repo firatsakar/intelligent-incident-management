@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,10 @@ public static class TracingExtensions
     // propagation.
     private const string RabbitMqPublisherActivitySource = "RabbitMQ.Client.Publisher";
     private const string RabbitMqSubscriberActivitySource = "RabbitMQ.Client.Subscriber";
+
+    // OutboxDispatcher.ActivitySourceName, spelled out because this project does not reference the
+    // outbox and should not start to for the sake of one string.
+    private const string OutboxActivitySource = "BuildingBlocks.Outbox";
 
     private const string OtlpTracesPath = "ingest/otlp/v1/traces";
 
@@ -66,8 +71,10 @@ public static class TracingExtensions
                         TelemetryConstants.ActivitySources.AgentOrchestrator,
                         NpgsqlActivitySource,
                         RabbitMqPublisherActivitySource,
-                        RabbitMqSubscriberActivitySource
+                        RabbitMqSubscriberActivitySource,
+                        OutboxActivitySource
                     )
+                    .SetSampler(new ParentBasedSampler(new DropUnstartedClientCallsSampler()))
                     .AddAspNetCoreInstrumentation(aspNetCore =>
                     {
                         // A hub connection is one request that lives as long as the browser tab.
@@ -99,5 +106,26 @@ public static class TracingExtensions
             );
 
         return services;
+    }
+
+    /// <summary>
+    /// Decides only for spans with no parent, and keeps every one of them except outbound calls.
+    /// </summary>
+    /// <remarks>
+    /// The background loops — outbox dispatchers, the telemetry poller, the cleanup jobs — query
+    /// their tables every few seconds with nothing in flight. Each of those queries is a root
+    /// client span: a trace consisting of one SELECT, twelve a minute from each service, burying
+    /// the traces anyone would open. A client call nothing started is not worth a trace. The work
+    /// those loops do that does matter opens a span of its own first, and its queries and calls
+    /// nest under it rather than reaching this decision.
+    /// </remarks>
+    private sealed class DropUnstartedClientCallsSampler : Sampler
+    {
+        public override SamplingResult ShouldSample(in SamplingParameters samplingParameters) =>
+            new(
+                samplingParameters.Kind == ActivityKind.Client
+                    ? SamplingDecision.Drop
+                    : SamplingDecision.RecordAndSample
+            );
     }
 }
