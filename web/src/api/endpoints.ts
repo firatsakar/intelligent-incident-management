@@ -10,6 +10,7 @@ import type {
   NotificationDelivery,
   NotificationStats,
   PagedResult,
+  SessionAccount,
   SignalPage,
   SignalStatus,
   TelemetrySource,
@@ -123,4 +124,22 @@ export const integrationsApi = {
   remove: (id: string) => api.delete<void>(`/api/integrations/${id}`),
 
   test: (id: string) => api.post<TestResult>(`/api/integrations/${id}/test`),
+}
+
+/**
+ * The session. The two tokens never appear here because they never appear in a body — they are
+ * cookies the browser holds, set by the server and unreadable from script.
+ */
+export const authApi = {
+  signIn: (email: string, password: string) =>
+    api.post<SessionAccount>('/api/auth/login', { email, password }),
+
+  /** Ends this session. Always 204, so there is nothing to branch on. */
+  signOut: () => api.post<void>('/api/auth/logout'),
+
+  /**
+   * Read on every page load. Answering from the database rather than from the token is what makes
+   * a role change or a deactivation visible before the token would have expired.
+   */
+  me: () => api.get<SessionAccount>('/api/auth/me'),
 }

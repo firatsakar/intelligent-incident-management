@@ -1,4 +1,4 @@
-import {
+﻿import {
   ActivityIcon,
   FunnelIcon,
   LayoutDashboardIcon,
@@ -24,7 +24,6 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { organizationName } from '@/features/auth/session'
 import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -200,7 +199,7 @@ export function AppLayout() {
             to="/"
             className="focus-visible:ring-ring/50 min-w-0 rounded-md outline-none focus-visible:ring-[3px]"
           >
-            <Brand organization={organization ? organizationName(organization) : undefined} />
+            <Brand organization={organization?.name} />
           </NavLink>
         </div>
 
@@ -230,7 +229,7 @@ export function AppLayout() {
                 <SheetHeader className="h-14 justify-center px-4 py-0">
                   <SheetTitle>
                     <Brand
-                      organization={organization ? organizationName(organization) : undefined}
+                      organization={organization?.name}
                     />
                   </SheetTitle>
                   <SheetDescription className="sr-only">{nav.drawer}</SheetDescription>

@@ -1,4 +1,4 @@
-import type { WindowPreset } from '@/lib/window'
+﻿import type { WindowPreset } from '@/lib/window'
 import type { RealtimeStatus } from '@/app/RealtimeProvider'
 import type { ConfigFieldId } from '@/features/settings/configSchema'
 import type {
@@ -77,10 +77,6 @@ export const en = {
     signOut: 'Sign out',
   },
 
-  session: {
-    /** The stored value stays 'Default organisation' — this is only how it reads. */
-    defaultOrganization: 'Default organisation',
-  },
 
   nav: {
     skip: 'Skip to content',
@@ -167,19 +163,22 @@ export const en = {
     },
 
     heading: 'Sign in',
-    subheading: 'Choose the name this session runs under.',
-    organisation: 'Organisation',
+    subheading: 'Your organisation is the one your account belongs to.',
     ownership:
-      'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. This build has one.',
-    nameLabel: 'Your name',
-    nameHint: 'Labels this session in the console. Nothing checks it.',
-    // A required field, not a rejected credential. It says what is missing and why it is wanted,
-    // and never implies that something was checked.
-    nameRequired: 'Enter a name. It is only used to label this session.',
-    noPasswordTitle: 'No password, because nothing would check it',
-    noPassword:
-      'This build has no authentication. The services behind this console answer anyone who can reach them, and signing in here only decides whose name the session carries. Real sign-in arrives with the gateway.',
+      'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them, so what you see here is your team’s.',
+    emailLabel: 'Email address',
+    passwordLabel: 'Password',
+    // An empty field, not a rejected credential — the reader can see which one is blank, so this
+    // only has to say that both are wanted.
+    required: 'Enter your email address and password.',
+    // The server refuses a wrong password, an unknown address and a deactivated account with one
+    // answer, on purpose. Saying more here than it does would undo that.
+    failed: 'That email address and password do not match an active account.',
+    // A network that did not answer is not a credential that was refused, and telling the reader
+    // to check their password when the problem is the connection sends them the wrong way.
+    unreachable: 'Could not reach the server. Check your connection and try again.',
     submit: 'Enter the console',
+    submitting: 'Signing in…',
   },
 
   language: {

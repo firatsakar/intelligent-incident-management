@@ -1,6 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
+import { onUnauthorized } from '@/api/client'
+
 import {
   endSession,
   readSession,
@@ -11,18 +13,23 @@ import {
   type SessionUser,
 } from './session'
 
+/**
+ * Signed in, signed out, or still asking.
+ *
+ * The third one used to be avoidable and is not any more. When a session was read synchronously
+ * out of `localStorage` there was an answer before the first paint; asking the server is a round
+ * trip, and rendering the login screen during it would put it in front of somebody who is already
+ * signed in.
+ */
+export type AuthStatus = 'restoring' | 'authenticated' | 'anonymous'
+
 interface AuthValue {
+  status: AuthStatus
   user: SessionUser | null
-  /**
-   * In the type from the start, though today it is always the one organisation. The ownership
-   * model was already decided — data belongs to an organisation, a user is a member of it — and
-   * adding the field later would mean editing every consumer to read something they could have
-   * been reading all along.
-   */
   organization: SessionOrganization | null
   isAuthenticated: boolean
-  signIn: (name: string) => Promise<void>
-  signOut: () => void
+  signIn: (email: string, password: string) => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
@@ -36,42 +43,96 @@ export function useAuth(): AuthValue {
 }
 
 /**
- * Holds the session in React state and nothing else; where a session comes from is session.ts's
- * business, and keeping it that way is what lets Adım 16 replace that one file.
+ * The access cookie lasts fifteen minutes and this asks for a new one before then.
  *
- * Read synchronously at mount rather than in an effect. An async bootstrap would need a third
- * state — signed in, signed out, still asking — and that third state is a frame of the login
- * screen in front of somebody who is already signed in. Adım 16 keeps the property: decoding a
- * stored token is synchronous too, and refreshing one belongs behind watchSession.
+ * Meeting a 401 and refreshing covers every HTTP request already, so this timer exists for the one
+ * thing that does not go through `client.ts`: a WebSocket reads the cookie when it connects and
+ * never again, so a socket that drops and reconnects after the token expired would be refused and
+ * the console would go quiet without saying why.
+ *
+ * The number below has to stay under `Jwt:AccessMinutes`. It is a coupling, stated rather than
+ * discovered — the alternative was the server reporting its own expiry, which is more surface for
+ * a timer that only needs to be roughly right.
  */
+const REFRESH_INTERVAL_MS = 12 * 60 * 1000
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
-  const [session, setSession] = useState<Session | null>(() => readSession())
+  const [status, setStatus] = useState<AuthStatus>('restoring')
+  const [session, setSession] = useState<Session | null>(null)
 
-  useEffect(() => watchSession(setSession), [])
+  // One place decides what the session is, whether the question came from a page load, another
+  // tab, or a refresh that failed.
+  useEffect(() => {
+    let cancelled = false
+
+    async function ask() {
+      const next = await readSession()
+
+      if (cancelled) return
+
+      setSession(next)
+      setStatus(next ? 'authenticated' : 'anonymous')
+    }
+
+    void ask()
+
+    const unwatch = watchSession(() => void ask())
+
+    // A request that could not be saved by a refresh means the session is over. Said here rather
+    // than guessed by each screen, which would otherwise each show its own error for what is one
+    // fact about the whole console.
+    onUnauthorized(() => {
+      if (cancelled) return
+
+      setSession(null)
+      setStatus('anonymous')
+    })
+
+    return () => {
+      cancelled = true
+      unwatch()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (status !== 'authenticated') return
+
+    const timer = window.setInterval(() => {
+      // Deliberately ignoring the outcome. If it failed, the next request will meet a 401 and go
+      // through the path that knows what to do about it.
+      void fetch('/api/auth/refresh', { method: 'POST' })
+    }, REFRESH_INTERVAL_MS)
+
+    return () => window.clearInterval(timer)
+  }, [status])
 
   const value = useMemo<AuthValue>(
     () => ({
+      status,
       user: session?.user ?? null,
       organization: session?.organization ?? null,
       isAuthenticated: session !== null,
 
-      signIn: async (name: string) => {
-        const next = await startSession(name)
+      signIn: async (email: string, password: string) => {
+        const next = await startSession(email, password)
 
         // Drop whatever the previous session left behind, here rather than at sign-out: at
         // sign-out the app is still mounted and clearing makes every screen refetch on its way to
-        // being unmounted. At sign-in nothing is observing the cache yet.
+        // being unmounted. At sign-in nothing is observing the cache yet. It also matters more
+        // now than it did — the cache may hold another organisation's rows.
         queryClient.clear()
         setSession(next)
+        setStatus('authenticated')
       },
 
-      signOut: () => {
-        endSession()
+      signOut: async () => {
+        await endSession()
         setSession(null)
+        setStatus('anonymous')
       },
     }),
-    [session, queryClient],
+    [status, session, queryClient],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -336,3 +336,18 @@ export interface IngestionTick {
   latestEventAt: string | null
   completedAt: string
 }
+
+/**
+ * Who the caller is, as `/api/auth` answers it.
+ *
+ * `role` arrives as the enum name and is never translated: it is a key the server decides with,
+ * and the console only chooses how to render it.
+ */
+export interface SessionAccount {
+  id: string
+  email: string
+  displayName: string
+  role: 'Admin' | 'Engineer' | 'Viewer'
+  organizationId: string
+  organizationName: string
+}

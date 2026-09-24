@@ -56,8 +56,6 @@ const allowedStrings = new Set([
   // `ApiError.name`, which is the Error's own class name and is never rendered.
   'ApiError',
   // The stored value of the default organisation, which is a key rather than a name — its
-  // display goes through `organizationName()` and is translated there.
-  'Default organisation',
 ])
 
 function* walk(dir) {

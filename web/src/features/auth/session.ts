@@ -1,82 +1,68 @@
 /**
  * The session seam.
  *
- * NOTHING IN THIS FILE IS SECURITY. It makes a session up in the browser: no credential is asked
- * for, sent or checked, and every service behind this console answers without one. Anyone who
- * skips the browser reaches every row, so a reader must not mistake any of this for a gate.
+ * It used to open by saying that nothing in it was security, because nothing in it was: the
+ * session was made up in the browser and every service behind this console answered without one.
+ * That is over. A session now comes from `/api/auth`, the credential is checked, and the two
+ * tokens live in cookies the browser sends and script cannot read — which is why there is nothing
+ * for this module to store any more.
  *
- * The gate is Adım 15 (the gateway) and Adım 16 (JWT plus organisation-scoped queries), and this
- * is the one file they replace:
+ * What is kept in the browser is one address, so the form is filled on a return, and one signal
+ * key, so a sign-out in another tab is noticed here. Neither is a credential and neither decides
+ * anything.
  *
- *   stays     the exported surface — readSession / startSession / endSession / watchSession /
- *             rememberedName — and the Session shape. Nothing outside this file knows where a
- *             session comes from, so nothing outside this file has to change.
- *   changes   the bodies. startSession posts credentials to the gateway and keeps the token it
- *             gets back; readSession decodes that token rather than a JSON blob and drops it once
- *             it has expired; watchSession also fires when a refresh fails.
- *   callers   may assume a session exists and carries a name and an organisation worth showing.
- *             They may not assume anybody verified either, and they must not make an
- *             authorisation decision from it — that decision belongs to the server, which is
- *             precisely why none is made here.
+ * Callers may assume a session carries a name, an organisation and a role worth showing. They must
+ * still not make an authorisation decision from it: the role here is what to render, and what to
+ * allow is decided by the server on every request.
  */
 
-import { activeDictionary } from '@/lib/i18n/active'
+import { authApi } from '@/api/endpoints'
+import type { SessionAccount } from '@/types/api'
+
+/** The three the platform has. The wire values are the enum names, never translated. */
+export type UserRole = 'Admin' | 'Engineer' | 'Viewer'
 
 export interface SessionUser {
+  id: string
   name: string
   /** Derived, never stored: one spelling of the name is enough to keep true. */
   initials: string
+  email: string
+  role: UserRole
 }
 
 export interface SessionOrganization {
   id: string
+  /** The customer's own name for themselves. Never translated, and never a sentinel. */
   name: string
 }
 
 export interface Session {
   user: SessionUser
   organization: SessionOrganization
-  startedAt: string
 }
 
-/**
- * The ownership model, as a constant.
- *
- * Data belongs to an organisation and a user is a member of it — an incident is shared by a team,
- * and one that only its author could see would be no use to anyone. There is exactly one
- * organisation here because there is exactly one database and nothing scopes it; giving it a
- * customer's name would be the kind of lie this file exists not to tell. Adım 16 reads it off the
- * token, and the id is the value that will scope the queries.
- *
- * The user has no id for the same reason: nothing in a browser can mint one that means anything.
- */
-export const defaultOrganization: SessionOrganization = {
-  id: 'default',
-  name: 'Default organisation',
+function toSession(response: SessionAccount): Session {
+  return {
+    user: {
+      id: response.id,
+      name: response.displayName,
+      initials: initialsFor(response.displayName),
+      email: response.email,
+      role: response.role,
+    },
+    organization: { id: response.organizationId, name: response.organizationName },
+  }
 }
 
-/**
- * How an organisation's name reads on screen.
- *
- * The default one is a sentinel this console invented rather than a name a customer chose, so its
- * display is translated while the stored value stays the key — exactly the treatment
- * `(signature gone)` gets on the services screen. A real organisation's name arrives from the
- * server with Adım 16 and must never be translated, which is why the test is on the id and not on
- * the text.
- */
-export function organizationName(organization: SessionOrganization): string {
-  return organization.id === defaultOrganization.id
-    ? activeDictionary().session.defaultOrganization
-    : organization.name
-}
-
-// Two keys on purpose. The session goes at sign-out; the name outlives it so signing back in is
-// one keystroke, which matters when it is the only thing there is to type.
-const SESSION_KEY = 'iim.session'
-const NAME_KEY = 'iim.session.name'
+// Not the session — that lives in a cookie. The address, because typing it again on every return
+// is friction with nothing behind it, and a timestamp that changes on every sign-in and sign-out,
+// which is how another tab hears about this one.
+const EMAIL_KEY = 'iim.session.email'
+const SIGNAL_KEY = 'iim.session.signal'
 
 // Storage throws rather than returning null in a locked-down browser, and a console that will not
-// boot in private mode is a worse failure than one that forgets you on reload.
+// boot in private mode is a worse failure than one that forgets your address.
 function readStorage(key: string): string | null {
   try {
     return localStorage.getItem(key)
@@ -89,15 +75,7 @@ function writeStorage(key: string, value: string): void {
   try {
     localStorage.setItem(key, value)
   } catch {
-    // Blocked or full: the session then lives exactly as long as the tab does.
-  }
-}
-
-function removeStorage(key: string): void {
-  try {
-    localStorage.removeItem(key)
-  } catch {
-    // Nothing to do, and nothing that depends on it having worked.
+    // Blocked or full: the convenience is lost and nothing else is.
   }
 }
 
@@ -114,85 +92,71 @@ export function initialsFor(name: string): string {
   return (first + last).toLocaleUpperCase()
 }
 
-function parse(raw: string): Session | null {
-  const value: unknown = JSON.parse(raw)
-
-  if (typeof value !== 'object' || value === null) return null
-
-  const stored = value as Partial<Session>
-  const name = stored.user?.name
-  const organization = stored.organization
-
-  if (typeof name !== 'string' || name.trim() === '') return null
-  if (typeof organization?.id !== 'string' || typeof organization.name !== 'string') return null
-
-  return {
-    user: { name, initials: initialsFor(name) },
-    organization: { id: organization.id, name: organization.name },
-    startedAt: typeof stored.startedAt === 'string' ? stored.startedAt : new Date().toISOString(),
-  }
-}
-
-export function readSession(): Session | null {
-  const raw = readStorage(SESSION_KEY)
-
-  if (!raw) return null
-
-  let session: Session | null = null
-
+/**
+ * Who the cookie belongs to, asked of the server rather than decoded here.
+ *
+ * Null means no usable session, which covers a first visit, an expired pair and an account that
+ * has been deactivated since the token was minted. The client has already tried refreshing by the
+ * time this returns null — that is `client.ts`'s job, on every request.
+ */
+export async function readSession(): Promise<Session | null> {
   try {
-    session = parse(raw)
+    return toSession(await authApi.me())
   } catch {
-    session = null
+    return null
   }
+}
 
-  // Unreadable means written by an older shape of this file. Dropping it beats booting into a
-  // half-session nobody can sign out of.
-  if (!session) removeStorage(SESSION_KEY)
+/**
+ * Signs in, or throws with the server's own sentence.
+ *
+ * The three ways this fails — wrong password, unknown address, deactivated account — are one
+ * answer from the server on purpose, so there is one message to show and no branch here that could
+ * reveal which it was.
+ */
+export async function startSession(email: string, password: string): Promise<Session> {
+  const session = toSession(await authApi.signIn(email, password))
+
+  writeStorage(EMAIL_KEY, email.trim())
+  writeStorage(SIGNAL_KEY, Date.now().toString())
 
   return session
 }
 
 /**
- * Async because a real sign-in is a round trip, and having the signature already be the shape the
- * gateway needs is most of what makes this file replaceable without touching its callers. It
- * cannot fail today — there is nothing here that could refuse.
+ * Ends this session and not the account's others. Signing out of a laptop should not sign the
+ * phone out, which is why the server revokes the one refresh token presented rather than all of
+ * them.
  */
-export async function startSession(name: string): Promise<Session> {
-  const trimmed = name.trim()
-
-  const session: Session = {
-    user: { name: trimmed, initials: initialsFor(trimmed) },
-    organization: defaultOrganization,
-    startedAt: new Date().toISOString(),
+export async function endSession(): Promise<void> {
+  try {
+    await authApi.signOut()
+  } catch {
+    // The server always answers 204 and the cookies are cleared either way. A sign-out that can
+    // fail is a sign-out the reader cannot trust, so there is nothing to report and nothing to do.
   }
 
-  writeStorage(SESSION_KEY, JSON.stringify(session))
-  writeStorage(NAME_KEY, trimmed)
-
-  return session
+  writeStorage(SIGNAL_KEY, Date.now().toString())
 }
 
-export function endSession(): void {
-  removeStorage(SESSION_KEY)
-}
-
-/** The last name signed in with, so the login field is filled rather than blank on a return. */
-export function rememberedName(): string {
-  return readStorage(NAME_KEY) ?? ''
+/** The last address signed in with, so the form is filled rather than blank on a return. */
+export function rememberedEmail(): string {
+  return readStorage(EMAIL_KEY) ?? ''
 }
 
 /**
- * Fires when another tab signs in or out. Not enforcement — nothing here enforces anything — but a
- * console that still looks signed in after you signed out next door is lying about its own state.
- * Adım 16 fires this when a token refresh fails, which is the case that will actually matter.
+ * Fires when another tab signs in or out.
+ *
+ * The cookies are shared across tabs, so signing out next door really does end this tab's session
+ * — but nothing tells this tab, and a console that still looks signed in after you signed out is
+ * lying about its own state. The signal key carries no session data; it only says "ask again".
  */
-export function watchSession(onChange: (session: Session | null) => void): () => void {
+export function watchSession(onChange: () => void): () => void {
   const handler = (event: StorageEvent) => {
     // A null key means the whole store was cleared, which concerns us as much as our own key does.
-    if (event.key !== null && event.key !== SESSION_KEY) return
+    if (event.key !== null && event.key !== SIGNAL_KEY) return
 
-    onChange(readSession())
+    onChange()
   }
 
   window.addEventListener('storage', handler)
