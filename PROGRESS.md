@@ -16,7 +16,8 @@
 - **Son tamamlanan:** Adım 20.7 — Metin denetimi (`IIM-92`, 2026-09-23) — 10 silme, 34 yeniden yazım, Türkçede bir sayı yanlışı ve her dialog'da bir ekran okuyucu etiketi
 - **Son tamamlanan:** Adım 15 — YARP API Gateway (`IIM-93`, 2026-09-23) — tek origin, rota tablosu `vite.config.ts`'ten C#'a taşındı, 285 test yeşil
 - **Son tamamlanan:** Adım 16 — JWT auth, roller ve organizasyon bazlı sahiplik (`IIM-94`, 2026-09-24) — 13 parça, beşinci servis, 10 entity + Elasticsearch + 3 hub org'a bağlandı, **341 test**
-- **Sıradaki:** Adım 13.5 + 17 birlikte (OTLP ingest + OpenTelemetry) — öncelik listesinin 7. maddesi
+- **Son tamamlanan (kod):** Adım 17 — OpenTelemetry tracing (`IIM-109`, 2026-09-24) — 5 parça, `develop`'ta; Seq'te gözle kabul 13.5'in koşusunda. Yolda bir Adım 16 regresyonu kapandı: outbox dispatcher'ı org kapsamı set etmiyordu, hiçbir analiz ES'e indekslenmiyordu
+- **Devam eden:** Adım 13.5 — OTLP log ingest (`IIM-115`)
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
@@ -157,7 +158,12 @@ audit hikâyesinin çoğunu zaten veriyor.
 
 ## Sıradaki / kalan yol haritası (AI öne çekilmiş)
 
-- [ ] **Adım 13.5** — OTLP log ingest (müşteri log entegrasyonunun **genel çözümü**). Vendor başına connector yazmak yerine tek bir standart tel formatı kabul edilir; uzun kuyruğu müşterinin zaten kullandığı shipper (OTel Collector / Fluent Bit / Vector) çözer. Adım 17 ile aynı bağımlılık → birlikte ele alınabilir. Karar notu: her log satırı saklanmaz, imza başına sayım + örnek satırlar saklanır; filtreleme kaynağa (Collector) itilir
+- [~] **Adım 13.5** (`IIM-115`) — OTLP log ingest (müşteri log entegrasyonunun **genel çözümü**). Vendor başına connector yazmak yerine tek bir standart tel formatı kabul edilir; uzun kuyruğu müşterinin zaten kullandığı shipper (OTel Collector / Fluent Bit / Vector) çözer. Adım 17 ile aynı bağımlılık → birlikte ele alınabilir. Karar notu: her log satırı saklanmaz, imza başına sayım + örnek satırlar saklanır; filtreleme kaynağa (Collector) itilir. **Kararlar (Fırat, 2026-09-24):** depolama **örnek + sayı** (`LogRecord.Occurrences`; tespit satır saymak yerine toplar; Fatal hiç katlanmaz; Seq yolu da aynı hattan); push'un organizasyonunu **kaynak başına ingest anahtarı** söyler
+  - [x] **Parça 1** (`IIM-116`, 2026-09-24) — Ortak ingest hattı + örnek/sayı depolama. Poll handler'ın ingest kısmı `IngestLogBatchCommand`'a taşındı (push da aynısını kullanacak — "bir log satırını almak"ın tek tanımı). `SampleFolding`: imza başına batch'te en eski 9 + en yeni (arayı taşır); **Fatal hiç, parmak izsiz hiç, batch'in en yeni anındaki hiçbir şey katlanmaz** — sonuncusu Seq cursor'ının sınırı bilerek yeniden okumasının kopya olarak tanınmaya devam etmesi için. Tespit, baseline (`WeightedTimestamp`) ve huni satır saymak yerine `Occurrences` topluyor; imza sayaçları zaten olay sayıyordu. Aynı batch'te aynı event id iki kez → bir satır (eskiden unique index tüm batch'i düşürürdü). Migration `defaultValue: 1` — canlıda 1009 eski satırın hepsi 1. **364 test** (+18)
+  - [~] **Parça 2** (`IIM-117`) — `TelemetrySourceKind.Otlp` + kaynak başına ingest anahtarı
+  - [ ] **Parça 3** (`IIM-118`) — OTLP/HTTP alıcı: `/otlp/v1/logs`, protobuf + JSON, gzip
+  - [ ] **Parça 4** (`IIM-119`) — Konsol: OTLP kaynağı, tek seferlik anahtar, Collector örneği
+  - [ ] **Parça 5** (`IIM-120`) — Demo, kabul koşusu (kanarya) ve dokümanlar
 - [ ] **Adım 13.6** — Generic alert webhook ingest (Datadog monitor, Grafana alert, CloudWatch alarm). En düşük hacim, en yüksek sinyal; ham log çekmek istemeyen müşteriler için. Provider başına küçük bir payload mapper yeter
 - [ ] **Adım 14** — Comment & Timeline (audit trail; event sourcing/Marten yeniden değerlendirilebilir)
 - [~] **Adım 17** (`IIM-109`, kod `develop`'ta 2026-09-24) — OpenTelemetry distributed tracing; MCP debug + agentic akış görünürlüğü önkoşulu. **Kararlar (Fırat, 2026-09-24):** hedef **Seq** (platform log'ları zaten orada, yeni konteyner yok); metrikler bu adımda yok → Adım 22; **13.5'ten önce** yapılıyor ki 13.5'in kabul koşusu OTLP push → bildirim zincirini tek trace olarak göstersin

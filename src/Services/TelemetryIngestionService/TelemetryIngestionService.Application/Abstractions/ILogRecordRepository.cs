@@ -1,4 +1,5 @@
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Services;
 
 namespace TelemetryIngestionService.Application.Abstractions;
 
@@ -18,6 +19,8 @@ public interface ILogRecordRepository
     );
 
     // Occurrences of one fingerprint inside a time window — the count burst detection works from.
+    // Summed over LogRecord.Occurrences, not counted in rows: a folded sample stands for the
+    // events it carries.
     Task<long> CountByFingerprintAsync(
         string fingerprint,
         DateTime from,
@@ -25,9 +28,9 @@ public interface ILogRecordRepository
         CancellationToken cancellationToken = default
     );
 
-    // Just the timestamps, for bucketing into the rate baseline. One column, and the range is
-    // BRIN-indexed.
-    Task<IReadOnlyList<DateTime>> GetTimestampsByFingerprintAsync(
+    // Timestamps with the number of events each row stands for, for bucketing into the rate
+    // baseline. Two narrow columns, and the range is BRIN-indexed.
+    Task<IReadOnlyList<WeightedTimestamp>> GetOccurrencesByFingerprintAsync(
         string fingerprint,
         DateTime from,
         DateTime to,

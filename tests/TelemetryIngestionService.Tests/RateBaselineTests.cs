@@ -94,6 +94,28 @@ public sealed class RateBaselineTests
     public sealed class BucketCounts
     {
         [Fact]
+        public void AFoldedSampleCountsAsEveryEventItCarries()
+        {
+            // A storm folded onto a few rows must weigh in the baseline what it weighed unfolded,
+            // or every loud signature would look quieter than it was.
+            WeightedTimestamp[] rows =
+            [
+                new(Origin.AddSeconds(10), 1),
+                new(Origin.AddSeconds(20), 291),
+                new(Origin.AddMinutes(2), 3),
+            ];
+
+            var buckets = RateBaseline.BucketCounts(
+                rows,
+                Origin,
+                Origin.AddMinutes(3),
+                TimeSpan.FromMinutes(1)
+            );
+
+            Assert.Equal(new long[] { 292, 0, 3 }, buckets);
+        }
+
+        [Fact]
         public void SplitsTimestampsIntoFixedWindows()
         {
             DateTime[] timestamps =
@@ -208,7 +230,7 @@ public sealed class RateBaselineTests
             // burst anomalous. Returning an empty list instead would drop below the minimum
             // sample count and silently suppress the anomaly bonus.
             var buckets = RateBaseline.BucketCounts(
-                [],
+                Array.Empty<DateTime>(),
                 Origin,
                 Origin.AddMinutes(6),
                 TimeSpan.FromMinutes(1)

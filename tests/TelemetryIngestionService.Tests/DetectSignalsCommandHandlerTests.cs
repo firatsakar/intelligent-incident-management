@@ -6,6 +6,7 @@ using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.DetectSignals;
 using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Services;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Events;
 
@@ -141,10 +142,12 @@ public sealed class DetectSignalsCommandHandlerTests
                 timestamps.Add(middle);
         }
 
-        IReadOnlyList<DateTime> history = timestamps;
+        IReadOnlyList<WeightedTimestamp> history = timestamps
+            .Select(timestamp => new WeightedTimestamp(timestamp, 1))
+            .ToList();
 
         _logRecords
-            .GetTimestampsByFingerprintAsync(
+            .GetOccurrencesByFingerprintAsync(
                 Arg.Any<string>(),
                 Arg.Any<DateTime>(),
                 Arg.Any<DateTime>(),

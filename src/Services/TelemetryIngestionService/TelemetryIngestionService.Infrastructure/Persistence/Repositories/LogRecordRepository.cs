@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
+using TelemetryIngestionService.Domain.Services;
 
 namespace TelemetryIngestionService.Infrastructure.Persistence.Repositories;
 
@@ -54,23 +55,26 @@ public sealed class LogRecordRepository : ILogRecordRepository
         return await _context
             .LogRecords.AsNoTracking()
             .Where(x => x.Fingerprint == fingerprint && x.Timestamp >= from && x.Timestamp <= to)
-            .LongCountAsync(cancellationToken);
+            .SumAsync(x => (long)x.Occurrences, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<DateTime>> GetTimestampsByFingerprintAsync(
+    public async Task<IReadOnlyList<WeightedTimestamp>> GetOccurrencesByFingerprintAsync(
         string fingerprint,
         DateTime from,
         DateTime to,
         CancellationToken cancellationToken = default
     )
     {
-        // One column over a BRIN-indexed range. At real log volume this wants bucketing pushed
-        // into SQL, but the baseline only ever spans a handful of windows.
-        return await _context
+        // Two columns over a BRIN-indexed range. At real log volume this wants bucketing pushed
+        // into SQL, but the baseline only ever spans a handful of windows — and folding keeps the
+        // row count per window bounded however loud the signature was.
+        var rows = await _context
             .LogRecords.AsNoTracking()
             .Where(x => x.Fingerprint == fingerprint && x.Timestamp >= from && x.Timestamp < to)
-            .Select(x => x.Timestamp)
+            .Select(x => new { x.Timestamp, x.Occurrences })
             .ToListAsync(cancellationToken);
+
+        return rows.Select(x => new WeightedTimestamp(x.Timestamp, x.Occurrences)).ToList();
     }
 
     public async Task<int> CountDistinctServicesAsync(
@@ -164,7 +168,7 @@ public sealed class LogRecordRepository : ILogRecordRepository
         // Three aggregates, three round trips, and no rows returned by any of them. The
         // alternative — one pass in memory — would make the cost of drawing a funnel depend on
         // how bad the customer's week was, which is precisely backwards.
-        var total = await query.CountAsync(cancellationToken);
+        var total = await query.SumAsync(x => x.Occurrences, cancellationToken);
 
         var distinctFingerprints = await query
             .Select(x => x.Fingerprint)
@@ -173,12 +177,12 @@ public sealed class LogRecordRepository : ILogRecordRepository
 
         var byService = await query
             .GroupBy(x => x.Service)
-            .Select(g => new { Service = g.Key, Count = g.Count() })
+            .Select(g => new { Service = g.Key, Count = g.Sum(x => x.Occurrences) })
             .ToListAsync(cancellationToken);
 
         var bySeverity = await query
             .GroupBy(x => x.Severity)
-            .Select(g => new { Severity = g.Key, Count = g.Count() })
+            .Select(g => new { Severity = g.Key, Count = g.Sum(x => x.Occurrences) })
             .ToListAsync(cancellationToken);
 
         return new LogWindowSummary(
