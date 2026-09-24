@@ -24,6 +24,7 @@ public sealed class ElasticsearchSimilarAnalysisSearcher : ISimilarAnalysisSearc
 
     public async Task<IReadOnlyList<SimilarAnalysis>> SearchAsync(
         string query,
+        Guid organizationId,
         Guid? excludeIncidentId = null,
         int maxResults = 3,
         CancellationToken cancellationToken = default
@@ -43,6 +44,17 @@ public sealed class ElasticsearchSimilarAnalysisSearcher : ISimilarAnalysisSearc
                                 m.MultiMatch(mm =>
                                     mm.Query(query)
                                         .Fields(new[] { "title^2", "description", "reasoning" })
+                                )
+                            );
+
+                            // Filter context, not query context: it decides what may match and
+                            // contributes nothing to the score. Postgres's query filter does not
+                            // reach this index — it is a separate store — so this clause is the
+                            // only thing standing between one organisation's history and another's
+                            // model.
+                            b.Filter(f =>
+                                f.Term(t =>
+                                    t.Field("organizationId").Value(organizationId.ToString())
                                 )
                             );
 

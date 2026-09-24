@@ -7,6 +7,7 @@ internal static class AnalysisDocumentMapper
     public static AnalysisDocument ToDocument(IncidentAnalysis analysis) =>
         new()
         {
+            OrganizationId = analysis.OrganizationId,
             IncidentId = analysis.IncidentId,
             Title = analysis.IncidentTitle,
             Description = analysis.IncidentDescription,

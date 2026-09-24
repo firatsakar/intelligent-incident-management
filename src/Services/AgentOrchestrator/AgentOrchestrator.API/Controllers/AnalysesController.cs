@@ -48,7 +48,7 @@ public sealed class AnalysesController : ControllerBase
         CancellationToken cancellationToken
     )
     {
-        var analyses = await repository.GetCompletedAsync(cancellationToken);
+        var analyses = await repository.GetAllCompletedForReindexAsync(cancellationToken);
         await indexer.IndexManyAsync(analyses, cancellationToken);
         return Ok(new { Reindexed = analyses.Count });
     }

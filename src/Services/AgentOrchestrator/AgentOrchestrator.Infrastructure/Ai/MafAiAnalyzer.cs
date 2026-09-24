@@ -28,6 +28,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
     }
 
     public async Task<AnalysisResult> AnalyzeAsync(
+        Guid organizationId,
         Guid incidentId,
         string title,
         string description,
@@ -40,7 +41,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         var agent = _client.AsAIAgent(
             model: _options.Model,
             instructions: BuildInstructions(),
-            tools: [BuildSearchTool(incidentId)]
+            tools: [BuildSearchTool(organizationId, incidentId)]
         );
         var response = await agent.RunAsync(userPrompt, cancellationToken: cancellationToken);
         stopwatch.Stop();
@@ -64,13 +65,19 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         return ParseResponse(rawText, metadata);
     }
 
-    private AIFunction BuildSearchTool(Guid currentIncidentId)
+    // The model supplies the query and nothing else. Both the organisation and the incident to
+    // exclude are fixed in the closure: the model searches its own hypothesis, but it cannot choose
+    // whose history it searches. Before this, the history was everybody's — and the leak would
+    // have surfaced as prose in the reasoning, quoting another organisation's incident as
+    // precedent, which is the least visible place a leak can land.
+    private AIFunction BuildSearchTool(Guid organizationId, Guid currentIncidentId)
     {
         return AIFunctionFactory.Create(
             async (string query) =>
             {
                 var results = await _searcher.SearchAsync(
                     query,
+                    organizationId,
                     excludeIncidentId: currentIncidentId,
                     maxResults: 3
                 );
