@@ -62,7 +62,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<IRealtimeNotifier, SignalRIncidentNotifier>();
+// Scoped rather than singleton, because who a push is addressed to depends on the scope it is
+// sent from. The hub context it wraps is a singleton either way.
+builder.Services.AddScoped<IRealtimeNotifier, SignalRIncidentNotifier>();
 
 // The same call IdentityService makes. Every service validates the token on its own:
 // the gateway forwards it, it does not vouch for it.

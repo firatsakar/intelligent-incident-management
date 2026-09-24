@@ -46,7 +46,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<IRealtimeNotifier, SignalRSignalNotifier>();
+// Scoped rather than singleton, because who a push is addressed to depends on the scope it is
+// sent from. The hub context it wraps is a singleton either way.
+builder.Services.AddScoped<IRealtimeNotifier, SignalRSignalNotifier>();
 
 // A new organisation cannot detect anything until it has a rule, and the service that writes the
 // rule cannot read the table an organisation is born in. This is the subscription that closes it.

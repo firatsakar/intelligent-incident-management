@@ -1,8 +1,7 @@
-using Microsoft.AspNetCore.SignalR;
+﻿using BuildingBlocks.Web;
 
 namespace IncidentService.API.Realtime;
 
-// Broadcast only: clients subscribe by connecting and never call anything on it. A hub with no
-// callable methods has no surface to secure beyond the connection itself, which matters while
-// there is still no authentication (Adım 16).
-public sealed class IncidentHub : Hub;
+// Broadcast only, and only to the connection's own organisation. OrganizationHub requires an
+// authenticated connection and puts it in exactly one group, taken from its own claim.
+public sealed class IncidentHub : OrganizationHub;
