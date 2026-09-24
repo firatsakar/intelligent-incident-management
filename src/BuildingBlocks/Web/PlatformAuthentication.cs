@@ -1,5 +1,8 @@
 using System.Text;
+using BuildingBlocks.SharedKernel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,8 +142,36 @@ public static class PlatformAuthentication
                 };
             });
 
-        services.AddAuthorization();
+        // Requiring a token is the default and opting out is the exception. The alternative —
+        // remembering [Authorize] on twenty-seven actions and on everything added later — fails
+        // silently and in the direction that matters, by answering someone who never signed in.
+        services
+            .AddAuthorizationBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+
+        services.AddScoped<IOrganizationContext, OrganizationContext>();
 
         return services;
     }
+
+    /// <summary>
+    /// Fills <see cref="IOrganizationContext"/> from the authenticated caller's claim. Goes after
+    /// <c>UseAuthentication</c>, which is what puts the claim there in the first place.
+    /// </summary>
+    public static IApplicationBuilder UseOrganizationContext(this IApplicationBuilder app) =>
+        app.Use(
+            (context, next) =>
+            {
+                var claim = context.User.FindFirst(PlatformClaims.Organization)?.Value;
+
+                if (Guid.TryParse(claim, out var organizationId))
+                    context.RequestServices.GetRequiredService<IOrganizationContext>()
+                        .Set(organizationId);
+
+                // No claim is not an error here. An anonymous endpoint is allowed to have no
+                // organisation; what must not happen is a scoped query running without one, and
+                // that is refused where the scope is read, not where it is missing.
+                return next();
+            }
+        );
 }

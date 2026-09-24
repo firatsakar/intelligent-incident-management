@@ -1,4 +1,5 @@
 using IncidentService.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IncidentService.API.Controllers;
@@ -13,6 +14,10 @@ namespace IncidentService.API.Controllers;
 [ApiController]
 [Route("api/dev")]
 [ApiExplorerSettings(IgnoreApi = true)]
+// Opts out of the fallback policy because there is no user here to have a token: this is run by
+// hand or by a script, against a service that only answers at all in Development. The environment
+// check below is the guard, and it is a stronger one than authentication would be.
+[AllowAnonymous]
 public sealed class DevController : ControllerBase
 {
     private readonly DemoIncidentSeeder _seeder;

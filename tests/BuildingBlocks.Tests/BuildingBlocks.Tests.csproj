@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\SharedKernel\BuildingBlocks.SharedKernel.csproj" />
   </ItemGroup>
 
   <ItemGroup>
