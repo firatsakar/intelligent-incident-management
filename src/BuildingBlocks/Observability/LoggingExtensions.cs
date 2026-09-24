@@ -31,6 +31,13 @@ public static class LoggingExtensions
                     // proxied request, and every call the console makes is a proxied request. The
                     // services that do not reference YARP are unaffected by this line.
                     .MinimumLevel.Override("Yarp", LogEventLevel.Warning)
+                    // The trace exporter posts to Seq every five seconds through IHttpClientFactory,
+                    // which logs four Information lines per post — into the same Seq, about the
+                    // act of sending it spans. A failed export still surfaces as a warning.
+                    .MinimumLevel.Override(
+                        "System.Net.Http.HttpClient.OtlpTraceExporter",
+                        LogEventLevel.Warning
+                    )
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Service", serviceName)
                     .WriteTo.Console()
