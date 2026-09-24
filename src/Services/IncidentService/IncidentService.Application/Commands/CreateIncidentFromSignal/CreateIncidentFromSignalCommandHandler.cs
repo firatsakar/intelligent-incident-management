@@ -54,6 +54,7 @@ public sealed class CreateIncidentFromSignalCommandHandler
         }
 
         var incident = Incident.Create(
+            _organization.Required,
             request.Title,
             request.Description,
             ParsePriority(request.Severity),

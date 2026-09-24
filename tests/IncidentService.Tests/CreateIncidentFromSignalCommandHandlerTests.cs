@@ -15,6 +15,10 @@ namespace IncidentService.Tests;
 // delivery without opening the same incident twice.
 public sealed class CreateIncidentFromSignalCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly Guid IncidentId = Guid.NewGuid();
     private static readonly DateTime DetectedAt = DateTime.UtcNow.AddMinutes(-15);
     private static readonly Guid OrganizationId = Guid.NewGuid();
@@ -80,6 +84,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
             .GetByIdAsync(IncidentId, Arg.Any<CancellationToken>())
             .Returns(
                 Incident.Create(
+                    Organization,
                     "already here",
                     "…",
                     IncidentPriority.High,

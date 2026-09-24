@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 
 namespace BuildingBlocks.Web;
@@ -149,7 +150,10 @@ public static class PlatformAuthentication
             .AddAuthorizationBuilder()
             .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
-        services.AddScoped<IOrganizationContext, OrganizationContext>();
+        // TryAdd, because infrastructure registers it too — a hosted service's scope has no HTTP
+        // pipeline to have done it. Two plain registrations would still resolve to one instance
+        // per scope, but only by the accident of which was added last.
+        services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
         return services;
     }

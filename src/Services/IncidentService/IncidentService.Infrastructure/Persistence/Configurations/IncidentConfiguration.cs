@@ -13,6 +13,12 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.OrganizationId).IsRequired();
+
+        // Every list and every stat reads by organisation first, so it leads the composite; the
+        // existing single-column indexes stay for the rest of each predicate.
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+
         builder.Property(x => x.Title).IsRequired().HasMaxLength(IncidentConstants.TitleMaxLength);
 
         builder

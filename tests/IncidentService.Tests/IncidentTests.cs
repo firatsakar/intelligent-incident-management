@@ -1,4 +1,4 @@
-using IncidentService.Domain.Aggregates;
+﻿using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Events;
 
@@ -6,8 +6,13 @@ namespace IncidentService.Tests;
 
 public sealed class IncidentTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static Incident Create(Guid? id = null, DateTime? detectedAt = null) =>
         Incident.Create(
+            Organization,
             "checkout-service: TimeoutException",
             "Payment gateway stopped responding.",
             IncidentPriority.Medium,

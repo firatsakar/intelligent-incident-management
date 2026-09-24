@@ -1,4 +1,6 @@
-﻿using IncidentService.Application.Abstractions;
+﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using BuildingBlocks.SharedKernel;
+using IncidentService.Application.Abstractions;
 using IncidentService.Infrastructure.Persistence;
 using IncidentService.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +16,10 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("IncidentDb");
+
+        // Registered here as well as by AddPlatformAuth: the three event consumers run in bus
+        // scopes, and the context has to exist there for the bus to fill it in.
+        services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
         services.AddDbContext<IncidentDbContext>(options =>
             options.UseNpgsql(connectionString));

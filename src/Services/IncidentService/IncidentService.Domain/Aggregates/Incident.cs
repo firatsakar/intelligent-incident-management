@@ -8,6 +8,12 @@ public sealed class Incident : AggregateRoot
 {
     private Incident() { }
 
+    /// <summary>
+    /// The team this incident belongs to. Everything else about who may see it follows from this:
+    /// an incident is shared by an organisation, not owned by whoever happened to open it.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
+
     public string Title { get; private set; } = default!;
     public string Description { get; private set; } = default!;
     public IncidentStatus Status { get; private set; }
@@ -33,6 +39,7 @@ public sealed class Incident : AggregateRoot
     public DateTime? DetectedAt { get; private set; }
 
     public static Incident Create(
+        Guid organizationId,
         string title,
         string description,
         IncidentPriority priority,
@@ -48,6 +55,7 @@ public sealed class Incident : AggregateRoot
         var incident = new Incident
         {
             Id = id ?? Guid.NewGuid(),
+            OrganizationId = organizationId,
             Title = title,
             Description = description,
             Status = IncidentStatus.Open,

@@ -33,6 +33,7 @@ public sealed class CreateIncidentCommandHandler
         CancellationToken cancellationToken)
     {
         var incident = Incident.Create(
+            _organization.Required,
             request.Title,
             request.Description,
             request.Priority,

@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using IncidentService.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,11 +23,17 @@ public sealed class DevController : ControllerBase
 {
     private readonly DemoIncidentSeeder _seeder;
     private readonly IWebHostEnvironment _environment;
+    private readonly IOrganizationContext _organization;
 
-    public DevController(DemoIncidentSeeder seeder, IWebHostEnvironment environment)
+    public DevController(
+        DemoIncidentSeeder seeder,
+        IWebHostEnvironment environment,
+        IOrganizationContext organization
+    )
     {
         _seeder = seeder;
         _environment = environment;
+        _organization = organization;
     }
 
     /// <summary>
@@ -34,10 +41,27 @@ public sealed class DevController : ControllerBase
     /// call reports what the first one left rather than doubling it.
     /// </summary>
     [HttpPost("seed-demo-incidents")]
-    public async Task<IActionResult> SeedDemoIncidents(CancellationToken cancellationToken)
+    public async Task<IActionResult> SeedDemoIncidents(
+        [FromQuery] Guid organizationId,
+        CancellationToken cancellationToken
+    )
     {
         if (!_environment.IsDevelopment())
             return NotFound();
+
+        // There is no user behind this endpoint and therefore no claim to take a scope from, so
+        // whoever calls it has to say whose demo data they want. Asked for rather than defaulted:
+        // an organisation this endpoint picked for itself would be a guess, and seeding a guess
+        // is how demo rows end up in a customer's dashboard.
+        if (organizationId == Guid.Empty)
+            return BadRequest(
+                new { error = "organizationId is required: say which organisation to seed." }
+            );
+
+        // The caller is the scope's writer here, for the same reason the polling loop is for
+        // telemetry — nothing upstream has one to hand down. The seeder's idempotency check
+        // then runs under the query filter, so each organisation is seeded once, independently.
+        _organization.Set(organizationId);
 
         var result = await _seeder.SeedAsync(cancellationToken);
 

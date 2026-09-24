@@ -1,4 +1,4 @@
-using IncidentService.Application.Abstractions;
+﻿using IncidentService.Application.Abstractions;
 using IncidentService.Application.Commands.ApplyAiAnalysis;
 using IncidentService.Application.Commands.RecordAiAnalysisFailure;
 using IncidentService.Application.DTOs;
@@ -14,11 +14,16 @@ namespace IncidentService.Tests;
 // because the thing that would have corrected it is what failed.
 public sealed class AiAnalysisFailureTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private readonly IIncidentRepository _repository = Substitute.For<IIncidentRepository>();
     private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
 
     private static Incident AnIncident() =>
         Incident.Create(
+            Organization,
             "checkout-service: TimeoutException",
             "Payment for order failed",
             IncidentPriority.Medium,

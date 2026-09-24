@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -31,10 +32,12 @@ public sealed class DemoIncidentSeeder
     private const int Days = 30;
 
     private readonly IncidentDbContext _context;
+    private readonly IOrganizationContext _organization;
 
-    public DemoIncidentSeeder(IncidentDbContext context)
+    public DemoIncidentSeeder(IncidentDbContext context, IOrganizationContext organization)
     {
         _context = context;
+        _organization = organization;
     }
 
     public sealed record SeedResult(int Created, int AlreadyPresent);
@@ -103,6 +106,7 @@ public sealed class DemoIncidentSeeder
         var priority = isBadDay ? scenario.PriorityWhenBad : scenario.PriorityWhenQuiet;
 
         var incident = Incident.Create(
+            _organization.Required,
             scenario.Title,
             $"{scenario.Description} {Marker}",
             priority,
