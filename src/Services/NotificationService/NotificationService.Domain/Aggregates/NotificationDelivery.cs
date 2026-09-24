@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using NotificationService.Domain.Enums;
 
 namespace NotificationService.Domain.Aggregates;
@@ -12,6 +12,13 @@ public sealed class NotificationDelivery : AggregateRoot
 
     private NotificationDelivery() { }
 
+    /// <summary>
+    /// Whose delivery this is. The integration it went through and the incident it was about both
+    /// belong to one organisation already; carried here too because nothing in this model has a
+    /// navigation to inherit it through, and the delivery-health screen reads this table directly.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
+
     public Guid IntegrationId { get; private set; }
     public Guid IncidentId { get; private set; }
 
@@ -23,11 +30,17 @@ public sealed class NotificationDelivery : AggregateRoot
     public string? LastError { get; private set; }
     public DateTime? SentAt { get; private set; }
 
-    public static NotificationDelivery Start(Guid integrationId, Guid incidentId, Guid eventId)
+    public static NotificationDelivery Start(
+        Guid organizationId,
+        Guid integrationId,
+        Guid incidentId,
+        Guid eventId
+    )
     {
         return new NotificationDelivery
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             IntegrationId = integrationId,
             IncidentId = incidentId,
             EventId = eventId,

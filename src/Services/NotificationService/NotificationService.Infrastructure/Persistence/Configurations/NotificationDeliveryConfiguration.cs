@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NotificationService.Domain.Aggregates;
 
@@ -12,6 +12,11 @@ public sealed class NotificationDeliveryConfiguration
         builder.ToTable("notification_deliveries");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.OrganizationId).IsRequired();
+
+        // The stats query reads a window of one organisation's deliveries.
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
 
         builder.Property(x => x.IntegrationId).IsRequired();
 

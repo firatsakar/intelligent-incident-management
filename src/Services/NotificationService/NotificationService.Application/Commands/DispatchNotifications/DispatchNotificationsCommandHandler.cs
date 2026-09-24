@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using NotificationService.Application.Abstractions;
@@ -14,13 +15,15 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
     private readonly INotificationChannelResolver _channels;
     private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<DispatchNotificationsCommandHandler> _logger;
+    private readonly IOrganizationContext _organization;
 
     public DispatchNotificationsCommandHandler(
         IIntegrationRepository integrations,
         INotificationDeliveryRepository deliveries,
         INotificationChannelResolver channels,
         IRealtimeNotifier realtime,
-        ILogger<DispatchNotificationsCommandHandler> logger
+        ILogger<DispatchNotificationsCommandHandler> logger,
+        IOrganizationContext organization
     )
     {
         _integrations = integrations;
@@ -28,6 +31,7 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
         _channels = channels;
         _realtime = realtime;
         _logger = logger;
+        _organization = organization;
     }
 
     public async Task Handle(
@@ -120,6 +124,7 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
     )
     {
         var delivery = NotificationDelivery.Start(
+            _organization.Required,
             integration.Id,
             request.IncidentId,
             request.EventId

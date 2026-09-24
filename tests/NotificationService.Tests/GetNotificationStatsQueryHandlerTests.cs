@@ -1,4 +1,4 @@
-using NotificationService.Application.Abstractions;
+﻿using NotificationService.Application.Abstractions;
 using NotificationService.Application.Queries.GetNotificationStats;
 using NotificationService.Domain.Aggregates;
 using NotificationService.Domain.Enums;
@@ -11,6 +11,10 @@ namespace NotificationService.Tests;
 // having sent a notification at all.
 public sealed class GetNotificationStatsQueryHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly DateTime Noon = new(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly INotificationDeliveryRepository _deliveries =
@@ -49,6 +53,7 @@ public sealed class GetNotificationStatsQueryHandlerTests
 
     private static Integration EmailIntegration(string name = "Ops mailbox") =>
         Integration.Create(
+            Organization,
             name,
             NotificationChannelType.Email,
             new Dictionary<string, string>
@@ -64,14 +69,14 @@ public sealed class GetNotificationStatsQueryHandlerTests
 
     private static NotificationDelivery Sent(Guid integrationId)
     {
-        var delivery = NotificationDelivery.Start(integrationId, Guid.NewGuid(), Guid.NewGuid());
+        var delivery = NotificationDelivery.Start(Organization, integrationId, Guid.NewGuid(), Guid.NewGuid());
         delivery.MarkSent();
         return delivery;
     }
 
     private static NotificationDelivery Failed(Guid integrationId, string error)
     {
-        var delivery = NotificationDelivery.Start(integrationId, Guid.NewGuid(), Guid.NewGuid());
+        var delivery = NotificationDelivery.Start(Organization, integrationId, Guid.NewGuid(), Guid.NewGuid());
         delivery.MarkFailed(error);
         return delivery;
     }
@@ -85,7 +90,7 @@ public sealed class GetNotificationStatsQueryHandlerTests
             Sent(integration.Id),
             Sent(integration.Id),
             Failed(integration.Id, "connection refused"),
-            NotificationDelivery.Start(integration.Id, Guid.NewGuid(), Guid.NewGuid())
+            NotificationDelivery.Start(Organization, integration.Id, Guid.NewGuid(), Guid.NewGuid())
         );
 
         var stats = await _handler.Handle(

@@ -1,3 +1,5 @@
+﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using BuildingBlocks.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,6 +19,10 @@ public static class ServiceCollectionExtensions
     )
     {
         var connectionString = configuration.GetConnectionString("NotificationDb");
+
+        // Registered here as well as by AddPlatformAuth: the dispatcher runs in a bus scope, and
+        // the context has to exist there for the bus to fill it in.
+        services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
         services.AddDbContext<NotificationDbContext>(options => options.UseNpgsql(connectionString));
 

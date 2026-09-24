@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using NotificationService.Domain.Enums;
 
 namespace NotificationService.Domain.Aggregates;
@@ -8,6 +8,13 @@ public sealed class Integration : AggregateRoot
     private Dictionary<string, string> _config = new();
 
     private Integration() { }
+
+    /// <summary>
+    /// Whose channel this is. A dispatch only ever considers the integrations of the organisation
+    /// the analysed incident belongs to — before this column, an incident analysed for one
+    /// organisation was sent through every organisation's email, webhook and Jira.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public string Name { get; private set; } = default!;
     public NotificationChannelType Channel { get; private set; }
@@ -24,6 +31,7 @@ public sealed class Integration : AggregateRoot
     public string? CategoryFilter { get; private set; }
 
     public static Integration Create(
+        Guid organizationId,
         string name,
         NotificationChannelType channel,
         IReadOnlyDictionary<string, string> config,
@@ -35,6 +43,7 @@ public sealed class Integration : AggregateRoot
         return new Integration
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Name = name,
             Channel = channel,
             _config = new Dictionary<string, string>(config),
