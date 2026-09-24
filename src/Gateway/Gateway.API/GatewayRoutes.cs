@@ -7,23 +7,33 @@ namespace Gateway.API;
 /// </summary>
 /// <remarks>
 /// It lived in <c>web/vite.config.ts</c> until now, which meant the browser could only reach the
-/// four services while a dev server was running: Vite defines <c>server.proxy</c> and nothing
-/// else, so a built <c>dist/</c> had no way to call anything. This file is the same nine entries,
-/// moved to where they work in development and in production alike.
+/// services while a dev server was running: Vite defines <c>server.proxy</c> and nothing else, so
+/// a built <c>dist/</c> had no way to call anything. This file is the same entries, moved to where
+/// they work in development and in production alike.
 ///
 /// In memory rather than in configuration on purpose. A route table is a structure with rules —
-/// which prefixes belong to the same service, which ones carry a WebSocket — and those rules are
-/// worth stating in a language that can hold a comment. The destination addresses are the part
-/// that genuinely varies per environment, so those alone are read from configuration, the way
-/// <see cref="BuildingBlocks.Observability.LoggingExtensions"/> reads the Seq URL.
+/// which prefixes belong to the same service, which ones carry a WebSocket, which one is worth
+/// rate limiting — and those rules are worth stating in a language that can hold a comment. The
+/// destination addresses are the part that genuinely varies per environment, so those alone are
+/// read from configuration, the way <see cref="BuildingBlocks.Observability.LoggingExtensions"/>
+/// reads the Seq URL.
 /// </remarks>
 internal static class GatewayRoutes
 {
     /// <summary>Configuration section holding per-environment service addresses.</summary>
     public const string ServicesConfigurationSection = "Services";
 
-    // One cluster per service, not per prefix: two of the four answer on more than one prefix and
+    /// <summary>
+    /// Applied to sign-in alone. It is the one endpoint where guessing is the attack, and where
+    /// each guess also costs the server a BCrypt verification at work factor 12. Refresh is
+    /// deliberately not limited: every open console calls it on a timer, and a limit there would
+    /// sign people out for being logged in.
+    /// </summary>
+    public const string SignInRateLimiterPolicy = "sign-in";
+
+    // One cluster per service, not per prefix: two of the five answer on more than one prefix and
     // a cluster is a destination, not a route.
+    private const string IdentityCluster = "identity";
     private const string IncidentCluster = "incident";
     private const string AgentCluster = "agent";
     private const string NotificationCluster = "notification";
@@ -31,6 +41,7 @@ internal static class GatewayRoutes
 
     private static readonly (string Cluster, string ConfigurationKey, string Fallback)[] Services =
     [
+        (IdentityCluster, "Identity", "http://localhost:5240"),
         (IncidentCluster, "Incident", "http://localhost:5203"),
         (AgentCluster, "Agent", "http://localhost:5130"),
         (NotificationCluster, "Notification", "http://localhost:5210"),
@@ -42,17 +53,20 @@ internal static class GatewayRoutes
     //
     // `/api/telemetry` and `/api/telemetry-sources` need no ordering here, unlike the Vite table
     // they replace: a route template matches whole segments, so `/api/telemetry/{**rest}` does not
-    // swallow `/api/telemetry-sources`. Two entries, no precedence rule to remember.
-    private static readonly (string Route, string Path, string Cluster)[] Api =
+    // swallow `/api/telemetry-sources`. Two entries, no precedence rule to remember. The same is
+    // what lets the literal `/api/auth/login` sit beside `/api/auth/{**rest}` and win.
+    private static readonly (string Route, string Path, string Cluster, string? RateLimiter)[] Api =
     [
-        ("incidents", "/api/incidents/{**rest}", IncidentCluster),
+        ("auth-sign-in", "/api/auth/login", IdentityCluster, SignInRateLimiterPolicy),
+        ("auth", "/api/auth/{**rest}", IdentityCluster, null),
+        ("incidents", "/api/incidents/{**rest}", IncidentCluster, null),
         // Routed because the endpoint exists and is reachable; the console never calls it. The
         // normal trigger for an analysis is IncidentDetectedEvent over RabbitMQ.
-        ("analyses", "/api/analyses/{**rest}", AgentCluster),
-        ("notifications", "/api/notifications/{**rest}", NotificationCluster),
-        ("integrations", "/api/integrations/{**rest}", NotificationCluster),
-        ("telemetry", "/api/telemetry/{**rest}", TelemetryCluster),
-        ("telemetry-sources", "/api/telemetry-sources/{**rest}", TelemetryCluster),
+        ("analyses", "/api/analyses/{**rest}", AgentCluster, null),
+        ("notifications", "/api/notifications/{**rest}", NotificationCluster, null),
+        ("integrations", "/api/integrations/{**rest}", NotificationCluster, null),
+        ("telemetry", "/api/telemetry/{**rest}", TelemetryCluster, null),
+        ("telemetry-sources", "/api/telemetry-sources/{**rest}", TelemetryCluster, null),
     ];
 
     // The hubs need nothing special from YARP — it proxies the upgrade itself, and the three
@@ -86,13 +100,21 @@ internal static class GatewayRoutes
             })
             .ToArray();
 
-        var routes = Api.Concat(Hubs)
-            .Select(route => new RouteConfig
+        var routes = Api.Select(route => new RouteConfig
             {
                 RouteId = route.Route,
                 ClusterId = route.Cluster,
                 Match = new RouteMatch { Path = route.Path },
+                RateLimiterPolicy = route.RateLimiter,
             })
+            .Concat(
+                Hubs.Select(route => new RouteConfig
+                {
+                    RouteId = route.Route,
+                    ClusterId = route.Cluster,
+                    Match = new RouteMatch { Path = route.Path },
+                })
+            )
             .ToArray();
 
         return (routes, clusters);
