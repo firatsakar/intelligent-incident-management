@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.Gateway);
+builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.Gateway);
 
 var (routes, clusters) = GatewayRoutes.Build(builder.Configuration);
 

@@ -9,7 +9,9 @@ public static class LoggingExtensions
 {
     public const string SeqUrlConfigurationKey = "Seq:Url";
 
-    private const string DefaultSeqUrl = "http://localhost:8081";
+    // Shared with TracingExtensions: logs and traces go to the same Seq, which is what lets a log
+    // event open the trace it was written inside.
+    internal const string DefaultSeqUrl = "http://localhost:8081";
 
     // Every service logs the same way: structured, to the console for whoever is watching a
     // terminal and to Seq for everything else. Stamping the service name here rather than at each
@@ -29,6 +31,13 @@ public static class LoggingExtensions
                     // proxied request, and every call the console makes is a proxied request. The
                     // services that do not reference YARP are unaffected by this line.
                     .MinimumLevel.Override("Yarp", LogEventLevel.Warning)
+                    // The trace exporter posts to Seq every five seconds through IHttpClientFactory,
+                    // which logs four Information lines per post — into the same Seq, about the
+                    // act of sending it spans. A failed export still surfaces as a warning.
+                    .MinimumLevel.Override(
+                        "System.Net.Http.HttpClient.OtlpTraceExporter",
+                        LogEventLevel.Warning
+                    )
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Service", serviceName)
                     .WriteTo.Console()

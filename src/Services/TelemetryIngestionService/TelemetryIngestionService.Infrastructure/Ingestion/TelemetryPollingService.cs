@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using System.Diagnostics;
+using MediatR;
 using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +17,10 @@ public sealed class TelemetryPollingService : BackgroundService
     // The scheduler ticks faster than any source's interval so a source with a short interval is
     // not held back by the loop itself.
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(5);
+
+    // TelemetryConstants.ActivitySources.TelemetryIngestionService, spelled out for the same reason
+    // the outbox spells out its own: infrastructure emits spans without taking on the SDK.
+    private static readonly ActivitySource ActivitySource = new("TelemetryIngestionService");
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TelemetryPollingService> _logger;
@@ -81,6 +86,16 @@ public sealed class TelemetryPollingService : BackgroundService
             if (!IsDue(source, cursor))
                 continue;
 
+            // One trace per poll, and the root of everything the poll sets off. Nothing is in
+            // flight when a timer fires, so without this the fetch, the detection and the outbox
+            // row a promotion writes would each belong to no trace — and a poll that promotes is
+            // where an incident's whole path begins.
+            using var activity = ActivitySource.StartActivity("telemetry poll", ActivityKind.Internal);
+
+            activity?.SetTag("telemetry.source.id", source.Id);
+            activity?.SetTag("telemetry.source.kind", source.Kind.ToString());
+            activity?.SetTag("organization.id", source.OrganizationId);
+
             // Each source gets its own scope: one source's DbContext state, and one source's
             // failure, must not touch another's.
             using var sourceScope = _scopeFactory.CreateScope();
@@ -93,9 +108,16 @@ public sealed class TelemetryPollingService : BackgroundService
                 .ServiceProvider.GetRequiredService<IOrganizationContext>()
                 .Set(source.OrganizationId);
 
-            await sourceScope
+            var result = await sourceScope
                 .ServiceProvider.GetRequiredService<ISender>()
                 .Send(new PollTelemetrySourceCommand(source.Id), cancellationToken);
+
+            activity?.SetTag("telemetry.poll.fetched", result.Fetched);
+            activity?.SetTag("telemetry.poll.stored", result.Stored);
+            activity?.SetTag("telemetry.poll.signatures", result.SignaturesTouched);
+
+            if (result.Error is not null)
+                activity?.SetStatus(ActivityStatusCode.Error, result.Error);
         }
     }
 

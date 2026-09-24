@@ -219,6 +219,17 @@ Hiçbir servis `/health` ya da `/ready` sunmuyor. Kubernetes liveness/readiness 
   tüketiciler korur), ama kopya **yayın** ve gereksiz yük oluşur.
 - Yapılacak: `SELECT ... FOR UPDATE SKIP LOCKED` ile satır kiralama, ya da dağıtık kilit.
 
+### 🔴 Outbox'ta yeniden deneme sınırı yok
+
+`OutboxDispatcher` başarısız bir satırı her 5 saniyede **sınırsız** yeniden dener ve her denemede
+handler'ın ilk yan etkisi (publish) tekrar olur. Adım 17'de canlı görüldü: organizasyon kapsamı
+eksikliği yüzünden deterministik olarak düşen bir satır **519. denemedeydi** ve
+`IncidentAnalyzedEvent`'i 43 dakikadır 5 saniyede bir yeniden yayınlıyordu. Kök neden kapandı
+(`IIM-112`), sınırsızlık kapanmadı: bir sonraki deterministik hata aynı döngüyü kurar.
+
+- Yapılacak: `RetryCount` için bir tavan (örn. 10) ve tavanı aşan satırı `GetPendingAsync`
+  dışına alıp görünür kılmak (DLQ derinliği gibi alarm) — sessizce bırakmak değil.
+
 ### 🟡 Dead-letter kuyruklarını kimse izlemiyor
 
 Servis başına DLQ var (`incident-service.dlq` vb.) ve zehirli mesajlar oraya düşüyor — ama
@@ -242,18 +253,29 @@ dispatch turunun tamamlanması garanti değil.
 
 ## 5. Gözlemlenebilirlik
 
-### 🟡 Distributed tracing yok
+### ✅ ~~Distributed tracing yok~~ — **kapandı** (Adım 17, `IIM-109`)
 
-Dört servis ve bir mesaj kuyruğu var; bir incident'ın hangi adımda takıldığını anlamak şu an
-log'ları elle eşleştirmekle mümkün. **Adım 17** (OpenTelemetry) bunu kapatır.
+Altı süreç de (`AddPlatformTracing`) span'lerini OTLP ile log'larla aynı Seq'e yazıyor; bir log
+satırı kendi trace'ini açıyor. HTTP, SQL, RabbitMQ (istemcinin kendi span'leri), outbox (trace
+satırda taşınıyor), telemetri poll'u ve agent'ın adımları (`invoke_agent` / `chat` /
+`execute_tool`) tek zincir. Üretim için kalanlar:
+
+- **Örnekleme.** Bugün her trace saklanıyor (yalnızca kökü olmayan istemci çağrıları düşüyor).
+  Gerçek trafikte oran tabanlı örnekleme ya da Collector'da tail sampling gerekir.
+- **Trace deposu organizasyon sınırı taşımıyor.** Bu yüzden agent span'leri **içerik
+  taşımıyor** (`EnableSensitiveData = false`) — model, token, süre, tool adı var; prompt ve
+  cevap yok. Bu kural gevşetilecekse önce depo erişimi organizasyona göre bölünmeli.
+- Seq burada hem log hem trace deposu; üretimde Collector üzerinden ayrı bir trace backend'i
+  (Tempo/Jaeger) seçeneği açık — servisler OTLP konuştuğu için yalnızca endpoint değişir.
 
 ### 🟡 Metrik toplanmıyor
 
 `TelemetryConstants.MetricNames` tanımlı ama **hiçbir yerde kullanılmıyor** — `incidents.created`,
 `notifications.sent`, `ai.request_duration_seconds` hepsi ölü tanım.
 
-- Yapılacak: Adım 17 ile birlikte gerçekten yayınla; MTTR ve model performansı (Adım 20)
-  bunlara dayanacak.
+- **Adım 17'de bilinçli olarak yapılmadı** (Fırat, 2026-09-24): trace hedefi Seq seçildi ve Seq
+  metrik göstermiyor; görünmeyecek bir metrik yayınlamak bir ölü tanımı başka bir ölü tanımla
+  değiştirmek olurdu. **Adım 22'ye** (Prometheus/Grafana ya da OTLP metrik backend'i) ait.
 
 ### 🟡 Platformun kendisi izlenmiyor
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using BuildingBlocks.SharedKernel;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -27,6 +28,12 @@ public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesIntercep
         if (context is null)
             return base.SavingChangesAsync(eventData, result, cancellationToken);
 
+        // Whatever is in flight as the aggregate changes — the request, the consumed message, the
+        // poll. Only W3C ids travel: the hierarchical format has no traceparent to hand on.
+        var traceParent = Activity.Current is { IdFormat: ActivityIdFormat.W3C } activity
+            ? activity.Id
+            : null;
+
         var outboxMessages = context
             .ChangeTracker.Entries<AggregateRoot>()
             .Select(entry => entry.Entity)
@@ -47,6 +54,7 @@ public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesIntercep
                 // become a message published to everyone. The scope is established by whoever
                 // opened it — the HTTP middleware, the bus, or the poller reading its source.
                 OrganizationId = _organization.Required,
+                TraceParent = traceParent,
             })
             .ToList();
 
