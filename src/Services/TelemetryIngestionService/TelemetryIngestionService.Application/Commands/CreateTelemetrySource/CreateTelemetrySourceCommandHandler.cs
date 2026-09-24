@@ -3,6 +3,8 @@ using MediatR;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Enums;
+using TelemetryIngestionService.Domain.Services;
 
 namespace TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 
@@ -41,14 +43,22 @@ public sealed class CreateTelemetrySourceCommandHandler
             request.IsEnabled
         );
 
+        // A pushed source is born with its key. The plaintext exists only in this method and the
+        // response it returns.
+        IngestKey.Issued? issued = source.Kind.IsPushed() ? IngestKey.Generate() : null;
+
+        if (issued is { } key)
+            source.IssueIngestKey(key.Hash, key.DisplayPrefix);
+
         await _sources.AddAsync(source, cancellationToken);
         await _sources.SaveChangesAsync(cancellationToken);
 
         // After the save, never before: what is broadcast has to be what is stored. The DTO
-        // masks the credentials, so this carries exactly what a GET would.
+        // masks the credentials, so this carries exactly what a GET would — and it is built
+        // before the key is attached, so the organisation's other consoles never receive it.
         var dto = TelemetrySourceDto.FromDomain(source);
         await _realtime.SourceChangedAsync(dto, cancellationToken);
 
-        return dto;
+        return dto with { IngestKey = issued?.Key };
     }
 }

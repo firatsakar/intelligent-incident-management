@@ -11,7 +11,9 @@ public sealed class UpdateTelemetrySourceCommandValidator
 
         RuleFor(x => x.Name).NotEmpty().MaximumLength(128);
 
-        RuleFor(x => x.Config).NotEmpty();
+        // Not NotEmpty: a pushed source has no settings of its own, and whether this one needs any
+        // depends on a kind only the stored source knows.
+        RuleFor(x => x.Config).NotNull();
 
         RuleFor(x => x.PollIntervalSeconds)
             .GreaterThanOrEqualTo(5)

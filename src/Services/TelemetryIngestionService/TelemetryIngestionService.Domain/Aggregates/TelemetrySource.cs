@@ -35,6 +35,20 @@ public sealed class TelemetrySource : AggregateRoot
 
     public int PollIntervalSeconds { get; private set; }
 
+    /// <summary>
+    /// SHA-256 of the key a pushed source authenticates with. Null for polled sources.
+    /// </summary>
+    /// <remarks>
+    /// The key is what tells a push which organisation it belongs to — the request carries no
+    /// user and no claim, so without it the push would have to be believed about whose it is.
+    /// Stored hashed for the same reason a refresh token is: the row has to be found by it, and a
+    /// database read must not be enough to send logs as somebody else.
+    /// </remarks>
+    public string? IngestKeyHash { get; private set; }
+
+    /// <summary>The key's first characters, so a person can tell which key a collector holds.</summary>
+    public string? IngestKeyPrefix { get; private set; }
+
     public static TelemetrySource Create(
         Guid organizationId,
         string name,
@@ -66,6 +80,19 @@ public sealed class TelemetrySource : AggregateRoot
     public void UpdateConfig(IReadOnlyDictionary<string, string> config)
     {
         _config = new Dictionary<string, string>(config);
+        SetUpdatedAt();
+    }
+
+    // Replaces whatever key the source had: a rotated key is the old one revoked, in one write.
+    public void IssueIngestKey(string hash, string prefix)
+    {
+        if (!Kind.IsPushed())
+            throw new InvalidOperationException(
+                $"A {Kind} source is polled; it has no ingest key to issue."
+            );
+
+        IngestKeyHash = hash;
+        IngestKeyPrefix = prefix;
         SetUpdatedAt();
     }
 
