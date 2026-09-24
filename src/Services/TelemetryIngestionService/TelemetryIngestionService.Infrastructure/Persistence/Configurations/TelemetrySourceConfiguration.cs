@@ -16,7 +16,8 @@ public sealed class TelemetrySourceConfiguration : IEntityTypeConfiguration<Tele
         builder.HasIndex(x => x.OrganizationId);
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(128);
-        builder.HasIndex(x => x.Name).IsUnique();
+        // Unique within an organisation: two teams can each call their source "Production Seq".
+        builder.HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
 
         builder.Property(x => x.Kind).IsRequired().HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.IsEnabled).IsRequired();
