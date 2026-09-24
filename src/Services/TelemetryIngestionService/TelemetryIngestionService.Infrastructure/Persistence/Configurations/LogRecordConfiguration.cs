@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -11,6 +11,9 @@ public sealed class LogRecordConfiguration : IEntityTypeConfiguration<LogRecord>
         builder.ToTable("log_records");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
 
         builder.Property(x => x.TelemetrySourceId).IsRequired();
         builder.Property(x => x.SourceEventId).HasMaxLength(128);

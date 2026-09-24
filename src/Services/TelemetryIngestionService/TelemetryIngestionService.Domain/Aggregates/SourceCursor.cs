@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
 
@@ -7,6 +7,12 @@ namespace TelemetryIngestionService.Domain.Aggregates;
 public sealed class SourceCursor : AggregateRoot
 {
     private SourceCursor() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public Guid TelemetrySourceId { get; private set; }
 
@@ -21,9 +27,14 @@ public sealed class SourceCursor : AggregateRoot
     public DateTime? LastPolledAt { get; private set; }
     public string? LastError { get; private set; }
 
-    public static SourceCursor Start(Guid telemetrySourceId)
+    public static SourceCursor Start(Guid organizationId, Guid telemetrySourceId)
     {
-        return new SourceCursor { Id = Guid.NewGuid(), TelemetrySourceId = telemetrySourceId };
+        return new SourceCursor
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            TelemetrySourceId = telemetrySourceId,
+        };
     }
 
     public void Advance(string? position, DateTime? lastEventTimestamp)

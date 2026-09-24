@@ -62,7 +62,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOutboxStore, TelemetryOutboxStore>();
         services.AddScoped<IOutboxMessageHandler, SignalPromotedOutboxHandler>();
 
-        services.AddHostedService<DetectionRuleSeeder>();
         services.AddHostedService<TelemetryPollingService>();
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();

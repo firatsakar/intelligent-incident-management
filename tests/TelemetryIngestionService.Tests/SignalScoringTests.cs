@@ -1,4 +1,4 @@
-using TelemetryIngestionService.Domain.Aggregates;
+﻿using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Services;
 
@@ -8,6 +8,10 @@ namespace TelemetryIngestionService.Tests;
 // to test and silently wrong if it is not.
 public sealed class SignalScoringTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     // Doubles are compared to ten decimal places throughout: the terms are summed, so 0.55 + 0.10
     // does not land exactly on 0.65 and an exact comparison would fail for the wrong reason.
     private const int Precision = 10;
@@ -209,6 +213,7 @@ public sealed class SignalScoringTests
     {
         private static DetectionRule Rule(double promoteThreshold = 0.90) =>
             DetectionRule.Create(
+                Organization,
                 "test",
                 service: null,
                 LogSeverity.Error,

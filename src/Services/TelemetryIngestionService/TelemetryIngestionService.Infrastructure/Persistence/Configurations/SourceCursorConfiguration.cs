@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -11,6 +11,9 @@ public sealed class SourceCursorConfiguration : IEntityTypeConfiguration<SourceC
         builder.ToTable("source_cursors");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
 
         // Exactly one cursor per source.
         builder.Property(x => x.TelemetrySourceId).IsRequired();

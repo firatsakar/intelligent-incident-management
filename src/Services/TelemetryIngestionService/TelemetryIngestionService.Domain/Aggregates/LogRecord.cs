@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
@@ -8,6 +8,12 @@ namespace TelemetryIngestionService.Domain.Aggregates;
 public sealed class LogRecord : AggregateRoot
 {
     private LogRecord() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public Guid TelemetrySourceId { get; private set; }
 
@@ -38,6 +44,7 @@ public sealed class LogRecord : AggregateRoot
     public bool HasClockSkew { get; private set; }
 
     public static LogRecord Create(
+        Guid organizationId,
         Guid telemetrySourceId,
         string? sourceEventId,
         string service,
@@ -56,6 +63,7 @@ public sealed class LogRecord : AggregateRoot
         return new LogRecord
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             TelemetrySourceId = telemetrySourceId,
             SourceEventId = sourceEventId,
             Service = service,

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -11,6 +11,9 @@ public sealed class ErrorSignatureConfiguration : IEntityTypeConfiguration<Error
         builder.ToTable("error_signatures");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
 
         // The identity of a distinct error. Unique so concurrent pollers cannot create two rows
         // for the same signature.

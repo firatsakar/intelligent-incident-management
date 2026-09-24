@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using System.Globalization;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
     private readonly ISignalRepository _signals;
     private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<DetectSignalsCommandHandler> _logger;
+    private readonly IOrganizationContext _organization;
 
     public DetectSignalsCommandHandler(
         IErrorSignatureRepository signatures,
@@ -27,7 +29,8 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         ILogRecordRepository logRecords,
         ISignalRepository signals,
         IRealtimeNotifier realtime,
-        ILogger<DetectSignalsCommandHandler> logger
+        ILogger<DetectSignalsCommandHandler> logger,
+        IOrganizationContext organization
     )
     {
         _signatures = signatures;
@@ -36,6 +39,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         _signals = signals;
         _realtime = realtime;
         _logger = logger;
+        _organization = organization;
     }
 
     public async Task<int> Handle(
@@ -145,6 +149,9 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
         }
 
         var signal = Signal.Detect(
+            // The scope the polling loop took from the source's row, carried down through
+            // the poll and the detection into the signal it produces.
+            _organization.Required,
             signature.Id,
             SignalKind.LogBurst,
             // When the problem started, not when we noticed it.

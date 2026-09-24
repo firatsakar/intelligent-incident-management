@@ -58,7 +58,7 @@ public sealed class TelemetryPollingService : BackgroundService
         var cursors = scope.ServiceProvider.GetRequiredService<ISourceCursorRepository>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var enabled = await sources.GetEnabledAsync(cancellationToken);
+        var enabled = await sources.GetEnabledForPollingAsync(cancellationToken);
 
         foreach (var source in enabled)
         {
@@ -76,7 +76,7 @@ public sealed class TelemetryPollingService : BackgroundService
                 continue;
             }
 
-            var cursor = await cursors.GetOrCreateAsync(source.Id, cancellationToken);
+            var cursor = await cursors.GetForPollingAsync(source.Id, cancellationToken);
 
             if (!IsDue(source, cursor))
                 continue;
@@ -99,9 +99,11 @@ public sealed class TelemetryPollingService : BackgroundService
         }
     }
 
-    private static bool IsDue(TelemetrySource source, SourceCursor cursor)
+    // A source with no cursor has never been polled, which makes it due. The cursor is created
+    // on the first poll, inside the source's own scope.
+    private static bool IsDue(TelemetrySource source, SourceCursor? cursor)
     {
-        return cursor.LastPolledAt is null
+        return cursor?.LastPolledAt is null
             || DateTime.UtcNow - cursor.LastPolledAt.Value
                 >= TimeSpan.FromSeconds(source.PollIntervalSeconds);
     }

@@ -1,4 +1,4 @@
-using NSubstitute;
+﻿using NSubstitute;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Queries.GetTelemetryStats;
 using TelemetryIngestionService.Domain.Aggregates;
@@ -11,6 +11,10 @@ namespace TelemetryIngestionService.Tests;
 // product claims restraint it never showed.
 public sealed class GetTelemetryStatsQueryHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly DateTime Noon = new(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly ILogRecordRepository _logRecords = Substitute.For<ILogRecordRepository>();
@@ -64,6 +68,7 @@ public sealed class GetTelemetryStatsQueryHandlerTests
         string? exceptionType = "TimeoutException"
     ) =>
         ErrorSignature.Create(
+            Organization,
             Guid.NewGuid().ToString("N"),
             service,
             exceptionType,

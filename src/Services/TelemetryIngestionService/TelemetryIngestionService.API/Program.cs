@@ -1,4 +1,7 @@
-﻿using System.Text.Json.Serialization;
+﻿using TelemetryIngestionService.Application.EventHandlers;
+using TelemetryIngestionService.API.BackgroundServices;
+using BuildingBlocks.Contracts;
+using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
@@ -44,6 +47,15 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddSignalR();
 
 builder.Services.AddSingleton<IRealtimeNotifier, SignalRSignalNotifier>();
+
+// A new organisation cannot detect anything until it has a rule, and the service that writes the
+// rule cannot read the table an organisation is born in. This is the subscription that closes it.
+builder.Services.AddScoped<
+    IIntegrationEventHandler<OrganizationCreatedEvent>,
+    OrganizationCreatedEventHandler
+>();
+
+builder.Services.AddHostedService<EventBusSubscriber>();
 
 // The same call IdentityService makes. Every service validates the token on its own:
 // the gateway forwards it, it does not vouch for it.
