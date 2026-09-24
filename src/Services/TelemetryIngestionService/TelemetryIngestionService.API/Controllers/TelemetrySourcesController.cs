@@ -1,3 +1,5 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TelemetryIngestionService.API.Contracts;
@@ -35,6 +37,7 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Create(
         [FromBody] CreateTelemetrySourceRequest request,
         CancellationToken cancellationToken
@@ -55,6 +58,7 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateTelemetrySourceRequest request,
@@ -73,6 +77,7 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/enabled")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> SetEnabled(
         Guid id,
         [FromBody] SetTelemetrySourceEnabledRequest request,
@@ -85,6 +90,7 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _sender.Send(new DeleteTelemetrySourceCommand(id), cancellationToken);
@@ -93,6 +99,7 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPost("{id:guid}/test")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Test(Guid id, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new TestTelemetrySourceCommand(id), cancellationToken);

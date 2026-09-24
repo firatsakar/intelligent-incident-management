@@ -1,3 +1,4 @@
+﻿import { useCanOperate } from '@/features/auth/AuthProvider'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftIcon, ArrowRightIcon, HandIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -58,6 +59,7 @@ export function IncidentDetailPage() {
     queryFn: integrationsApi.list,
   })
 
+  const canOperate = useCanOperate()
   const updateStatus = useUpdateStatus(id)
   const assignTeam = useAssignTeam(id)
 
@@ -123,56 +125,61 @@ export function IncidentDetailPage() {
 
           {/* Two controls, kept compact and off to the side. This screen is a record of what
               happened, and a pair of form fields given equal weight to the timeline would read as
-              though the point of opening it were to edit something. */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={data.status}
-              onValueChange={(value) => updateStatus.mutate(value as IncidentStatus)}
-              disabled={updateStatus.isPending}
-            >
-              <SelectTrigger className="w-36" aria-label={t.statusLabel}>
-                {/* Explicit for the same reason as the list filters: the trigger otherwise shows
-                    the raw enum name. */}
-                <SelectValue>{labels.incidentStatus[data.status]}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {incidentStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {labels.incidentStatus[status]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              though the point of opening it were to edit something.
 
-            <div className="flex items-center gap-1.5">
-              <Input
-                value={team}
-                onChange={(event) => setTeam(event.target.value)}
-                // The current team is on the identity row above, not in here as a placeholder: a
-                // placeholder is not a value, it vanishes the moment you type, and an operator
-                // who reads one as the current assignment will believe they cleared it.
-                placeholder={data.assignedTeam ? t.reassignPlaceholder : t.assignPlaceholder}
-                aria-label={data.assignedTeam ? t.reassignLabel : t.assignLabel}
-                className="w-40"
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' || !team.trim() || assignTeam.isPending) return
-
-                  assignTeam.mutate(team.trim())
-                  setTeam('')
-                }}
-              />
-              <Button
-                variant="outline"
-                disabled={!team.trim() || assignTeam.isPending}
-                onClick={() => {
-                  assignTeam.mutate(team.trim())
-                  setTeam('')
-                }}
+              Not rendered for a Viewer. Nothing is lost by it: status and team are both on the
+              identity row above, and that is where they are read. */}
+          {canOperate && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={data.status}
+                onValueChange={(value) => updateStatus.mutate(value as IncidentStatus)}
+                disabled={updateStatus.isPending}
               >
-                {assignTeam.isPending ? t.assigning : t.assign}
-              </Button>
+                <SelectTrigger className="w-36" aria-label={t.statusLabel}>
+                  {/* Explicit for the same reason as the list filters: the trigger otherwise shows
+                      the raw enum name. */}
+                  <SelectValue>{labels.incidentStatus[data.status]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {incidentStatuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {labels.incidentStatus[status]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={team}
+                  onChange={(event) => setTeam(event.target.value)}
+                  // The current team is on the identity row above, not in here as a placeholder: a
+                  // placeholder is not a value, it vanishes the moment you type, and an operator
+                  // who reads one as the current assignment will believe they cleared it.
+                  placeholder={data.assignedTeam ? t.reassignPlaceholder : t.assignPlaceholder}
+                  aria-label={data.assignedTeam ? t.reassignLabel : t.assignLabel}
+                  className="w-40"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' || !team.trim() || assignTeam.isPending) return
+
+                    assignTeam.mutate(team.trim())
+                    setTeam('')
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  disabled={!team.trim() || assignTeam.isPending}
+                  onClick={() => {
+                    assignTeam.mutate(team.trim())
+                    setTeam('')
+                  }}
+                >
+                  {assignTeam.isPending ? t.assigning : t.assign}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

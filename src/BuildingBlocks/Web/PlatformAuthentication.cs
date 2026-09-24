@@ -70,6 +70,22 @@ public sealed class PlatformJwtOptions
     public SymmetricSecurityKey Key() => new(Encoding.UTF8.GetBytes(SigningKey));
 }
 
+/// <summary>
+/// What a role may do, named by the capability rather than by the role.
+/// </summary>
+/// <remarks>
+/// One policy today, because one distinction exists today: whether a person may change anything.
+/// Viewers read every screen and write nothing. Engineers and administrators work the incidents
+/// and configure where alerts go and which logs are read. What separates an administrator —
+/// the organisation's own settings and members — has no endpoint yet, and a policy guarding
+/// nothing would only be a name for a future decision.
+/// </remarks>
+public static class PlatformPolicies
+{
+    /// <summary>Change something: an incident, an integration, a telemetry source.</summary>
+    public const string Operate = "operate";
+}
+
 public static class PlatformAuthentication
 {
     /// <summary>
@@ -148,7 +164,14 @@ public static class PlatformAuthentication
         // silently and in the direction that matters, by answering someone who never signed in.
         services
             .AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            // A signed-in Viewer who tries to write gets 403, not 404: unlike another
+            // organisation's row, this one is theirs to see, so there is nothing to hide about its
+            // existence — only something to refuse.
+            .AddPolicy(
+                PlatformPolicies.Operate,
+                policy => policy.RequireAuthenticatedUser().RequireRole("Admin", "Engineer")
+            );
 
         // TryAdd, because infrastructure registers it too — a hosted service's scope has no HTTP
         // pipeline to have done it. Two plain registrations would still resolve to one instance

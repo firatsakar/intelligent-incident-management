@@ -1,9 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query'
+﻿import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { onUnauthorized } from '@/api/client'
 
 import {
+  canOperate,
   endSession,
   readSession,
   startSession,
@@ -33,6 +34,16 @@ interface AuthValue {
 }
 
 const AuthContext = createContext<AuthValue | null>(null)
+
+/**
+ * Whether the signed-in person may change things. False while signed out or restoring, so a
+ * control never flashes into view for a frame and disappears.
+ */
+export function useCanOperate(): boolean {
+  const { user } = useAuth()
+
+  return user ? canOperate(user.role) : false
+}
 
 export function useAuth(): AuthValue {
   const value = useContext(AuthContext)

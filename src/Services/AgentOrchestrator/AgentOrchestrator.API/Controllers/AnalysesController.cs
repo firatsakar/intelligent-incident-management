@@ -1,4 +1,5 @@
-﻿using AgentOrchestrator.API.Contracts;
+﻿using BuildingBlocks.Web;
+using AgentOrchestrator.API.Contracts;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using MediatR;
@@ -19,6 +20,7 @@ public sealed class AnalysesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Analyze(
         [FromBody] AnalyzeIncidentRequest request,
         CancellationToken cancellationToken

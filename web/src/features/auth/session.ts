@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The session seam.
  *
  * It used to open by saying that nothing in it was security, because nothing in it was: the
@@ -77,6 +77,15 @@ function writeStorage(key: string, value: string): void {
   } catch {
     // Blocked or full: the convenience is lost and nothing else is.
   }
+}
+
+/**
+ * Whether this person may change anything, which decides what the console renders and nothing
+ * else. The server enforces the same rule on every write and answers a Viewer with 403 whatever
+ * the screen showed; this only spares them controls that could never work.
+ */
+export function canOperate(role: UserRole): boolean {
+  return role === 'Admin' || role === 'Engineer'
 }
 
 /** Two letters at most: a three-part name inside a 24px circle is a smudge, not an identity. */
