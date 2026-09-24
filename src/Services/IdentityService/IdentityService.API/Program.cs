@@ -10,6 +10,7 @@ using IdentityService.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.IdentityService);
+builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.IdentityService);
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(SignInCommand).Assembly));
 

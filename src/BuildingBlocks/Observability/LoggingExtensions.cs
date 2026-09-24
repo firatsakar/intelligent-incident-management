@@ -9,7 +9,9 @@ public static class LoggingExtensions
 {
     public const string SeqUrlConfigurationKey = "Seq:Url";
 
-    private const string DefaultSeqUrl = "http://localhost:8081";
+    // Shared with TracingExtensions: logs and traces go to the same Seq, which is what lets a log
+    // event open the trace it was written inside.
+    internal const string DefaultSeqUrl = "http://localhost:8081";
 
     // Every service logs the same way: structured, to the console for whoever is watching a
     // terminal and to Seq for everything else. Stamping the service name here rather than at each

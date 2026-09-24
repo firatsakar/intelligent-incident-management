@@ -11,6 +11,7 @@ using BuildingBlocks.Observability;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.AgentOrchestrator);
+builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.AgentOrchestrator);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(AnalyzeIncidentCommand).Assembly)

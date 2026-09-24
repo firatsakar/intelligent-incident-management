@@ -15,6 +15,7 @@ using TelemetryIngestionService.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.TelemetryIngestionService);
+builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.TelemetryIngestionService);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly)
