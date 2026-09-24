@@ -1,4 +1,6 @@
-﻿using IncidentService.API.Contracts;
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
+using IncidentService.API.Contracts;
 using IncidentService.Application.Commands.AssignTeam;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
@@ -23,6 +25,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Create(
         [FromBody] CreateIncidentRequest request,
         CancellationToken cancellationToken
@@ -91,6 +94,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> UpdateStatus(
         Guid id,
         [FromBody] UpdateStatusRequest request,
@@ -108,6 +112,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/team")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> AssignTeam(
         Guid id,
         [FromBody] AssignTeamRequest request,

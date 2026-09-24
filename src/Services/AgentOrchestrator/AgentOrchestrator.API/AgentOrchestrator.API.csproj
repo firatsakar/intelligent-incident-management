@@ -19,6 +19,7 @@
 		<ProjectReference Include="..\AgentOrchestrator.Infrastructure\AgentOrchestrator.Infrastructure.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\EventBus\BuildingBlocks.EventBus.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\Observability\BuildingBlocks.Observability.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

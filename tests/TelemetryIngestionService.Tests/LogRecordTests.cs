@@ -1,14 +1,19 @@
-using TelemetryIngestionService.Domain.Aggregates;
+﻿using TelemetryIngestionService.Domain.Aggregates;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Tests;
 
 public sealed class LogRecordTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly TimeSpan Tolerance = TimeSpan.FromMinutes(2);
 
     private static LogRecord Create(DateTime timestamp, string? fingerprint = "abc123") =>
         LogRecord.Create(
+            Organization,
             Guid.NewGuid(),
             sourceEventId: "event-1",
             service: "checkout-service",

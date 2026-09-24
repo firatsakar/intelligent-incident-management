@@ -1,4 +1,4 @@
-import { LogOutIcon, ShieldAlertIcon } from 'lucide-react'
+﻿import { LogOutIcon, ShieldAlertIcon } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/features/auth/AuthProvider'
-import { organizationName } from '@/features/auth/session'
 import { useT } from '@/lib/i18n'
 
 /**
@@ -55,7 +54,7 @@ export function UserMenu() {
             <p className="truncate text-sm font-medium">{user.name}</p>
             {organization && (
               <p className="text-muted-foreground truncate text-xs">
-                {organizationName(organization)}
+                {organization.name}
               </p>
             )}
           </div>
@@ -75,7 +74,7 @@ export function UserMenu() {
 
         <DropdownMenuSeparator />
 
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={() => void signOut()}>
           <LogOutIcon />
           {common.signOut}
         </DropdownMenuItem>

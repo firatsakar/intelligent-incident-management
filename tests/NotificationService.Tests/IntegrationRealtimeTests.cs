@@ -1,4 +1,5 @@
-﻿using NotificationService.Application.Abstractions;
+﻿using BuildingBlocks.SharedKernel;
+using NotificationService.Application.Abstractions;
 using NotificationService.Application.Commands.CreateIntegration;
 using NotificationService.Application.Commands.DeleteIntegration;
 using NotificationService.Application.Commands.SetIntegrationEnabled;
@@ -14,12 +15,28 @@ namespace NotificationService.Tests;
 // and the only way to find out was to reload.
 public sealed class IntegrationRealtimeTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
+
+    // The scope a real run inherits — from the bus for a dispatch, from the claim for a create.
+    private readonly OrganizationContext _organization = Scoped();
+
+    private static OrganizationContext Scoped()
+    {
+        var context = new OrganizationContext();
+        context.Set(Organization);
+
+        return context;
+    }
     private readonly IIntegrationRepository _integrations =
         Substitute.For<IIntegrationRepository>();
     private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
 
     private static Integration EmailIntegration(string name = "Ops mailbox") =>
         Integration.Create(
+            Organization,
             name,
             NotificationChannelType.Email,
             new Dictionary<string, string>
@@ -37,7 +54,7 @@ public sealed class IntegrationRealtimeTests
     [Fact]
     public async Task CreatingAnIntegrationAnnouncesIt()
     {
-        var handler = new CreateIntegrationCommandHandler(_integrations, _realtime);
+        var handler = new CreateIntegrationCommandHandler(_integrations, _realtime, _organization);
 
         await handler.Handle(
             new CreateIntegrationCommand
@@ -69,7 +86,7 @@ public sealed class IntegrationRealtimeTests
     {
         // What is broadcast has to be what is stored. Announcing first would push a row that a
         // failing save then leaves nonexistent.
-        var handler = new CreateIntegrationCommandHandler(_integrations, _realtime);
+        var handler = new CreateIntegrationCommandHandler(_integrations, _realtime, _organization);
 
         await handler.Handle(
             new CreateIntegrationCommand

@@ -1,3 +1,4 @@
+﻿import { useCanOperate } from '@/features/auth/AuthProvider'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -267,6 +268,7 @@ function ChannelTile({
   onDelete: (integration: Integration) => void
   onDismiss: (id: string) => void
 }) {
+  const canOperate = useCanOperate()
   const { labels, settings } = useT()
   const t = settings.integrations
   const name = labels.channel[entry.channel]
@@ -329,16 +331,18 @@ function ChannelTile({
       </CardContent>
 
       {/* mt-auto so the action lines up across a row of tiles whose bodies are different heights. */}
-      <CardFooter className="mt-auto">
-        <Button
-          variant={instances.length > 0 ? 'outline' : 'default'}
-          className="w-full"
-          onClick={onConnect}
-        >
-          <PlusIcon aria-hidden />
-          {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
-        </Button>
-      </CardFooter>
+      {canOperate && (
+        <CardFooter className="mt-auto">
+          <Button
+            variant={instances.length > 0 ? 'outline' : 'default'}
+            className="w-full"
+            onClick={onConnect}
+          >
+            <PlusIcon aria-hidden />
+            {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   )
 }
@@ -366,6 +370,7 @@ function InstanceRow({
 }) {
   const dictionary = useT()
   const { settings } = dictionary
+  const canOperate = useCanOperate()
   const t = settings.integrations
 
   return (
@@ -373,7 +378,8 @@ function InstanceRow({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <Switch
           checked={integration.isEnabled}
-          disabled={toggling}
+          // Disabled rather than hidden for a Viewer: its position is how the state is read.
+          disabled={toggling || !canOperate}
           aria-label={settings.shared.enabledSwitch(integration.name)}
           onCheckedChange={(isEnabled) => onToggle(Boolean(isEnabled))}
         />
@@ -388,22 +394,24 @@ function InstanceRow({
           {integration.name}
         </span>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
-            {testing ? settings.shared.testing : settings.shared.test}
-          </Button>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            {settings.shared.edit}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={settings.shared.deleteAria(integration.name)}
-            onClick={onDelete}
-          >
-            <TrashIcon aria-hidden />
-          </Button>
-        </div>
+        {canOperate && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
+              {testing ? settings.shared.testing : settings.shared.test}
+            </Button>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              {settings.shared.edit}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={settings.shared.deleteAria(integration.name)}
+              onClick={onDelete}
+            >
+              <TrashIcon aria-hidden />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Paused is a word, not just a switch position — the state has to survive being read by

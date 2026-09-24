@@ -1,4 +1,5 @@
-using MediatR;
+﻿using MediatR;
+using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -57,11 +58,25 @@ public sealed class TelemetryPollingService : BackgroundService
         var cursors = scope.ServiceProvider.GetRequiredService<ISourceCursorRepository>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var enabled = await sources.GetEnabledAsync(cancellationToken);
+        var enabled = await sources.GetEnabledForPollingAsync(cancellationToken);
 
         foreach (var source in enabled)
         {
-            var cursor = await cursors.GetOrCreateAsync(source.Id, cancellationToken);
+            // A source written before organisations existed has no owner, and there is nowhere to
+            // put what polling it would find. Skipped rather than polled with an empty scope,
+            // which the context would refuse anyway — and said out loud, because a source that is
+            // enabled and silent is the failure this platform exists to notice.
+            if (source.OrganizationId == Guid.Empty)
+            {
+                _logger.LogWarning(
+                    "Telemetry source {SourceId} has no organisation and was not polled.",
+                    source.Id
+                );
+
+                continue;
+            }
+
+            var cursor = await cursors.GetForPollingAsync(source.Id, cancellationToken);
 
             if (!IsDue(source, cursor))
                 continue;
@@ -70,15 +85,25 @@ public sealed class TelemetryPollingService : BackgroundService
             // failure, must not touch another's.
             using var sourceScope = _scopeFactory.CreateScope();
 
+            // The one place in the detection pipeline where an organisation is read from a row
+            // rather than from a claim or a message. Nothing upstream of here has a scope to
+            // inherit — this loop is woken by a timer, not by anybody — so this is where the whole
+            // chain's ownership is decided, and everything after it carries what is set here.
+            sourceScope
+                .ServiceProvider.GetRequiredService<IOrganizationContext>()
+                .Set(source.OrganizationId);
+
             await sourceScope
                 .ServiceProvider.GetRequiredService<ISender>()
                 .Send(new PollTelemetrySourceCommand(source.Id), cancellationToken);
         }
     }
 
-    private static bool IsDue(TelemetrySource source, SourceCursor cursor)
+    // A source with no cursor has never been polled, which makes it due. The cursor is created
+    // on the first poll, inside the source's own scope.
+    private static bool IsDue(TelemetrySource source, SourceCursor? cursor)
     {
-        return cursor.LastPolledAt is null
+        return cursor?.LastPolledAt is null
             || DateTime.UtcNow - cursor.LastPolledAt.Value
                 >= TimeSpan.FromSeconds(source.PollIntervalSeconds);
     }

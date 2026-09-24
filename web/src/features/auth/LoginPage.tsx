@@ -1,4 +1,4 @@
-import { Building2Icon, ListChecksIcon, RouteIcon, ScaleIcon, ShieldAlertIcon } from 'lucide-react'
+﻿import { ListChecksIcon, RouteIcon, ScaleIcon } from 'lucide-react'
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 
@@ -9,23 +9,24 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ApiError } from '@/api/client'
 import { useT, type Dictionary } from '@/lib/i18n'
 
 import { useAuth } from './AuthProvider'
-import { defaultOrganization, organizationName, rememberedName } from './session'
+import { rememberedEmail } from './session'
 
 /**
  * The first screen anyone sees, and the only one that is nothing but design — everywhere else the
- * data is the design. Two jobs, and they pull against each other:
+ * data is the design. It has to look like the product it fronts: calm, dense, cool ground, accent
+ * for identity only, because this is where the visual identity gets established.
  *
- *   it has to look like the product it fronts — calm, dense, cool ground, accent for identity
- *   only — because this is where the visual identity gets established;
- *   and it has to admit, in the plainest words on the page, that it checks nothing.
+ * It used to carry a caution saying it checked nothing, and no password field, because a field
+ * that accepts anything is worse than no field — it teaches the operator that a credential was
+ * verified. Both are gone: there is a password now, and something checks it.
  *
- * So there is no password field. A field that accepts anything is worse than no field: it teaches
- * the operator that a credential was verified, and the next thing they assume is that the data
- * behind the screen is theirs alone. The only question asked is the only one that has an honest
- * answer here — what name should this session carry.
+ * The organisation is not shown here any more either. It is a property of the account, so it
+ * cannot be known before the account is, and naming one before anybody has signed in would be
+ * guessing.
  */
 
 // True of this product, and the reason it is not an alerting rule. Each line names something an
@@ -52,17 +53,23 @@ const ground: CSSProperties = {
 }
 
 export function LoginPage() {
-  const { isAuthenticated, signIn } = useAuth()
+  const { status, isAuthenticated, signIn } = useAuth()
   const location = useLocation()
   const { login } = useT()
 
-  const [name, setName] = useState(rememberedName)
+  const [email, setEmail] = useState(rememberedEmail)
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-  const field = useRef<HTMLInputElement>(null)
+  const emailField = useRef<HTMLInputElement>(null)
+  const passwordField = useRef<HTMLInputElement>(null)
 
   // Where the guard turned them away from, with its query string intact.
   const from = (location.state as { from?: string } | null)?.from ?? '/'
+
+  // Nothing until the session has been asked about, so this form does not appear for a frame in
+  // front of somebody who turns out to be signed in.
+  if (status === 'restoring') return null
 
   // One redirect for two cases — a session that was already there, and the one just created — so
   // signing in has a single exit and cannot race a second navigate.
@@ -71,19 +78,42 @@ export function LoginPage() {
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
-    const trimmed = name.trim()
+    const address = email.trim()
 
-    if (!trimmed) {
-      // A required field, not a rejected credential. The message says what is missing and why it
-      // is wanted, and never implies that something was checked.
-      setError(login.nameRequired)
-      field.current?.focus()
+    if (!address || !password) {
+      setError(login.required)
+      const missing = address ? passwordField : emailField
+      missing.current?.focus()
 
       return
     }
 
     setPending(true)
-    await signIn(trimmed)
+    setError(null)
+
+    try {
+      await signIn(address, password)
+    } catch (cause) {
+      setError(describe(cause))
+      setPassword('')
+      setPending(false)
+      passwordField.current?.focus()
+    }
+  }
+
+  /**
+   * Four outcomes, four sentences. Only one of them is about the password.
+   *
+   * This screen reported every failure as a refused credential, so a stopped service told the
+   * reader their password had stopped working — which is both false and the kind of false that
+   * sends somebody off to reset something that was never wrong.
+   */
+  function describe(cause: unknown): string {
+    if (!(cause instanceof ApiError)) return login.unreachable
+    if (cause.status === 401) return login.failed
+    if (cause.status === 429) return login.tooMany
+
+    return login.serverError
   }
 
   return (
@@ -148,70 +178,63 @@ export function LoginPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                {/* Shown, not chosen. A select holding one option is a control that cannot do
-                    anything, and a list of invented organisations would be a second lie on a
-                    screen whose whole point is not telling the first one. */}
-                <div className="bg-muted/40 flex items-center gap-2.5 rounded-lg border px-3 py-2">
-                  <Building2Icon className="text-muted-foreground size-4 shrink-0" aria-hidden />
-                  <div className="min-w-0">
-                    <p className="text-muted-foreground text-[0.6875rem] font-medium tracking-wider uppercase">
-                      {login.organisation}
-                    </p>
-                    <p className="truncate text-sm font-medium">
-                      {organizationName(defaultOrganization)}
-                    </p>
-                  </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="session-email">{login.emailLabel}</Label>
+
+                  <Input
+                    id="session-email"
+                    ref={emailField}
+                    type="email"
+                    value={email}
+                    autoFocus={!email}
+                    autoComplete="username"
+                    spellCheck={false}
+                    className="h-10"
+                    aria-invalid={error ? true : undefined}
+                    onChange={(event) => {
+                      setEmail(event.target.value)
+                      if (error) setError(null)
+                    }}
+                  />
                 </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="session-password">{login.passwordLabel}</Label>
+
+                  <Input
+                    id="session-password"
+                    ref={passwordField}
+                    type="password"
+                    value={password}
+                    autoFocus={Boolean(email)}
+                    autoComplete="current-password"
+                    className="h-10"
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? 'session-error' : undefined}
+                    onChange={(event) => {
+                      setPassword(event.target.value)
+                      if (error) setError(null)
+                    }}
+                  />
+                </div>
+
+                {/* One message for both fields and for the refusal, because the server answers the
+                    three ways a sign-in can fail with one sentence and saying more here would undo
+                    that. */}
+                {error && (
+                  <p id="session-error" role="alert" className="text-alarm-ink text-xs">
+                    {error}
+                  </p>
+                )}
 
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {login.ownership}
                 </p>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="session-name">{login.nameLabel}</Label>
-
-                  <Input
-                    id="session-name"
-                    ref={field}
-                    value={name}
-                    autoFocus
-                    autoComplete="name"
-                    spellCheck={false}
-                    className="h-10"
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? 'session-name-hint session-name-error' : 'session-name-hint'}
-                    onChange={(event) => {
-                      setName(event.target.value)
-                      if (error) setError(null)
-                    }}
-                  />
-
-                  <p id="session-name-hint" className="text-muted-foreground text-xs">
-                    {login.nameHint}
-                  </p>
-
-                  {error && (
-                    <p id="session-name-error" role="alert" className="text-alarm-ink text-xs">
-                      {error}
-                    </p>
-                  )}
-                </div>
-
-                {/* caution, not alarm: the system has not reached a verdict here, it is missing a
-                    whole faculty — and this is the one thing on the screen the reader must not
-                    skip. Icon and words carry it as well as the tint does. */}
-                <div className="bg-caution text-caution-foreground border-caution-border rounded-lg border px-3 py-2.5">
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    <ShieldAlertIcon className="size-4 shrink-0" aria-hidden />
-                    {login.noPasswordTitle}
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed">{login.noPassword}</p>
-                </div>
               </CardContent>
 
               <CardFooter>
                 <Button type="submit" size="lg" className="h-11 w-full" disabled={pending}>
-                  {login.submit}
+                  {pending ? login.submitting : login.submit}
                 </Button>
               </CardFooter>
             </Card>

@@ -62,6 +62,9 @@ namespace IncidentService.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -86,6 +89,8 @@ namespace IncidentService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
 
                     b.ToTable("incidents", (string)null);
                 });

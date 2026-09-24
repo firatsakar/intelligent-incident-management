@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -15,6 +16,20 @@ namespace TelemetryIngestionService.Tests;
 // run by hand.
 public sealed class DetectSignalsCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
+
+    private readonly OrganizationContext _organization = Scoped();
+
+    private static OrganizationContext Scoped()
+    {
+        var context = new OrganizationContext();
+        context.Set(Organization);
+
+        return context;
+    }
     private const string Fingerprint = "abc123";
     private const string Service = "checkout-service";
 
@@ -51,7 +66,10 @@ public sealed class DetectSignalsCommandHandlerTests
             _logRecords,
             _signals,
             _realtime,
-            NullLogger<DetectSignalsCommandHandler>.Instance
+            NullLogger<DetectSignalsCommandHandler>.Instance,
+            // The scope the polling loop takes from the source's row, which detection then stamps
+            // onto every signal it writes.
+            _organization
         );
     }
 
@@ -64,6 +82,7 @@ public sealed class DetectSignalsCommandHandlerTests
         int dedupWindowHours = 24
     ) =>
         DetectionRule.Create(
+            Organization,
             service is null ? "catch-all" : $"rule for {service}",
             service,
             LogSeverity.Error,
@@ -83,6 +102,7 @@ public sealed class DetectSignalsCommandHandlerTests
     private ErrorSignature GivenSignature(DateTime? lastSeenAt = null)
     {
         var signature = ErrorSignature.Create(
+            Organization,
             Fingerprint,
             Service,
             "TimeoutException",
@@ -262,6 +282,7 @@ public sealed class DetectSignalsCommandHandlerTests
             .GetLatestForSignatureAsync(signature.Id, Arg.Any<CancellationToken>())
             .Returns(
                 Signal.Detect(
+                    Organization,
                     signature.Id,
                     SignalKind.LogBurst,
                     DateTime.UtcNow,
@@ -286,6 +307,7 @@ public sealed class DetectSignalsCommandHandlerTests
             .GetLatestForSignatureAsync(signature.Id, Arg.Any<CancellationToken>())
             .Returns(
                 Signal.Detect(
+                    Organization,
                     signature.Id,
                     SignalKind.LogBurst,
                     DateTime.UtcNow.AddHours(-2),

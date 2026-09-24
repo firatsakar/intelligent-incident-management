@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -11,6 +11,9 @@ public sealed class LogRecordConfiguration : IEntityTypeConfiguration<LogRecord>
         builder.ToTable("log_records");
 
         builder.HasKey(x => x.Id);
+
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
 
         builder.Property(x => x.TelemetrySourceId).IsRequired();
         builder.Property(x => x.SourceEventId).HasMaxLength(128);
@@ -32,7 +35,9 @@ public sealed class LogRecordConfiguration : IEntityTypeConfiguration<LogRecord>
 
         // Fingerprint plus time answers "how often did this signature fire in this window", the
         // question burst detection asks constantly.
-        builder.HasIndex(x => new { x.Fingerprint, x.Timestamp });
+        // Organisation first, because every one of these queries now carries it — the filter adds
+        // it whether the caller wrote it or not.
+        builder.HasIndex(x => new { x.OrganizationId, x.Fingerprint, x.Timestamp });
 
         // Guards against a replayed batch inserting the same event twice.
         builder

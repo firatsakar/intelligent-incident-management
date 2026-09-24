@@ -51,6 +51,9 @@ namespace AgentOrchestrator.Infrastructure.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -63,10 +66,12 @@ namespace AgentOrchestrator.Infrastructure.Migrations
 
                     b.HasIndex("IncidentId");
 
+                    b.HasIndex("OrganizationId");
+
                     b.ToTable("incident_analyses", (string)null);
                 });
 
-            modelBuilder.Entity("AgentOrchestrator.Infrastructure.Outbox.OutboxMessage", b =>
+            modelBuilder.Entity("BuildingBlocks.Outbox.OutboxMessage", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -77,6 +82,9 @@ namespace AgentOrchestrator.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("OccurredOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("Payload")
                         .IsRequired()

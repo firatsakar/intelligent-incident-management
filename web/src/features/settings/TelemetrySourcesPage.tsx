@@ -1,3 +1,4 @@
+﻿import { useCanOperate } from '@/features/auth/AuthProvider'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
@@ -276,6 +277,7 @@ function KindTile({
   onDelete: (source: TelemetrySource) => void
   onDismiss: (id: string) => void
 }) {
+  const canOperate = useCanOperate()
   const { labels, settings } = useT()
   const t = settings.telemetry
   const name = labels.telemetryKind[entry.kind]
@@ -329,16 +331,18 @@ function KindTile({
         )}
       </CardContent>
 
-      <CardFooter className="mt-auto">
-        <Button
-          variant={instances.length > 0 ? 'outline' : 'default'}
-          className="w-full"
-          onClick={onConnect}
-        >
-          <PlusIcon aria-hidden />
-          {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
-        </Button>
-      </CardFooter>
+      {canOperate && (
+        <CardFooter className="mt-auto">
+          <Button
+            variant={instances.length > 0 ? 'outline' : 'default'}
+            className="w-full"
+            onClick={onConnect}
+          >
+            <PlusIcon aria-hidden />
+            {instances.length > 0 ? t.addAnother(name) : t.connectOne(name)}
+          </Button>
+        </CardFooter>
+      )}
     </Card>
   )
 }
@@ -366,6 +370,7 @@ function SourceRow({
 }) {
   const dictionary = useT()
   const { settings } = dictionary
+  const canOperate = useCanOperate()
   const t = settings.telemetry
 
   const url = source.config.Url
@@ -375,7 +380,8 @@ function SourceRow({
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <Switch
           checked={source.isEnabled}
-          disabled={toggling}
+          // Disabled rather than hidden for a Viewer: its position is how the state is read.
+          disabled={toggling || !canOperate}
           aria-label={settings.shared.enabledSwitch(source.name)}
           onCheckedChange={(isEnabled) => onToggle(Boolean(isEnabled))}
         />
@@ -390,22 +396,24 @@ function SourceRow({
           {source.name}
         </span>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
-            {testing ? settings.shared.testing : settings.shared.test}
-          </Button>
-          <Button variant="outline" size="sm" onClick={onEdit}>
-            {settings.shared.edit}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={settings.shared.deleteAria(source.name)}
-            onClick={onDelete}
-          >
-            <TrashIcon aria-hidden />
-          </Button>
-        </div>
+        {canOperate && (
+          <div className="flex shrink-0 items-center gap-1">
+            <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
+              {testing ? settings.shared.testing : settings.shared.test}
+            </Button>
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              {settings.shared.edit}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={settings.shared.deleteAria(source.name)}
+              onClick={onDelete}
+            >
+              <TrashIcon aria-hidden />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* The endpoint is the one value that identifies which instance this actually is, and it is

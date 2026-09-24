@@ -1,5 +1,6 @@
 ﻿using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.SharedKernel;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
 using IncidentService.Domain.Aggregates;
@@ -13,15 +14,18 @@ public sealed class CreateIncidentCommandHandler
     private readonly IIncidentRepository _repository;
     private readonly IEventBus _eventBus;
     private readonly IRealtimeNotifier _realtime;
+    private readonly IOrganizationContext _organization;
 
     public CreateIncidentCommandHandler(
         IIncidentRepository repository,
         IEventBus eventBus,
-        IRealtimeNotifier realtime)
+        IRealtimeNotifier realtime,
+        IOrganizationContext organization)
     {
         _repository = repository;
         _eventBus = eventBus;
         _realtime = realtime;
+        _organization = organization;
     }
 
     public async Task<IncidentDto> Handle(
@@ -29,6 +33,7 @@ public sealed class CreateIncidentCommandHandler
         CancellationToken cancellationToken)
     {
         var incident = Incident.Create(
+            _organization.Required,
             request.Title,
             request.Description,
             request.Priority,
@@ -39,8 +44,12 @@ public sealed class CreateIncidentCommandHandler
         await _repository.AddAsync(incident, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
 
+        // IncidentService has no outbox, so this publish is direct and the scope has to be read
+        // here. Over HTTP it came from the claim; Required rather than the nullable accessor
+        // because an incident announced to nobody in particular is worse than a failed request.
         await _eventBus.PublishAsync(new IncidentDetectedEvent
         {
+            OrganizationId = _organization.Required,
             IncidentId = incident.Id,
             Title = incident.Title,
             Description = incident.Description,

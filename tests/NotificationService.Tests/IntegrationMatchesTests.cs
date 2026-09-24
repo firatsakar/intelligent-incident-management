@@ -1,4 +1,4 @@
-using NotificationService.Domain.Aggregates;
+﻿using NotificationService.Domain.Aggregates;
 using NotificationService.Domain.Enums;
 
 namespace NotificationService.Tests;
@@ -8,11 +8,16 @@ namespace NotificationService.Tests;
 // than what they do when they do.
 public sealed class IntegrationMatchesTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static Integration Given(
         IncidentPriority? minPriority = null,
         string? categoryFilter = null
     ) =>
         Integration.Create(
+            Organization,
             "ops email",
             NotificationChannelType.Email,
             new Dictionary<string, string>(),

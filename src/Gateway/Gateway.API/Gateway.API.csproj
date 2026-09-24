@@ -13,6 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\Observability\BuildingBlocks.Observability.csproj" />
+    <!-- For the access cookie's name, which this project and IdentityService have to agree on. -->
+    <ProjectReference Include="..\..\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
 </Project>

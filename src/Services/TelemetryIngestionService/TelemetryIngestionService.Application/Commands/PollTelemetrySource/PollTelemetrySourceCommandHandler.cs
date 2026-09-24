@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
@@ -29,6 +30,7 @@ public sealed class PollTelemetrySourceCommandHandler
     private readonly ISender _sender;
     private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<PollTelemetrySourceCommandHandler> _logger;
+    private readonly IOrganizationContext _organization;
 
     public PollTelemetrySourceCommandHandler(
         ITelemetrySourceRepository sources,
@@ -38,7 +40,8 @@ public sealed class PollTelemetrySourceCommandHandler
         ITelemetrySourceConnectorResolver connectors,
         ISender sender,
         IRealtimeNotifier realtime,
-        ILogger<PollTelemetrySourceCommandHandler> logger
+        ILogger<PollTelemetrySourceCommandHandler> logger,
+        IOrganizationContext organization
     )
     {
         _sources = sources;
@@ -49,6 +52,7 @@ public sealed class PollTelemetrySourceCommandHandler
         _sender = sender;
         _realtime = realtime;
         _logger = logger;
+        _organization = organization;
     }
 
     public async Task<PollResult> Handle(
@@ -163,6 +167,7 @@ public sealed class PollTelemetrySourceCommandHandler
 
             records.Add(
                 LogRecord.Create(
+                    _organization.Required,
                     source.Id,
                     raw.SourceEventId,
                     raw.Service,
@@ -273,6 +278,7 @@ public sealed class PollTelemetrySourceCommandHandler
             }
 
             var created = ErrorSignature.Create(
+                _organization.Required,
                 fingerprint,
                 occurrence.Service,
                 occurrence.ExceptionType,

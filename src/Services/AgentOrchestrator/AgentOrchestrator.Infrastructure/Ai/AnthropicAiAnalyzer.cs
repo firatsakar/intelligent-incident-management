@@ -25,6 +25,7 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
     }
 
     public async Task<AnalysisResult> AnalyzeAsync(
+        Guid organizationId,
         Guid incidentId,
         string title,
         string description,

@@ -46,7 +46,48 @@ function describe(status: number, statusText: string, body: unknown): string {
   return statusText || `Request failed with ${status}`
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+// The session's own endpoints. They are excluded from the retry below for two different reasons:
+// refreshing in response to a failed refresh is a loop, and a 401 from signing in is the answer,
+// not a stale token.
+const AUTH_PREFIX = '/api/auth/'
+
+let refreshInFlight: Promise<boolean> | null = null
+
+/**
+ * Trades the refresh cookie for a new access cookie, at most once at a time.
+ *
+ * Single-flight because a screen mounts several queries at once: ten requests meeting an expired
+ * token would otherwise send ten refreshes, and since every refresh rotates the token, nine of
+ * them would be presenting a value that had just been retired — which the server reads as reuse
+ * and answers by ending the whole session.
+ */
+function refreshOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${AUTH_PREFIX}refresh`, { method: 'POST' }).then(
+      (response) => response.ok,
+      () => false,
+    )
+
+    void refreshInFlight.finally(() => {
+      refreshInFlight = null
+    })
+  }
+
+  return refreshInFlight
+}
+
+let onSessionLost: (() => void) | null = null
+
+/**
+ * Called when a request was refused and refreshing could not fix it — an expired refresh token, a
+ * revoked session, an account switched off. The handler belongs to whoever owns the session; this
+ * module knows that the session is gone and nothing about what to do next.
+ */
+export function onUnauthorized(handler: () => void): void {
+  onSessionLost = handler
+}
+
+async function request<T>(path: string, init?: RequestInit, mayRetry = true): Promise<T> {
   const response = await fetch(path, {
     ...init,
     headers: {
@@ -54,6 +95,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   })
+
+  if (response.status === 401 && mayRetry && !path.startsWith(AUTH_PREFIX)) {
+    // The access token lasts minutes and cannot be withdrawn, which is the trade that lets it be
+    // validated without asking anybody. A 401 is therefore the expected way a session ages, not an
+    // error worth showing: refresh, and send the request again exactly as it was.
+    if (await refreshOnce()) return request<T>(path, init, false)
+
+    onSessionLost?.()
+  }
 
   // 204 from the PATCH endpoints, and any empty body.
   const text = await response.text()

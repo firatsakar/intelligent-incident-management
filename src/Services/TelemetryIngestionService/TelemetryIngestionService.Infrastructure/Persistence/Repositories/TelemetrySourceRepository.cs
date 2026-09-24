@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -30,6 +30,18 @@ public sealed class TelemetrySourceRepository : ITelemetrySourceRepository
     {
         return await _context
             .TelemetrySources.AsNoTracking()
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TelemetrySource>> GetEnabledForPollingAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .TelemetrySources.AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(x => x.IsEnabled && x.OrganizationId != Guid.Empty)
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }

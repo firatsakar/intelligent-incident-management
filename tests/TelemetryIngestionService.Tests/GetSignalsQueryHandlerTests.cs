@@ -12,6 +12,10 @@ namespace TelemetryIngestionService.Tests;
 // to look at a span in the first place.
 public sealed class GetSignalsQueryHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly DateTime Noon = new(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly ISignalRepository _signals = Substitute.For<ISignalRepository>();
@@ -26,6 +30,7 @@ public sealed class GetSignalsQueryHandlerTests
 
     private static ErrorSignature Signature(string service = "checkout-service") =>
         ErrorSignature.Create(
+            Organization,
             "abc123",
             service,
             "TimeoutException",
@@ -36,6 +41,7 @@ public sealed class GetSignalsQueryHandlerTests
     private static Signal SignalFor(Guid signatureId, SignalStatus status = SignalStatus.Weak)
     {
         var signal = Signal.Detect(
+            Organization,
             signatureId,
             SignalKind.LogBurst,
             detectedAt: Noon,

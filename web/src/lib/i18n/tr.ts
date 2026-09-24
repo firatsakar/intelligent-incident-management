@@ -1,4 +1,4 @@
-import type { Dictionary } from './en'
+﻿import type { Dictionary } from './en'
 
 /**
  * Türkçe.
@@ -59,9 +59,6 @@ export const tr: Dictionary = {
     signOut: 'Oturumu kapat',
   },
 
-  session: {
-    defaultOrganization: 'Varsayılan organizasyon',
-  },
 
   nav: {
     skip: 'İçeriğe geç',
@@ -145,17 +142,18 @@ export const tr: Dictionary = {
     },
 
     heading: 'Oturum aç',
-    subheading: 'Bu oturumun altında çalışacağı adı seçin.',
-    organisation: 'Organizasyon',
+    subheading: 'Organizasyonunuz, hesabınızın bağlı olduğu organizasyondur.',
     ownership:
-      'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait. Bu sürümde tek bir organizasyon var.',
-    nameLabel: 'Adınız',
-    nameHint: 'Bu oturumu konsolda etiketler. Hiçbir şey onu doğrulamaz.',
-    nameRequired: 'Bir ad girin. Yalnızca bu oturumu etiketlemek için kullanılıyor.',
-    noPasswordTitle: 'Parola yok, çünkü onu doğrulayacak bir şey yok',
-    noPassword:
-      'Bu sürümde kimlik doğrulama yok. Bu konsolun arkasındaki servisler kendilerine ulaşabilen herkese cevap veriyor ve buradan giriş yapmak yalnızca oturumun kimin adını taşıyacağını belirliyor. Gerçek oturum açma gateway ile geliyor.',
+      'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait; yani burada gördükleriniz ekibinizin.',
+    emailLabel: 'E-posta adresi',
+    passwordLabel: 'Parola',
+    required: 'E-posta adresinizi ve parolanızı girin.',
+    failed: 'Bu e-posta adresi ve parola etkin bir hesapla eşleşmiyor.',
+    unreachable: 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+    tooMany: 'Çok fazla deneme yapıldı. Bir dakika bekleyip tekrar deneyin.',
+    serverError: 'Oturum açma şu anda cevap vermiyor. Birazdan tekrar deneyin.',
     submit: 'Konsola gir',
+    submitting: 'Giriş yapılıyor…',
   },
 
   language: {

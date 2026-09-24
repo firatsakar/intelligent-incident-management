@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Contracts;
+﻿using BuildingBlocks.SharedKernel;
+using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
@@ -14,21 +15,33 @@ namespace IncidentService.Tests;
 // delivery without opening the same incident twice.
 public sealed class CreateIncidentFromSignalCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly Guid IncidentId = Guid.NewGuid();
     private static readonly DateTime DetectedAt = DateTime.UtcNow.AddMinutes(-15);
+    private static readonly Guid OrganizationId = Guid.NewGuid();
 
     private readonly IIncidentRepository _repository = Substitute.For<IIncidentRepository>();
     private readonly IEventBus _eventBus = Substitute.For<IEventBus>();
     private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
     private readonly CreateIncidentFromSignalCommandHandler _handler;
 
+    // The scope a real run would have inherited from SignalPromotedEvent, established by the bus
+    // before the handler is reached.
+    private readonly OrganizationContext _organization = new();
+
     public CreateIncidentFromSignalCommandHandlerTests()
     {
+        _organization.Set(OrganizationId);
+
         _handler = new CreateIncidentFromSignalCommandHandler(
             _repository,
             _eventBus,
             _realtime,
-            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance
+            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance,
+            _organization
         );
     }
 
@@ -71,6 +84,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
             .GetByIdAsync(IncidentId, Arg.Any<CancellationToken>())
             .Returns(
                 Incident.Create(
+                    Organization,
                     "already here",
                     "…",
                     IncidentPriority.High,

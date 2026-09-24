@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using BuildingBlocks.SharedKernel;
+using MediatR;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
@@ -10,14 +11,17 @@ public sealed class CreateTelemetrySourceCommandHandler
 {
     private readonly ITelemetrySourceRepository _sources;
     private readonly IRealtimeNotifier _realtime;
+    private readonly IOrganizationContext _organization;
 
     public CreateTelemetrySourceCommandHandler(
         ITelemetrySourceRepository sources,
-        IRealtimeNotifier realtime
+        IRealtimeNotifier realtime,
+        IOrganizationContext organization
     )
     {
         _sources = sources;
         _realtime = realtime;
+        _organization = organization;
     }
 
     public async Task<TelemetrySourceDto> Handle(
@@ -26,6 +30,10 @@ public sealed class CreateTelemetrySourceCommandHandler
     )
     {
         var source = TelemetrySource.Create(
+            // The only place a source's owner is decided, and it is decided from the claim of
+            // whoever configured it. Everything the detector later does with this source's logs
+            // inherits the organisation from here.
+            _organization.Required,
             request.Name,
             request.Kind,
             request.Config,

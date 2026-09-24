@@ -1,7 +1,9 @@
-﻿using AgentOrchestrator.API.Contracts;
+﻿using BuildingBlocks.Web;
+using AgentOrchestrator.API.Contracts;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AgentOrchestrator.API.Controllers;
@@ -18,6 +20,7 @@ public sealed class AnalysesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Analyze(
         [FromBody] AnalyzeIncidentRequest request,
         CancellationToken cancellationToken
@@ -37,13 +40,17 @@ public sealed class AnalysesController : ControllerBase
 
     [HttpPost("reindex")]
     [ApiExplorerSettings(IgnoreApi = true)]
+    // An operational rebuild of the Elasticsearch index, run by whoever changed a mapping. There
+    // is no user behind it and therefore no token it could carry. It reads and rewrites the search
+    // view of what the database already holds; it creates nothing and decides nothing.
+    [AllowAnonymous]
     public async Task<IActionResult> Reindex(
         [FromServices] IIncidentAnalysisRepository repository,
         [FromServices] IAnalysisIndexer indexer,
         CancellationToken cancellationToken
     )
     {
-        var analyses = await repository.GetCompletedAsync(cancellationToken);
+        var analyses = await repository.GetAllCompletedForReindexAsync(cancellationToken);
         await indexer.IndexManyAsync(analyses, cancellationToken);
         return Ok(new { Reindexed = analyses.Count });
     }

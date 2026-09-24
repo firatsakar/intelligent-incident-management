@@ -18,11 +18,16 @@
 
 ### 🔴 Bağlantı dizeleri ve parolalar `appsettings.json` içinde ve **git'te izleniyor**
 
-Dört servisin `appsettings.json` dosyasında Postgres parolaları ve RabbitMQ kimlik bilgileri
+Beş servisin `appsettings.json` dosyasında Postgres parolaları ve RabbitMQ kimlik bilgileri
 düz metin duruyor ve bu dosyalar repoda. Geliştirme için kabul edilebilir, üretim için değil.
 
 - Etkilenen: `IncidentService.API`, `AgentOrchestrator.API`, `NotificationService.API`,
-  `TelemetryIngestionService.API`
+  `TelemetryIngestionService.API`, ve Adım 16'dan beri `IdentityService.API`
+- **Adım 16 bir sır daha ekledi: `Jwt:SigningKey`.** Beş servisin hepsi token'ı kendi başına
+  doğruluyor, yani anahtar beş yerde. Geliştirmede user secrets'ta (git'e girmiyor), ama
+  **user secrets yalnızca Development ortamında yükleniyor** — üretimde ortam değişkeni ya da
+  secret store'dan gelmek zorunda. Aynı şey `Identity:Seed:*` için de geçerli. Anahtarı
+  değiştirmek tüm oturumları anında geçersiz kılar, ki rotasyonun bedeli bu.
 - Yapılacak: bağlantı dizelerini ortam değişkeni / secret store'a taşı, repodaki değerleri
   yer tutucuya indir. Mevcut parolalar repo geçmişinde kaldığı için **rotasyon gerekir**.
 
@@ -51,45 +56,48 @@ token'ını ve log sistemi anahtarını olduğu gibi saklıyor.
 
 ## 2. Güvenlik
 
-### 🔴 Üç SignalR hub'ı da herkese yayın yapıyor — Adım 16'nın önkoşulu
+### ✅ ~~Üç SignalR hub'ı da herkese yayın yapıyor~~ — **kapandı** (Adım 16, `IIM-106`)
 
-`IncidentHub`, `NotificationHub` ve `SignalHub` istisnasız `Clients.All` kullanıyor; ne grup
-var ne oda, ve hub'lar kimlik doğrulamasız. **Adım 20 bu yüzeyi belirgin şekilde genişletti**:
-artık entegrasyon ve telemetri kaynağı yapılandırmaları (maskeli config'leriyle), imza
-güncellemeleri ve ingest özetleri de yayınlanıyor.
+Üç hub `OrganizationHub`'dan türüyor: `[Authorize]`, ve `OnConnectedAsync` bağlantıyı kendi
+claim'inden alınan **tek bir** gruba koyuyor. Notifier'lar kapsamdaki organizasyona yayın
+yapıyor, asla herkese değil; kapsam yoksa hiçbir yere. İki organizasyon için imzalanmış iki
+token'la gateway üzerinden ölçüldü: B'nin olayını B'nin soketi duydu, A'nınki duymadı, anonim
+soket 401 aldı.
 
-Bugün ek bir risk değil — API'ler zaten açık ve yayınlanan DTO'lar bir GET'in döndürdüğünün
-aynısı. **Ama organizasyon bazlı kapsamlama soket üzerinden uygulanamaz**: Adım 16 HTTP'yi
-kapatsa bile, hub'a bağlanan herkes her organizasyonun olayını almaya devam eder. Yani hub
-grupları Adım 16'nın *içinde* yapılacak bir iş, sonrasına bırakılacak bir iyileştirme değil.
+### ✅ ~~Hiçbir API'de kimlik doğrulama yok~~ — **kapandı** (Adım 16, `IIM-99`)
 
-- Yapılacak: `OnConnectedAsync`'te org claim'inden gruba katılma + `Clients.Group(...)` ile
-  yayın + hub'lara `[Authorize]`.
+Beş serviste fallback authorization policy: token istemek varsayılan, muafiyet yazılması
+gereken şey. Yalnızca iki uç muaf, ikisi de kullanıcı token'ı taşıyamaz:
+`api/dev/seed-demo-incidents` (Development dışında 404) ve `api/Analyses/reindex`.
+Yazma uçları ayrıca `Operate` policy'si istiyor (Admin veya Engineer); Viewer 403 alıyor.
 
-### 🔴 Hiçbir API'de kimlik doğrulama yok
+### ✅ ~~Frontend'deki giriş ekranı kozmetiktir~~ — **kapandı** (Adım 15 + 16)
 
-Dört servisin tüm uçları kimliksiz erişime açık. Bu, incident verisini okumak, entegrasyon
-oluşturmak ve silmek dahil her şeyi kapsar.
+Parola soruluyor, IdentityService'te BCrypt ile doğrulanıyor, oturum iki httpOnly +
+SameSite=Strict cookie'de taşınıyor (15 dk access, 14 gün rotasyonlu refresh). `session.ts`
+başındaki "NOTHING IN THIS FILE IS SECURITY" uyarısı, anlattığı şeyle birlikte kaldırıldı.
 
-- **Adım 16** (JWT + rol sistemi) bu maddeyi kapatır ve yol haritasındaki en yüksek öncelikli
-  güvenlik işidir.
-- Ara önlem: servisleri dış ağa açmamak, yalnızca küme içinden erişilebilir tutmak.
+### 🔴 Kullanıcı yönetimi yok
 
-### 🔴 Frontend'deki giriş ekranı **kozmetiktir — sıfır güvenlik sağlar**
+Bir organizasyon, seed ile gelen tek bir Admin ile başlıyor. Kullanıcı ekleme, davet, parola
+sıfırlama, rol değiştirme, organizasyon oluşturma için **hiçbir uç yok** — ikinci bir kullanıcı
+ancak veritabanına elle yazılarak var olabilir. Adım 16'nın kapsam dışı bıraktığı iş; bir
+müşteriye verilmeden önce gerekli.
 
-Adım 19.5 Parça 5 (`IIM-51`, 2026-09-22) `/login` ekranını, oturum kapatmayı ve rota
-korumasını ekledi. **Hiçbiri bir güvenlik sınırı değildir.** Oturum tarayıcıda uyduruluyor:
-parola sorulmuyor, gönderilmiyor, doğrulanmıyor. Koruma yalnızca React router seviyesinde;
-tarayıcıyı atlayıp servisleri doğrudan çağıran herkes her satıra ulaşır — yukarıdaki madde
-aynen geçerli.
+- Viewer rolünün ekranları bu yüzden **tarayıcıda hiç görülmedi**: Viewer hesabı yok, ve
+  cookie httpOnly olduğu için elle yerleştirilemiyor. Sunucu tarafı ölçüldü (Viewer'ın her
+  yazması 403); arayüzdeki gizleme tek bir fonksiyon ve derleniyor, ama gözle doğrulanmadı.
 
-Bu bilinçli bir sıra kararıydı: ekranlar Adım 16'nın önüne alındı ki auth geldiğinde
-değişmesi gereken tek şey `web/src/features/auth/session.ts` olsun. O dosyanın başındaki
-yorum aynı uyarıyı taşıyor ve giriş kartının kendisi kullanıcıya da açıkça söylüyor
-("No password, because nothing would check it").
+### 🟡 Oturum iptali yalnızca refresh tarafında
 
-- **Kapatan:** Adım 15 (gateway) + Adım 16 (JWT + organizasyon bazlı sorgular).
-- **Yanlış anlaşılma riski:** bir ekran görüp "auth var" sanmak. Bu maddenin var olma sebebi.
+Access token 15 dakika boyunca geri alınamaz — tasarım gereği, çünkü beş servis onu kimseye
+sormadan doğruluyor. Bir hesabı devre dışı bırakmak refresh'i hemen durdurur ama elde kalan
+access token en fazla 15 dakika daha geçerlidir. Anında kesme gerekirse: kısa bir iptal listesi
+ya da access ömrünü kısaltmak.
+
+### 🟡 Kimlik doğrulama yalnızca yerel parola
+
+SSO, SCIM, MFA yok. Kurumsal bir müşterinin ilk soracağı şeyler.
 
 ### 🔴 `seq-demo` kimlik doğrulaması kapalı — üretime asla gitmemeli
 
@@ -108,15 +116,20 @@ Bu **kasıtlı** ve yalnızca demo içindir (izlenen müşteri sistemini taklit 
 GHSA-v5pm-xwqc-g5wc (yüksek önem). `Microsoft.AspNetCore.OpenApi` 10.0.7 transitif olarak
 çekiyor; **dört API projesinin dördü de** etkileniyor. Yamalı sürüme çıkılmalı.
 
-### 🟡 CORS ve rate limiting yok
+### ✅ ~~CORS yok~~ — **gereksiz kılındı** (Adım 15, `IIM-93`)
 
-- **CORS hâlâ yok ve Adım 19'da bilinçli olarak eklenmedi.** Frontend Vite dev proxy'sinin
-  ardında çalışıyor: tarayıcı yalnızca dev server ile konuşuyor, proxy sunucu tarafında
-  çağırıyor, origin hiç değişmiyor. **Sonucu:** `dist/` başka bir origin'den servis edilirse
-  uygulama çalışmaz. Üretim cevabı Adım 15 (YARP gateway) — gateway gelene kadar SPA yalnızca
-  Vite dev/preview sunucusunun ardında ayakta.
-- Rate limiting: kimliksiz uçlar kapandıktan sonra bile, `POST /api/incidents` ve test uçları
-  kötüye kullanıma açık.
+CORS eklenmedi ve eklenmeyecek: gateway tek origin sağlıyor, tarayıcı yalnızca onunla
+konuşuyor. `dist/` artık gateway tarafından servis edilebiliyor (`Spa:Root`) ve uygulama Vite
+olmadan çalışıyor — Adım 15'te ölçüldü.
+
+### 🟡 Rate limiting yalnızca girişte
+
+Gateway `/api/auth/login`'i adres başına dakikada 10 denemeyle sınırlıyor (429 +
+`Retry-After`). Diğer uçlar sınırsız: `POST /api/incidents` bir AI analizi ve bildirim zinciri
+tetikliyor, entegrasyon test uçları dışarıya istek atıyor. Kimliksiz erişim kapandığı için risk
+artık yalnızca kötü niyetli bir *üye*den geliyor, ama sıfır değil.
+
+- `dist/`'in gateway'e kopyalanması bir publish adımı olarak henüz yok (Adım 21/22).
 
 ### ⚪ Dev-only uçlar
 
@@ -130,6 +143,20 @@ GHSA-v5pm-xwqc-g5wc (yüksek önem). `Microsoft.AspNetCore.OpenApi` 10.0.7 trans
   (mapping değişimi / ES yeniden inşası). Yetkilendirme geldiğinde admin rolüne bağlanmalı.
 
 ---
+
+### 🟡 Veritabanı kısıtları hiçbir testte yok
+
+Adım 16'nın kabul koşusu, birim testlerinin göremeyeceği **üç hata** buldu: organizasyona göre
+tekil olması gereken üç unique index tablo genelindeydi (`detection_rules.Name`,
+`telemetry_sources.Name`, `error_signatures.Fingerprint`). Sonuncusu en ağırıydı: aynı
+framework'ü çalıştıran iki organizasyon aynı parmak izini üretir ve ikincinin poll'u, diğeriyle
+ortak tek bir hatası olduğu an tamamen başarısız olurdu. Repository'ler mock'landığı için hiçbir
+test bir index görmüyor. Adım 23'ün (Testcontainers + gerçek Postgres) en somut gerekçesi bu.
+
+- Aynı boşluk sorgu süzgeçleri için de geçerli: `HasQueryFilter`'ın gerçekten süzdüğü birim
+  testleriyle değil, veritabanına başka bir organizasyonun satırı elle eklenerek kanıtlandı.
+- AgentOrchestrator'ın test projesi hâlâ yok — ve EF olmayan tek süzgeci (Elasticsearch'ün
+  organizasyon filtresi) o tutuyor.
 
 ## 3. Veri yönetimi ve saklama
 

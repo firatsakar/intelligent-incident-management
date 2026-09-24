@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
 
@@ -7,6 +7,12 @@ namespace TelemetryIngestionService.Domain.Aggregates;
 public sealed class ErrorSignature : AggregateRoot
 {
     private ErrorSignature() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public string Fingerprint { get; private set; } = default!;
     public string Service { get; private set; } = default!;
@@ -33,6 +39,7 @@ public sealed class ErrorSignature : AggregateRoot
     public int FalsePositiveCount { get; private set; }
 
     public static ErrorSignature Create(
+        Guid organizationId,
         string fingerprint,
         string service,
         string? exceptionType,
@@ -43,6 +50,7 @@ public sealed class ErrorSignature : AggregateRoot
         return new ErrorSignature
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Fingerprint = fingerprint,
             Service = service,
             ExceptionType = exceptionType,

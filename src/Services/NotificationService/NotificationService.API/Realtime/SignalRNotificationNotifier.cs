@@ -1,3 +1,5 @@
+﻿using BuildingBlocks.Web;
+using BuildingBlocks.SharedKernel;
 using Microsoft.AspNetCore.SignalR;
 using NotificationService.Application.Abstractions;
 using NotificationService.Application.DTOs;
@@ -8,14 +10,17 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
 {
     private readonly IHubContext<NotificationHub> _hub;
     private readonly ILogger<SignalRNotificationNotifier> _logger;
+    private readonly IOrganizationContext _organization;
 
     public SignalRNotificationNotifier(
         IHubContext<NotificationHub> hub,
-        ILogger<SignalRNotificationNotifier> logger
+        ILogger<SignalRNotificationNotifier> logger,
+        IOrganizationContext organization
     )
     {
         _hub = hub;
         _logger = logger;
+        _organization = organization;
     }
 
     public async Task DeliveryRecordedAsync(
@@ -25,7 +30,7 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
     {
         try
         {
-            await _hub.Clients.All.SendAsync("deliveryRecorded", delivery, cancellationToken);
+            await Audience().SendAsync("deliveryRecorded", delivery, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -64,7 +69,7 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
     {
         try
         {
-            await _hub.Clients.All.SendAsync(message, payload, cancellationToken);
+            await Audience().SendAsync(message, payload, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -75,5 +80,33 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
                 id
             );
         }
+    }
+
+    // The organisation in scope is the organisation whose row was just written: the same scope
+    // stamped it and the same query filter would read it back. With no scope there is no audience
+    // at all — never Clients.All, which is what every one of these used to be and is exactly the
+    // leak this exists to close. The send then goes nowhere, and the caller swallows failures
+    // anyway because a broadcast is the least important thing a command does.
+    private IClientProxy Audience()
+    {
+        var organizationId = _organization.OrganizationId;
+
+        if (organizationId is null)
+        {
+            _logger.LogWarning("Realtime push skipped: no organisation in scope to address it to.");
+
+            return NoAudience.Instance;
+        }
+
+        return _hub.Clients.Group(OrganizationGroups.For(organizationId.Value));
+    }
+
+    /// <summary>A proxy that sends to nobody, for the case where there is nobody it may send to.</summary>
+    private sealed class NoAudience : IClientProxy
+    {
+        public static readonly NoAudience Instance = new();
+
+        public Task SendCoreAsync(string method, object?[] args, CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
     }
 }

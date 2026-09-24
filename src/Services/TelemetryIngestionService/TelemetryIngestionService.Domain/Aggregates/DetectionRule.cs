@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
@@ -8,6 +8,12 @@ namespace TelemetryIngestionService.Domain.Aggregates;
 public sealed class DetectionRule : AggregateRoot
 {
     private DetectionRule() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public string Name { get; private set; } = default!;
 
@@ -24,6 +30,7 @@ public sealed class DetectionRule : AggregateRoot
     public bool IsEnabled { get; private set; }
 
     public static DetectionRule Create(
+        Guid organizationId,
         string name,
         string? service,
         LogSeverity minSeverity,
@@ -37,6 +44,7 @@ public sealed class DetectionRule : AggregateRoot
         return new DetectionRule
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Name = name,
             Service = service,
             MinSeverity = minSeverity,

@@ -162,7 +162,7 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [ ] NotificationService — email/webhook alerts on incident lifecycle events
 - [ ] TelemetryIngestionService — anomaly-based incident detection
 - [ ] Comment & timeline (audit trail)
-- [ ] API Gateway (YARP) & JWT authentication
+- [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
 - [ ] Distributed tracing with OpenTelemetry
 - [ ] **MCP integration** — let the agent consume external systems (Grafana, Kubernetes, GitHub, PagerDuty) as tools, for cross-system root cause analysis
 - [ ] Unit & integration tests

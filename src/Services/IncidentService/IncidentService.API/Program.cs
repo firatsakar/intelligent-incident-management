@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
@@ -62,7 +62,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<IRealtimeNotifier, SignalRIncidentNotifier>();
+// Scoped rather than singleton, because who a push is addressed to depends on the scope it is
+// sent from. The hub context it wraps is a singleton either way.
+builder.Services.AddScoped<IRealtimeNotifier, SignalRIncidentNotifier>();
+
+// The same call IdentityService makes. Every service validates the token on its own:
+// the gateway forwards it, it does not vouch for it.
+builder.Services.AddPlatformAuth(builder.Configuration);
 
 builder.Services.AddOpenApi();
 
@@ -75,7 +81,12 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// No UseHttpsRedirection. TLS terminates at the gateway; a service behind it redirecting
+// to https is redirecting a request that already arrived over a private hop, and in
+// development it redirects a plain-HTTP call to a port nothing is listening on.
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseOrganizationContext();
 app.MapControllers();
 app.MapHub<IncidentHub>("/hubs/incidents");
 

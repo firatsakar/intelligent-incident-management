@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Events;
 
@@ -11,6 +11,12 @@ public sealed class Signal : AggregateRoot
     private Dictionary<string, double> _scoreBreakdown = new();
 
     private Signal() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public Guid ErrorSignatureId { get; private set; }
     public SignalKind Kind { get; private set; }
@@ -33,6 +39,7 @@ public sealed class Signal : AggregateRoot
     public Guid? IncidentId { get; private set; }
 
     public static Signal Detect(
+        Guid organizationId,
         Guid errorSignatureId,
         SignalKind kind,
         DateTime detectedAt,
@@ -44,6 +51,7 @@ public sealed class Signal : AggregateRoot
         return new Signal
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             ErrorSignatureId = errorSignatureId,
             Kind = kind,
             Status = SignalStatus.Recorded,

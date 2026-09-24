@@ -1,5 +1,9 @@
+using System.Threading.RateLimiting;
 using BuildingBlocks.Observability;
 using Gateway.API;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,12 +13,84 @@ var (routes, clusters) = GatewayRoutes.Build(builder.Configuration);
 
 builder.Services.AddReverseProxy().LoadFromMemory(routes, clusters);
 
+builder.Services.AddRateLimiter(limiter =>
+{
+    // Per caller address, so one person guessing cannot lock everyone else out of signing in.
+    // Ten a minute is far above anybody typing their own password wrong and far below anything
+    // worth calling an attempt at guessing — and each rejected request is also a BCrypt
+    // verification at work factor 12 that the server does not have to do.
+    limiter.AddPolicy(
+        GatewayRoutes.SignInRateLimiterPolicy,
+        context =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 10,
+                    Window = TimeSpan.FromMinutes(1),
+
+                    // No queue. A caller past the limit should be told so immediately rather than
+                    // held open, which is the same reasoning as failing a sign-in fast.
+                    QueueLimit = 0,
+                }
+            )
+    );
+
+    limiter.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var metadata)
+            ? metadata
+            : TimeSpan.FromMinutes(1);
+
+        context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new ProblemDetails
+            {
+                Status = StatusCodes.Status429TooManyRequests,
+                Title = "Too many attempts",
+                Detail = $"Wait {(int)retryAfter.TotalSeconds} seconds and try again.",
+            },
+            cancellationToken
+        );
+    };
+});
+
 var app = builder.Build();
 
-// No UseHttpsRedirection here, and it comes out of the four services in Adım 16. TLS terminates
-// at this edge; a service behind it that redirects to https is redirecting a request that already
-// arrived over a private hop, and in development it redirects a plain-HTTP call to a port nothing
-// is listening on.
+var console = SpaHosting.TryResolve(app.Configuration, app.Logger);
+
+// No UseHttpsRedirection here, and it comes out of the four older services in Parça 5. TLS
+// terminates at this edge; a service behind it that redirects to https is redirecting a request
+// that already arrived over a private hop, and in development it redirects a plain-HTTP call to a
+// port nothing is listening on.
+
+if (console is not null)
+{
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = console.Files });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = console.Files });
+}
+
+// Explicit, because the rate limiter reads its policy off the matched endpoint and therefore has
+// to run after routing rather than wherever the host would otherwise insert it.
+app.UseRouting();
+
+app.UseMiddleware<CookieBearerMiddleware>();
+
+app.UseRateLimiter();
+
 app.MapReverseProxy();
+
+if (console is not null)
+{
+    // Anything that is neither a route above nor a file on disk is a console URL like
+    // /incidents/{id}, which exists only in the browser's router.
+    app.MapFallbackToFile(
+        "index.html",
+        new StaticFileOptions { FileProvider = console.Files }
+    );
+}
 
 app.Run();

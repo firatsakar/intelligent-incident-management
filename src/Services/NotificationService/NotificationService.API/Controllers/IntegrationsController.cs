@@ -1,3 +1,5 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NotificationService.API.Contracts;
@@ -35,6 +37,7 @@ public sealed class IntegrationsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Create(
         [FromBody] CreateIntegrationRequest request,
         CancellationToken cancellationToken
@@ -56,6 +59,7 @@ public sealed class IntegrationsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateIntegrationRequest request,
@@ -75,6 +79,7 @@ public sealed class IntegrationsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/enabled")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> SetEnabled(
         Guid id,
         [FromBody] SetIntegrationEnabledRequest request,
@@ -87,6 +92,7 @@ public sealed class IntegrationsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _sender.Send(new DeleteIntegrationCommand(id), cancellationToken);
@@ -95,6 +101,7 @@ public sealed class IntegrationsController : ControllerBase
     }
 
     [HttpPost("{id:guid}/test")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> SendTest(Guid id, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new SendTestNotificationCommand(id), cancellationToken);

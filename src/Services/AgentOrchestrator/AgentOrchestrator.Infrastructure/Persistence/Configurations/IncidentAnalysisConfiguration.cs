@@ -12,6 +12,9 @@ public sealed class IncidentAnalysisConfiguration : IEntityTypeConfiguration<Inc
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
+
         builder.Property(x => x.IncidentId).IsRequired();
 
         builder.HasIndex(x => x.IncidentId);
