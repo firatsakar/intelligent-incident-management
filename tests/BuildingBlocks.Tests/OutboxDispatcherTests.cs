@@ -35,6 +35,7 @@ public sealed class OutboxDispatcherTests
             Type = type,
             Payload = "{}",
             OccurredOn = DateTimeOffset.UtcNow,
+            OrganizationId = Guid.NewGuid(),
         };
 
     private void GivenPending(params OutboxMessage[] messages)

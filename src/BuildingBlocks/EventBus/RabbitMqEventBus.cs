@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
@@ -76,6 +77,13 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
             var integrationEvent =
                 JsonSerializer.Deserialize<T>(message)
                 ?? throw new InvalidOperationException($"Deserialization returned null for event {eventName}.");
+
+            // The one place a consumed message establishes who it is about. Here rather than in
+            // each handler: a handler that sets its own scope has decided who it is working for,
+            // and five handlers each remembering is five chances to forget.
+            serviceProvider
+                .GetRequiredService<IOrganizationContext>()
+                .Set(integrationEvent.OrganizationId);
 
             var handler = serviceProvider.GetRequiredService<THandler>();
 

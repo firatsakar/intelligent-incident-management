@@ -34,7 +34,9 @@ public sealed class OrganizationCreatedOutboxHandler : IOutboxMessageHandler
                 // The outbox row's id, so the event id is stable across retries and a consumer
                 // that has already seen it can say so.
                 Id = message.Id,
-                OrganizationId = domainEvent.OrganizationId,
+                // From the row, not the payload: the outbox row was stamped in the scope that
+                // wrote it, and for this event that scope is the organisation being created.
+                OrganizationId = message.OrganizationId,
                 Name = domainEvent.Name,
             },
             cancellationToken

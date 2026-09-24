@@ -1,5 +1,6 @@
-using BuildingBlocks.Contracts;
+﻿using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
+using BuildingBlocks.SharedKernel;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
 using IncidentService.Domain.Aggregates;
@@ -16,18 +17,21 @@ public sealed class CreateIncidentFromSignalCommandHandler
     private readonly IEventBus _eventBus;
     private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<CreateIncidentFromSignalCommandHandler> _logger;
+    private readonly IOrganizationContext _organization;
 
     public CreateIncidentFromSignalCommandHandler(
         IIncidentRepository repository,
         IEventBus eventBus,
         IRealtimeNotifier realtime,
-        ILogger<CreateIncidentFromSignalCommandHandler> logger
+        ILogger<CreateIncidentFromSignalCommandHandler> logger,
+        IOrganizationContext organization
     )
     {
         _repository = repository;
         _eventBus = eventBus;
         _realtime = realtime;
         _logger = logger;
+        _organization = organization;
     }
 
     public async Task Handle(
@@ -66,6 +70,11 @@ public sealed class CreateIncidentFromSignalCommandHandler
         await _eventBus.PublishAsync(
             new IncidentDetectedEvent
             {
+                // Set by the bus from SignalPromotedEvent before this handler ran. There is no
+                // HttpContext anywhere on this path — a poll became a signal became a promotion —
+                // so the organisation the incident belongs to is whichever one owned the telemetry
+                // source, carried the whole way on the messages.
+                OrganizationId = _organization.Required,
                 IncidentId = incident.Id,
                 Title = incident.Title,
                 Description = incident.Description,

@@ -16,7 +16,9 @@ namespace BuildingBlocks.Contracts;
 /// </remarks>
 public sealed record OrganizationCreatedEvent : IntegrationEvent
 {
-    public required Guid OrganizationId { get; init; }
+    // No OrganizationId of its own: the base carries one, and for this event the organisation it
+    // is about and the organisation it is scoped to are the same thing. Declaring it here again
+    // would hide the base's and give a consumer two fields that could disagree.
 
     /// <summary>For logs and for naming whatever a consumer creates. Not an identifier.</summary>
     public required string Name { get; init; }

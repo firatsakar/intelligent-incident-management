@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
@@ -13,6 +13,18 @@ public sealed class TelemetrySource : AggregateRoot
 
     private TelemetrySource() { }
 
+    /// <summary>
+    /// Whose source this is, and therefore whose every log record, signature, signal and incident
+    /// downstream of it is.
+    /// </summary>
+    /// <remarks>
+    /// This is the root of the scope for the whole detection pipeline. Nothing in that pipeline
+    /// runs on a request — a background loop polls, detects and promotes — so there is no claim to
+    /// read anywhere along it. Every organisation the pipeline ever establishes is read from this
+    /// column and then carried on the messages.
+    /// </remarks>
+    public Guid OrganizationId { get; private set; }
+
     public string Name { get; private set; } = default!;
     public TelemetrySourceKind Kind { get; private set; }
     public bool IsEnabled { get; private set; }
@@ -24,6 +36,7 @@ public sealed class TelemetrySource : AggregateRoot
     public int PollIntervalSeconds { get; private set; }
 
     public static TelemetrySource Create(
+        Guid organizationId,
         string name,
         TelemetrySourceKind kind,
         IReadOnlyDictionary<string, string> config,
@@ -34,6 +47,7 @@ public sealed class TelemetrySource : AggregateRoot
         return new TelemetrySource
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Name = name,
             Kind = kind,
             _config = new Dictionary<string, string>(config),

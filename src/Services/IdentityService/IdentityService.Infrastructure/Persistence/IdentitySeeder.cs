@@ -1,3 +1,4 @@
+using BuildingBlocks.SharedKernel;
 using IdentityService.Application.Abstractions;
 using IdentityService.Domain.Aggregates;
 using IdentityService.Domain.Enums;
@@ -81,6 +82,13 @@ public sealed class IdentitySeeder : IHostedService
             );
 
             await organizations.AddAsync(organization, cancellationToken);
+
+            // The outbox interceptor stamps every row it writes with the scope in flight, and
+            // there is no scope here to inherit: this is a hosted service started by the host, and
+            // the organisation it is about is the one being created on the line above. Setting it
+            // explicitly is what keeps the interceptor's rule absolute — every outbox row has an
+            // owner, and nothing falls back to a default.
+            scope.ServiceProvider.GetRequiredService<IOrganizationContext>().Set(organization.Id);
 
             var user = User.Create(
                 organization.Id,

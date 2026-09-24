@@ -174,9 +174,13 @@ export const en = {
     // The server refuses a wrong password, an unknown address and a deactivated account with one
     // answer, on purpose. Saying more here than it does would undo that.
     failed: 'That email address and password do not match an active account.',
-    // A network that did not answer is not a credential that was refused, and telling the reader
-    // to check their password when the problem is the connection sends them the wrong way.
+    // Three ways this can fail that are not a wrong password, each with a different next step.
+    // Reporting any of them as a refused credential sends the reader to change something that was
+    // never wrong — and it is what this screen did until somebody met a stopped service and was
+    // told their password no longer worked.
     unreachable: 'Could not reach the server. Check your connection and try again.',
+    tooMany: 'Too many attempts. Wait a minute and try again.',
+    serverError: 'Sign-in is not answering right now. Try again in a moment.',
     submit: 'Enter the console',
     submitting: 'Signing in…',
   },

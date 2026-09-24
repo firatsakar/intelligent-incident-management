@@ -150,6 +150,8 @@ export const tr: Dictionary = {
     required: 'E-posta adresinizi ve parolanızı girin.',
     failed: 'Bu e-posta adresi ve parola etkin bir hesapla eşleşmiyor.',
     unreachable: 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+    tooMany: 'Çok fazla deneme yapıldı. Bir dakika bekleyip tekrar deneyin.',
+    serverError: 'Oturum açma şu anda cevap vermiyor. Birazdan tekrar deneyin.',
     submit: 'Konsola gir',
     submitting: 'Giriş yapılıyor…',
   },

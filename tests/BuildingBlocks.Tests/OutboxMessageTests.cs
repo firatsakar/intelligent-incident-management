@@ -7,7 +7,12 @@ public sealed class OutboxMessageTests
     [Fact]
     public void NewMessage_IsPendingAndUnretried()
     {
-        var message = new OutboxMessage { Type = "SignalPromotedDomainEvent", Payload = "{}" };
+        var message = new OutboxMessage
+        {
+            Type = "SignalPromotedDomainEvent",
+            Payload = "{}",
+            OrganizationId = Guid.NewGuid(),
+        };
 
         // The dispatcher's WHERE filter is "ProcessedOn is null". A default that was anything
         // else would make every new message invisible to it.

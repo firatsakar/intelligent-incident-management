@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.Events;
 using BuildingBlocks.Contracts;
@@ -45,6 +45,11 @@ public sealed class IncidentAnalysisCompletedOutboxHandler : IOutboxMessageHandl
             // Reuse the outbox row's Id so the event Id stays stable across retries — a fresh
             // Guid per attempt cannot serve as a consumer's idempotency key.
             Id = message.Id,
+
+            // The organisation the row was stamped with when it was written, inside the
+            // transaction that changed the aggregate. The dispatcher runs minutes later in a
+            // scope of its own, which knows nothing about whose work this was.
+            OrganizationId = message.OrganizationId,
             IncidentId = domainEvent.IncidentId,
             IncidentTitle = domainEvent.IncidentTitle,
             SuggestedCategory = domainEvent.SuggestedCategory,

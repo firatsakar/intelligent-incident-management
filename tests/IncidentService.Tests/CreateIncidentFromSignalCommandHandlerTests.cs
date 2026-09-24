@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Contracts;
+﻿using BuildingBlocks.SharedKernel;
+using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
@@ -16,19 +17,27 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
 {
     private static readonly Guid IncidentId = Guid.NewGuid();
     private static readonly DateTime DetectedAt = DateTime.UtcNow.AddMinutes(-15);
+    private static readonly Guid OrganizationId = Guid.NewGuid();
 
     private readonly IIncidentRepository _repository = Substitute.For<IIncidentRepository>();
     private readonly IEventBus _eventBus = Substitute.For<IEventBus>();
     private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
     private readonly CreateIncidentFromSignalCommandHandler _handler;
 
+    // The scope a real run would have inherited from SignalPromotedEvent, established by the bus
+    // before the handler is reached.
+    private readonly OrganizationContext _organization = new();
+
     public CreateIncidentFromSignalCommandHandlerTests()
     {
+        _organization.Set(OrganizationId);
+
         _handler = new CreateIncidentFromSignalCommandHandler(
             _repository,
             _eventBus,
             _realtime,
-            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance
+            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance,
+            _organization
         );
     }
 

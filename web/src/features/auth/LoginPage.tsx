@@ -94,13 +94,26 @@ export function LoginPage() {
     try {
       await signIn(address, password)
     } catch (cause) {
-      // A refusal and an unreachable server are different problems with different next steps, and
-      // telling somebody to check their password when the network is down sends them the wrong way.
-      setError(cause instanceof ApiError ? login.failed : login.unreachable)
+      setError(describe(cause))
       setPassword('')
       setPending(false)
       passwordField.current?.focus()
     }
+  }
+
+  /**
+   * Four outcomes, four sentences. Only one of them is about the password.
+   *
+   * This screen reported every failure as a refused credential, so a stopped service told the
+   * reader their password had stopped working — which is both false and the kind of false that
+   * sends somebody off to reset something that was never wrong.
+   */
+  function describe(cause: unknown): string {
+    if (!(cause instanceof ApiError)) return login.unreachable
+    if (cause.status === 401) return login.failed
+    if (cause.status === 429) return login.tooMany
+
+    return login.serverError
   }
 
   return (

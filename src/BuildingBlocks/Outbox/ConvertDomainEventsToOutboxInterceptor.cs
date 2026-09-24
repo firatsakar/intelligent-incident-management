@@ -9,6 +9,13 @@ namespace BuildingBlocks.Outbox;
 // without the state change that caused it, nor the other way round.
 public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesInterceptor
 {
+    private readonly IOrganizationContext _organization;
+
+    public ConvertDomainEventsToOutboxInterceptor(IOrganizationContext organization)
+    {
+        _organization = organization;
+    }
+
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
@@ -35,6 +42,11 @@ public sealed class ConvertDomainEventsToOutboxInterceptor : SaveChangesIntercep
                 Type = domainEvent.GetType().Name,
                 Payload = JsonSerializer.Serialize(domainEvent, domainEvent.GetType()),
                 OccurredOn = DateTimeOffset.UtcNow,
+
+                // Required, and refusing here is the point: a row written without an owner would
+                // become a message published to everyone. The scope is established by whoever
+                // opened it — the HTTP middleware, the bus, or the poller reading its source.
+                OrganizationId = _organization.Required,
             })
             .ToList();
 

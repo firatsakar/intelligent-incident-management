@@ -1,7 +1,9 @@
-using BuildingBlocks.Outbox;
+﻿using BuildingBlocks.Outbox;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Infrastructure.Outbox;
 using TelemetryIngestionService.Domain.Enums;
@@ -20,6 +22,12 @@ public static class ServiceCollectionExtensions
     )
     {
         var connectionString = configuration.GetConnectionString("TelemetryDb");
+
+        // Registered here as well as in AddPlatformAuth, because a background scope has no HTTP
+        // pipeline to have registered it: the outbox interceptor runs in whatever scope saved the
+        // aggregate, and several of those are opened by a hosted service. TryAdd, so the two
+        // registrations cannot become two different lifetimes.
+        services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
         services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 
