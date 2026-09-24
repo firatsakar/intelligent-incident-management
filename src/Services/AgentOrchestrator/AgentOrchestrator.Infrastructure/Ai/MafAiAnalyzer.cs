@@ -2,6 +2,7 @@
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.ValueObjects;
 using Anthropic;
+using Microsoft.Agents.AI;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,6 +11,11 @@ namespace AgentOrchestrator.Infrastructure.Ai;
 
 public sealed class MafAiAnalyzer : IAiAnalyzer
 {
+    // TelemetryConstants.ActivitySources.AgentOrchestrator, which the platform's tracing listens
+    // to. Spelled out rather than referenced: Observability brings the Serilog and OpenTelemetry
+    // SDKs, and infrastructure needs neither to emit a span.
+    private const string AgentActivitySource = "AgentOrchestrator";
+
     private readonly ISimilarAnalysisSearcher _searcher;
     private readonly AnthropicClient _client;
     private readonly AiAnalyzerOptions _options;
@@ -38,11 +44,26 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         var userPrompt = BuildUserPrompt(title, description);
 
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        var agent = _client.AsAIAgent(
-            model: _options.Model,
-            instructions: BuildInstructions(),
-            tools: [BuildSearchTool(organizationId, incidentId)]
-        );
+        var agent = _client
+            .AsAIAgent(
+                model: _options.Model,
+                instructions: BuildInstructions(),
+                tools: [BuildSearchTool(organizationId, incidentId)]
+            )
+            .AsBuilder()
+            // An invoke_agent span, a chat span per model turn, and an execute_tool span per
+            // search the model decides to run — which is the part of an analysis nothing else
+            // shows: what it looked for, in what order, and how long each step took. Wired below
+            // function invocation by MAF itself, which is what makes the tool spans exist at all.
+            .UseOpenTelemetry(
+                AgentActivitySource,
+                telemetry =>
+                    // Metadata only: model, token counts, durations, tool names. The prompt is the
+                    // customer's incident text and the response is the analysis; neither belongs
+                    // in the platform's own trace store, which has no organisation boundary.
+                    telemetry.EnableSensitiveData = false
+            )
+            .Build();
         var response = await agent.RunAsync(userPrompt, cancellationToken: cancellationToken);
         stopwatch.Stop();
 
