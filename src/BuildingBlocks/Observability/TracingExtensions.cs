@@ -14,6 +14,14 @@ public static class TracingExtensions
     // project.
     private const string NpgsqlActivitySource = "Npgsql";
 
+    // RabbitMQ.Client 7 traces itself: a publish span that writes W3C trace context into the
+    // message headers, and a deliver span, parented on that context, that the consumer's handler
+    // runs inside. Listening is what switches it on — with no listener the client neither starts
+    // the spans nor touches the headers — so these two names are the whole of the bus's
+    // propagation.
+    private const string RabbitMqPublisherActivitySource = "RabbitMQ.Client.Publisher";
+    private const string RabbitMqSubscriberActivitySource = "RabbitMQ.Client.Subscriber";
+
     private const string OtlpTracesPath = "ingest/otlp/v1/traces";
 
     /// <summary>
@@ -56,7 +64,9 @@ public static class TracingExtensions
                         TelemetryConstants.ActivitySources.NotificationService,
                         TelemetryConstants.ActivitySources.TelemetryIngestionService,
                         TelemetryConstants.ActivitySources.AgentOrchestrator,
-                        NpgsqlActivitySource
+                        NpgsqlActivitySource,
+                        RabbitMqPublisherActivitySource,
+                        RabbitMqSubscriberActivitySource
                     )
                     .AddAspNetCoreInstrumentation(aspNetCore =>
                     {
