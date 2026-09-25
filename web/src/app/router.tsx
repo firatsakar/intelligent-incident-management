@@ -1,8 +1,10 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 
 import { AppLayout } from './AppLayout'
+import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DeliveriesPage } from '@/features/deliveries/DeliveriesPage'
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage'
@@ -12,6 +14,7 @@ import { SignalsPage } from '@/features/signals/SignalsPage'
 import { FunnelPage } from '@/features/telemetry/FunnelPage'
 import { ServicesPage } from '@/features/telemetry/ServicesPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
+import { MembersPage } from '@/features/settings/MembersPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
 import { SettingsLayout } from '@/features/settings/SettingsLayout'
 import { TelemetrySourcesPage } from '@/features/settings/TelemetrySourcesPage'
@@ -19,6 +22,10 @@ import { TelemetrySourcesPage } from '@/features/settings/TelemetrySourcesPage'
 export const router = createBrowserRouter([
   // Outside the shell: no rail, no header, nothing to navigate to from here.
   { path: '/login', element: <LoginPage /> },
+  // The two one-time links from email. Outside the guard: the person holding one has no session
+  // yet, or has a different one, and the link is the only credential the page needs.
+  { path: '/invite/:token', element: <AcceptInvitePage /> },
+  { path: '/reset/:token', element: <ResetPasswordPage /> },
   {
     // A pathless layout route. The guard wraps every application URL without appearing in any of
     // them, so no link, no bookmark and no shared filtered URL moves.
@@ -50,6 +57,7 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/settings/profile" replace /> },
               { path: 'profile', element: <ProfilePage /> },
+              { path: 'members', element: <MembersPage /> },
               { path: 'telemetry', element: <TelemetrySourcesPage /> },
               { path: 'integrations', element: <IntegrationsPage /> },
             ],

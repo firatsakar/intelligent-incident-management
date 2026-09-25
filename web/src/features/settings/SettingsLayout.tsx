@@ -1,4 +1,4 @@
-import { DatabaseIcon, PlugIcon, UserRoundIcon } from 'lucide-react'
+import { DatabaseIcon, PlugIcon, UserRoundIcon, UsersIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 
@@ -8,7 +8,7 @@ import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
- * Settings is one destination with three pages, not three destinations that happen to share a
+ * Settings is one destination with several pages, not three destinations that happen to share a
  * prefix.
  *
  * The rail used to carry a "Settings" heading over two entries, which said the same thing this
@@ -35,9 +35,11 @@ interface SettingsPage {
 
 // Profile first: it is the one page about the reader rather than about the platform's plumbing,
 // and it is the one that is reached by wanting "my settings" rather than by wanting a connector.
-// Then the two halves of the pipeline in the order data moves through them — read, then routed.
+// Members next — people before plumbing. Then the two halves of the pipeline in the order data
+// moves through them — read, then routed.
 const pages: SettingsPage[] = [
   { to: '/settings/profile', id: 'profile', icon: UserRoundIcon },
+  { to: '/settings/members', id: 'members', icon: UsersIcon, adminOnly: true },
   { to: '/settings/telemetry', id: 'telemetry', icon: DatabaseIcon, adminOnly: true },
   { to: '/settings/integrations', id: 'integrations', icon: PlugIcon, adminOnly: true },
 ]

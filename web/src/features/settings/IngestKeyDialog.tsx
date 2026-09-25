@@ -1,6 +1,6 @@
-import { CheckIcon, CopyIcon, KeyRoundIcon } from 'lucide-react'
-import { useState } from 'react'
+import { KeyRoundIcon } from 'lucide-react'
 
+import { Copyable } from '@/components/Copyable'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -98,48 +98,5 @@ OTEL_EXPORTER_OTLP_LOGS_HEADERS=${ingestKeyHeader}=${key}`
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function Copyable({
-  label,
-  value,
-  hint,
-  block = false,
-}: {
-  label: string
-  value: string
-  hint: string
-  block?: boolean
-}) {
-  const t = useT().settings.telemetry.keyPanel
-  const [copied, setCopied] = useState(false)
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(value)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1500)
-  }
-
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">{label}</span>
-        <Button variant="ghost" size="sm" onClick={() => void copy()} aria-label={`${t.copy}: ${label}`}>
-          {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
-          <span aria-live="polite">{copied ? t.copied : t.copy}</span>
-        </Button>
-      </div>
-
-      {block ? (
-        <pre className="bg-muted overflow-x-auto rounded-md px-3 py-2 font-mono text-xs leading-relaxed">
-          {value}
-        </pre>
-      ) : (
-        <p className="bg-muted rounded-md px-3 py-2 font-mono text-xs break-all">{value}</p>
-      )}
-
-      <p className="text-muted-foreground text-xs">{hint}</p>
-    </div>
   )
 }

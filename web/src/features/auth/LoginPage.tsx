@@ -230,6 +230,10 @@ export function LoginPage() {
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {login.ownership}
                 </p>
+
+                {/* There is no self-service reset yet: an Admin issues the link. Said here because
+                    this is where somebody who forgot finds out. */}
+                <p className="text-muted-foreground text-xs leading-relaxed">{login.forgot}</p>
               </CardContent>
 
               <CardFooter>

@@ -1,34 +1,45 @@
 ﻿import {
   Building2Icon,
   LogOutIcon,
+  MailIcon,
   MonitorIcon,
   MoonIcon,
-  ShieldAlertIcon,
   SunIcon,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
-import type { ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
+import { toast } from 'sonner'
 
+import { ApiError } from '@/api/client'
+import { authApi } from '@/api/endpoints'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/features/auth/AuthProvider'
+import { NewPasswordFields } from '@/features/auth/NewPasswordFields'
+import { checkNewPassword, type PasswordProblem } from '@/features/auth/passwordRules'
+import type { UserRole } from '@/features/auth/session'
 import { languageName, languages, useLanguage, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 /**
- * Who this session says you are, and the two things on this console that are genuinely yours.
+ * The account, and the things on this console that are the reader's own.
  *
- * The halves of the screen are honest in opposite directions, which is the whole reason they sit
- * together. The identity is a label this browser made up and nothing checked; the appearance and
- * language settings are real preferences that really persist. Saying so on each of them, once, is
- * what stops the page reading as a settings screen where nothing works — two of the three *do*
- * work, and putting them next to the qualified one is what proves the qualification is specific
- * rather than a blanket disclaimer over the product.
- *
- * This is also the screen where a user would most reasonably expect the identity to be real, so it
- * is the screen that has to say plainly that it is not. Louder than the account menu's line, which
- * is a reminder; quieter than the login card, which is said at the moment it is acted on.
+ * The identity card used to say that it was not an account — a name the browser made up, with no
+ * password behind it. Since Adım 16 it is one, checked by the server on every request, and since
+ * Adım 16.5 its password can be changed here. What the reader cannot change here is their role:
+ * that belongs to the organisation's Admins, and the card says so rather than offering a control
+ * that would be refused.
  */
 
 const themeOptions = [
@@ -54,10 +65,13 @@ export function ProfilePage() {
       <Identity
         name={user.name}
         initials={user.initials}
+        email={user.email}
+        role={user.role}
         organizationName={organization?.name}
         onSignOut={() => void signOut()}
       />
 
+      <PasswordCard email={user.email} />
       <Appearance />
       <LanguageCard />
     </div>
@@ -67,15 +81,19 @@ export function ProfilePage() {
 function Identity({
   name,
   initials,
+  email,
+  role,
   organizationName,
   onSignOut,
 }: {
   name: string
   initials: string
+  email: string
+  role: UserRole
   organizationName: string | undefined
   onSignOut: () => void
 }) {
-  const { common, profile } = useT()
+  const { common, profile, labels } = useT()
   const { identity } = profile
 
   return (
@@ -93,8 +111,15 @@ function Identity({
           </Avatar>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-base font-medium" title={name}>
-              {name}
+            <p className="flex items-center gap-2 text-base font-medium">
+              <span className="truncate" title={name}>
+                {name}
+              </span>
+              <Badge variant="secondary">{labels.role[role]}</Badge>
+            </p>
+            <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
+              <MailIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate">{email}</span>
             </p>
             {organizationName && (
               <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 text-sm">
@@ -104,30 +129,135 @@ function Identity({
             )}
           </div>
 
-          {/* Sign out is the only control here because it is the only one that does anything: the
-              name is not editable in place, it is what you typed on the way in, and changing it
-              means starting a session under a different one. */}
+          {/* Sign out is the only control here: the name, the address and the role are the
+              organisation's record of this person, changed by its Admins rather than in place. */}
           <Button variant="outline" className="shrink-0" onClick={onSignOut}>
             <LogOutIcon aria-hidden />
             {common.signOut}
           </Button>
         </div>
 
-        {/* caution, not alarm: nothing has gone wrong and no verdict was reached — a faculty is
-            missing. Icon and words carry it as well as the tint does. */}
-        <div className="bg-caution text-caution-foreground border-caution-border rounded-lg border px-3 py-2.5">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <ShieldAlertIcon className="size-4 shrink-0" aria-hidden />
-            {identity.notAnAccountTitle}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed">{identity.notAnAccount}</p>
-        </div>
+        <p className="text-muted-foreground text-xs leading-relaxed">{labels.roleDetail[role]}</p>
 
-        {/* The same sentence the login card uses, because it is the same fact and the product
-            should not have two wordings for it. Not repeated with the organisation's name, which
-            is already on the row above — what is missing there is what membership means. */}
+        {/* Not repeated with the organisation's name, which is already on the row above — what is
+            missing there is what membership means. */}
         <p className="text-muted-foreground text-xs leading-relaxed">{identity.ownership}</p>
       </CardContent>
+    </Card>
+  )
+}
+
+/**
+ * One's own password, with the current one as proof. The server ends every other session of the
+ * account and renews this one, so the reader stays signed in here and nowhere else.
+ */
+function PasswordCard({ email }: { email: string }) {
+  const { profile, common } = useT()
+  const text = profile.password
+
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [repeat, setRepeat] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [failure, setFailure] = useState<string | null>(null)
+  const [currentWrong, setCurrentWrong] = useState(false)
+
+  const currentMissing = submitted && !current
+  const problem: PasswordProblem | null = submitted ? checkNewPassword(next, repeat) : null
+  const same = submitted && Boolean(current) && current === next
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitted(true)
+    setFailure(null)
+    setCurrentWrong(false)
+
+    if (!current || checkNewPassword(next, repeat) || current === next) return
+
+    setPending(true)
+
+    try {
+      await authApi.changePassword(current, next)
+
+      setCurrent('')
+      setNext('')
+      setRepeat('')
+      setSubmitted(false)
+      toast.success(text.changed)
+    } catch (cause) {
+      // Everything the server could say about the new password was checked above, so a 400 is
+      // its answer about the current one.
+      if (cause instanceof ApiError && cause.status === 400) setCurrentWrong(true)
+      else if (cause instanceof ApiError && cause.status === 429) setFailure(common.tooMany)
+      else setFailure(cause instanceof ApiError ? common.serverError : common.unreachable)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  const currentError = currentMissing ? text.currentRequired : currentWrong ? text.wrongCurrent : null
+
+  return (
+    <Card>
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
+        <CardHeader>
+          <CardTitle>{text.title}</CardTitle>
+          <CardDescription>{text.description}</CardDescription>
+        </CardHeader>
+
+        <CardContent className="max-w-sm space-y-4">
+          {/* For password managers, which otherwise file the new password against nothing. */}
+          <input type="email" value={email} autoComplete="username" readOnly hidden />
+
+          <div className="space-y-1.5">
+            <Label htmlFor="profile-current">{text.current}</Label>
+            <Input
+              id="profile-current"
+              type="password"
+              value={current}
+              autoComplete="current-password"
+              className="h-10"
+              aria-invalid={currentError ? true : undefined}
+              aria-describedby={currentError ? 'profile-current-error' : undefined}
+              onChange={(event) => {
+                setCurrent(event.target.value)
+                setCurrentWrong(false)
+              }}
+            />
+            {currentError && (
+              <p id="profile-current-error" className="text-alarm-ink text-xs">
+                {currentError}
+              </p>
+            )}
+          </div>
+
+          <NewPasswordFields
+            id="profile"
+            password={next}
+            repeat={repeat}
+            problem={problem}
+            passwordLabel={text.next}
+            repeatLabel={text.repeat}
+            onPassword={setNext}
+            onRepeat={setRepeat}
+          />
+
+          {same && !problem && <p className="text-alarm-ink text-xs">{text.same}</p>}
+
+          {failure && (
+            <p role="alert" className="text-alarm-ink text-xs">
+              {failure}
+            </p>
+          )}
+        </CardContent>
+
+        <CardFooter>
+          <Button type="submit" disabled={pending}>
+            {pending ? text.submitting : text.submit}
+          </Button>
+        </CardFooter>
+      </form>
     </Card>
   )
 }
