@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using AgentOrchestrator.Application.Changes;
+using System.Text.Json;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.ValueObjects;
 using Anthropic.SDK;
@@ -25,12 +26,15 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
     }
 
     public async Task<AnalysisResult> AnalyzeAsync(
+        Guid organizationId,
         Guid incidentId,
         string title,
         string description,
+        CodeContext? code,
         CancellationToken cancellationToken = default
     )
     {
+        // The fallback analyzer has no tools, so it reads no code whatever the context offers.
         var systemPrompt = BuildSystemPrompt();
         var userPrompt = BuildUserPrompt(title, description);
 

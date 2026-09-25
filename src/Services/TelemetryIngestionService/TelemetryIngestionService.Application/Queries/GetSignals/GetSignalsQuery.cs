@@ -13,9 +13,15 @@ namespace TelemetryIngestionService.Application.Queries.GetSignals;
 // With a window: everything detected in that span, across *all* statuses. That is what an
 // aggregate view needs; filtering by status first would hide the contrast between the bursts that
 // were promoted and the ones that were not, which is the whole point of looking.
+//
+// Both shapes are capped and both report the true total. The windowed path used to have neither,
+// which made it the one read in this service whose cost was set by the customer's error rate
+// rather than by anything the caller asked for — and the seven-day preset put that within reach
+// of ordinary use.
 public sealed record GetSignalsQuery(
     SignalStatus Status = SignalStatus.Weak,
     int Limit = 50,
     DateTime? From = null,
-    DateTime? To = null
-) : IRequest<IReadOnlyList<SignalDto>>;
+    DateTime? To = null,
+    int Offset = 0
+) : IRequest<SignalPageDto>;

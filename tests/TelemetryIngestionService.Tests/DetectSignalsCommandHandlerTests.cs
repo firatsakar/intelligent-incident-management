@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -5,6 +6,7 @@ using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.DetectSignals;
 using TelemetryIngestionService.Application.DTOs;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Services;
 using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Events;
 
@@ -15,6 +17,20 @@ namespace TelemetryIngestionService.Tests;
 // run by hand.
 public sealed class DetectSignalsCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
+
+    private readonly OrganizationContext _organization = Scoped();
+
+    private static OrganizationContext Scoped()
+    {
+        var context = new OrganizationContext();
+        context.Set(Organization);
+
+        return context;
+    }
     private const string Fingerprint = "abc123";
     private const string Service = "checkout-service";
 
@@ -51,7 +67,10 @@ public sealed class DetectSignalsCommandHandlerTests
             _logRecords,
             _signals,
             _realtime,
-            NullLogger<DetectSignalsCommandHandler>.Instance
+            NullLogger<DetectSignalsCommandHandler>.Instance,
+            // The scope the polling loop takes from the source's row, which detection then stamps
+            // onto every signal it writes.
+            _organization
         );
     }
 
@@ -64,6 +83,7 @@ public sealed class DetectSignalsCommandHandlerTests
         int dedupWindowHours = 24
     ) =>
         DetectionRule.Create(
+            Organization,
             service is null ? "catch-all" : $"rule for {service}",
             service,
             LogSeverity.Error,
@@ -83,6 +103,7 @@ public sealed class DetectSignalsCommandHandlerTests
     private ErrorSignature GivenSignature(DateTime? lastSeenAt = null)
     {
         var signature = ErrorSignature.Create(
+            Organization,
             Fingerprint,
             Service,
             "TimeoutException",
@@ -121,10 +142,12 @@ public sealed class DetectSignalsCommandHandlerTests
                 timestamps.Add(middle);
         }
 
-        IReadOnlyList<DateTime> history = timestamps;
+        IReadOnlyList<WeightedTimestamp> history = timestamps
+            .Select(timestamp => new WeightedTimestamp(timestamp, 1))
+            .ToList();
 
         _logRecords
-            .GetTimestampsByFingerprintAsync(
+            .GetOccurrencesByFingerprintAsync(
                 Arg.Any<string>(),
                 Arg.Any<DateTime>(),
                 Arg.Any<DateTime>(),
@@ -262,6 +285,7 @@ public sealed class DetectSignalsCommandHandlerTests
             .GetLatestForSignatureAsync(signature.Id, Arg.Any<CancellationToken>())
             .Returns(
                 Signal.Detect(
+                    Organization,
                     signature.Id,
                     SignalKind.LogBurst,
                     DateTime.UtcNow,
@@ -286,6 +310,7 @@ public sealed class DetectSignalsCommandHandlerTests
             .GetLatestForSignatureAsync(signature.Id, Arg.Any<CancellationToken>())
             .Returns(
                 Signal.Detect(
+                    Organization,
                     signature.Id,
                     SignalKind.LogBurst,
                     DateTime.UtcNow.AddHours(-2),
@@ -371,7 +396,9 @@ public sealed class DetectSignalsCommandHandlerTests
 
         await Detect();
 
-        Assert.Equal(0.30, _recorded[0].Confidence, 10);
+        // One false alarm is a third of the history term's floor, not all of it: 0.55 − 0.0833.
+        // Under the two flags it replaced, the same single verdict took the whole −0.25.
+        Assert.Equal(SignalScoring.BurstBase + SignalScoring.History(0, 1)!.Value, _recorded[0].Confidence, 10);
         Assert.Equal(SignalStatus.Recorded, _recorded[0].Status);
     }
 
@@ -551,6 +578,47 @@ public sealed class DetectSignalsCommandHandlerTests
             .Received(1)
             .SignalRecordedAsync(
                 Arg.Is<SignalDto>(dto => dto.Status == SignalStatus.Weak),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task TheSignatureIsAnnouncedAlongsideTheSignal()
+    {
+        // The signature changed in the same transaction — it may have gained an incident, its
+        // counters moved — and broadcasting only the signal left the evidence screen's signature
+        // column going stale while signals were still arriving live on the very same push.
+        GivenRules(Rule(threshold: 3));
+        GivenSignature();
+        GivenOrdinaryBaselineOf(mean: 6);
+        GivenWindow(occurrences: 6);
+
+        await Detect();
+
+        await _realtime
+            .Received(1)
+            .SignatureChangedAsync(
+                Arg.Any<ErrorSignatureDto>(),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task NoSignalMeansNoSignatureAnnouncementEither()
+    {
+        // A signature that did not cross a rule was not written to, so announcing it would be a
+        // message about nothing — multiplied by every signature the detector looks at per poll.
+        GivenRules(Rule(threshold: 10));
+        GivenSignature();
+        GivenOrdinaryBaselineOf(mean: 2);
+        GivenWindow(occurrences: 2);
+
+        await Detect();
+
+        await _realtime
+            .DidNotReceive()
+            .SignatureChangedAsync(
+                Arg.Any<ErrorSignatureDto>(),
                 Arg.Any<CancellationToken>()
             );
     }

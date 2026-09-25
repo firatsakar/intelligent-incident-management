@@ -16,6 +16,18 @@ public sealed record TelemetrySourceDto
     public required IReadOnlyDictionary<string, string> Config { get; init; }
 
     public required int PollIntervalSeconds { get; init; }
+
+    // Which key a pushed source's collector holds — the first characters, never the key.
+    public string? IngestKeyPrefix { get; init; }
+
+    /// <summary>
+    /// The whole key, present exactly once: in the response to the request that issued it.
+    /// </summary>
+    /// <remarks>
+    /// Only the hash is stored, so nothing can show it again, and the copy that is broadcast to
+    /// the organisation's other consoles is built without it. Lose it and the answer is a new one.
+    /// </remarks>
+    public string? IngestKey { get; init; }
     public required DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
@@ -31,6 +43,7 @@ public sealed record TelemetrySourceDto
             // restored on write.
             Config = ConfigMasking.Mask(source.Config),
             PollIntervalSeconds = source.PollIntervalSeconds,
+            IngestKeyPrefix = source.IngestKeyPrefix,
             CreatedAt = source.CreatedAt,
             UpdatedAt = source.UpdatedAt,
         };

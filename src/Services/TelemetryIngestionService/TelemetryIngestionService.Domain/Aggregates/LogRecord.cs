@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
@@ -8,6 +8,12 @@ namespace TelemetryIngestionService.Domain.Aggregates;
 public sealed class LogRecord : AggregateRoot
 {
     private LogRecord() { }
+
+    /// <summary>
+    /// Whose row this is. Inherited from the telemetry source the pipeline started at, carried
+    /// here explicitly because nothing in this model has a navigation to inherit through.
+    /// </summary>
+    public Guid OrganizationId { get; private set; }
 
     public Guid TelemetrySourceId { get; private set; }
 
@@ -27,6 +33,18 @@ public sealed class LogRecord : AggregateRoot
     // Set for Error and Fatal records; null for everything else.
     public string? Fingerprint { get; private set; }
 
+    /// <summary>
+    /// How many events this row stands for. One, unless it is the sample a burst was folded onto.
+    /// </summary>
+    /// <remarks>
+    /// Not every line of a storm is worth a row: three hundred copies of one error differ only in
+    /// the ids the fingerprint already masks. A batch keeps a few of each signature as samples and
+    /// counts the rest onto the newest one (<see cref="Services.SampleFolding"/>). Everything that
+    /// asks "how many" — burst detection, the baseline, the funnel — sums this column rather than
+    /// counting rows, so a folded storm weighs exactly what the unfolded one did.
+    /// </remarks>
+    public int Occurrences { get; private set; } = 1;
+
     // When the event happened, on the source's clock.
     public DateTime Timestamp { get; private set; }
 
@@ -38,6 +56,7 @@ public sealed class LogRecord : AggregateRoot
     public bool HasClockSkew { get; private set; }
 
     public static LogRecord Create(
+        Guid organizationId,
         Guid telemetrySourceId,
         string? sourceEventId,
         string service,
@@ -48,14 +67,23 @@ public sealed class LogRecord : AggregateRoot
         string? stackTrace,
         string? fingerprint,
         DateTime timestamp,
-        TimeSpan clockSkewTolerance
+        TimeSpan clockSkewTolerance,
+        int occurrences = 1
     )
     {
+        if (occurrences < 1)
+            throw new ArgumentOutOfRangeException(
+                nameof(occurrences),
+                occurrences,
+                "A stored record stands for at least the one event it is."
+            );
+
         var ingestedAt = DateTime.UtcNow;
 
         return new LogRecord
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             TelemetrySourceId = telemetrySourceId,
             SourceEventId = sourceEventId,
             Service = service,
@@ -65,6 +93,7 @@ public sealed class LogRecord : AggregateRoot
             ExceptionType = exceptionType,
             StackTrace = stackTrace,
             Fingerprint = fingerprint,
+            Occurrences = occurrences,
             Timestamp = timestamp,
             IngestedAt = ingestedAt,
             HasClockSkew = timestamp > ingestedAt.Add(clockSkewTolerance),

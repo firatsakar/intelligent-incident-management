@@ -1,0 +1,47 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web"],
+      "port": 5173
+    },
+    {
+      "name": "gateway",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Gateway/Gateway.API", "--launch-profile", "http", "--no-build"],
+      "port": 5100
+    },
+    {
+      "name": "identity",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Services/IdentityService/IdentityService.API", "--launch-profile", "http", "--no-build"],
+      "port": 5240
+    },
+    {
+      "name": "incident",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Services/IncidentService/IncidentService.API", "--launch-profile", "http", "--no-build"],
+      "port": 5203
+    },
+    {
+      "name": "agent",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Services/AgentOrchestrator/AgentOrchestrator.API", "--launch-profile", "http", "--no-build"],
+      "port": 5130
+    },
+    {
+      "name": "notification",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Services/NotificationService/NotificationService.API", "--launch-profile", "http", "--no-build"],
+      "port": 5210
+    },
+    {
+      "name": "telemetry",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "src/Services/TelemetryIngestionService/TelemetryIngestionService.API", "--launch-profile", "http", "--no-build"],
+      "port": 5220
+    }
+  ]
+}

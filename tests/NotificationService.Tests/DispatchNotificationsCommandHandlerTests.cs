@@ -1,3 +1,4 @@
+﻿using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
@@ -13,6 +14,21 @@ namespace NotificationService.Tests;
 // each of the ways that can go wrong without taking the others down with it.
 public sealed class DispatchNotificationsCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
+
+    // The scope a real run inherits — from the bus for a dispatch, from the claim for a create.
+    private readonly OrganizationContext _organization = Scoped();
+
+    private static OrganizationContext Scoped()
+    {
+        var context = new OrganizationContext();
+        context.Set(Organization);
+
+        return context;
+    }
     private static readonly Guid IncidentId = Guid.NewGuid();
 
     private readonly IIntegrationRepository _integrations =
@@ -42,7 +58,8 @@ public sealed class DispatchNotificationsCommandHandlerTests
             _deliveries,
             _channels,
             _realtime,
-            NullLogger<DispatchNotificationsCommandHandler>.Instance
+            NullLogger<DispatchNotificationsCommandHandler>.Instance,
+            _organization
         );
     }
 
@@ -55,6 +72,7 @@ public sealed class DispatchNotificationsCommandHandlerTests
         string? categoryFilter = null
     ) =>
         Integration.Create(
+            Organization,
             name,
             channel,
             new Dictionary<string, string>(),
@@ -136,6 +154,21 @@ public sealed class DispatchNotificationsCommandHandlerTests
             );
 
         Assert.Equal(DeliveryStatus.Sent, Assert.Single(_recorded).Status);
+    }
+
+    [Fact]
+    public async Task TheDeliveryRecordsWhereItWentByNameAndChannel()
+    {
+        // The integration list is Admin-only (Adım 16.5); the incident screen every role opens
+        // still has to say where a notification went, so the row carries it.
+        GivenEnabled(AnIntegration("ops webhook", NotificationChannelType.Webhook));
+        GivenChannel(NotificationChannelType.Webhook);
+
+        await Dispatch();
+
+        var delivery = Assert.Single(_recorded);
+        Assert.Equal("ops webhook", delivery.IntegrationName);
+        Assert.Equal(NotificationChannelType.Webhook, delivery.Channel);
     }
 
     [Fact]

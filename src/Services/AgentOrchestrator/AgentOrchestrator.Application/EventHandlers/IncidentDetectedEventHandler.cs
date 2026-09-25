@@ -35,6 +35,8 @@ public sealed class IncidentDetectedEventHandler : IIntegrationEventHandler<Inci
             IncidentId = integrationEvent.IncidentId,
             Title = integrationEvent.Title,
             Description = integrationEvent.Description,
+            Service = integrationEvent.Service,
+            DetectedAt = integrationEvent.DetectedAt,
         };
 
         await _sender.Send(command, cancellationToken);

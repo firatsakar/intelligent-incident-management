@@ -12,9 +12,25 @@ public sealed record EvidenceWindowDto
     public required DateTime To { get; init; }
     public string? Service { get; init; }
     public required int TotalLogRecords { get; init; }
+
+    // Signals and signatures used to come back whole while only the log records were capped, so
+    // a busy window could return three unbounded collections out of three. Every list here now
+    // reports the count it was cut from.
+    public required int TotalSignals { get; init; }
+    public required int TotalSignatures { get; init; }
     public required IReadOnlyList<LogRecordDto> LogRecords { get; init; }
     public required IReadOnlyList<ErrorSignatureDto> Signatures { get; init; }
     public required IReadOnlyList<SignalDto> Signals { get; init; }
+}
+
+// A window of signals with the count it was cut from, so a truncated list can say so. Kept local
+// rather than reaching for IncidentService's PagedResult: two service domains never reference
+// each other, and a shared paging contract is a BuildingBlocks decision for the day a third
+// caller wants one.
+public sealed record SignalPageDto
+{
+    public required IReadOnlyList<SignalDto> Items { get; init; }
+    public required int TotalCount { get; init; }
 }
 
 public sealed record LogRecordDto
@@ -25,6 +41,9 @@ public sealed record LogRecordDto
     public required string Message { get; init; }
     public string? ExceptionType { get; init; }
     public string? Fingerprint { get; init; }
+
+    // How many events this row stands for — above one when a burst was folded onto it.
+    public required int Occurrences { get; init; }
     public required DateTime Timestamp { get; init; }
     public required DateTime IngestedAt { get; init; }
     public required bool HasClockSkew { get; init; }
@@ -38,6 +57,7 @@ public sealed record LogRecordDto
             Message = record.Message,
             ExceptionType = record.ExceptionType,
             Fingerprint = record.Fingerprint,
+            Occurrences = record.Occurrences,
             Timestamp = record.Timestamp,
             IngestedAt = record.IngestedAt,
             HasClockSkew = record.HasClockSkew,

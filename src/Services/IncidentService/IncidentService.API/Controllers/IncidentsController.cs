@@ -1,9 +1,12 @@
-﻿using IncidentService.API.Contracts;
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
+using IncidentService.API.Contracts;
 using IncidentService.Application.Commands.AssignTeam;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
 using IncidentService.Application.Queries.GetIncidentById;
 using IncidentService.Application.Queries.GetIncidents;
+using IncidentService.Application.Queries.GetIncidentStats;
 using IncidentService.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +25,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Create(
         [FromBody] CreateIncidentRequest request,
         CancellationToken cancellationToken
@@ -49,6 +53,25 @@ public sealed class IncidentsController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>
+    /// Arrival shape over time plus the current open picture, for the dashboard. The guid
+    /// constraint on GetById is what keeps "stats" from being read as an id.
+    /// </summary>
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetStats(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (from.HasValue && to.HasValue && from >= to)
+            return BadRequest(new { error = "'from' must be earlier than 'to'." });
+
+        var result = await _sender.Send(new GetIncidentStatsQuery(from, to), cancellationToken);
+
+        return Ok(result);
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetList(
         [FromQuery] IncidentStatus? status,
@@ -71,6 +94,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/status")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> UpdateStatus(
         Guid id,
         [FromBody] UpdateStatusRequest request,
@@ -81,6 +105,7 @@ public sealed class IncidentsController : ControllerBase
         {
             IncidentId = id,
             NewStatus = request.NewStatus,
+            Verdict = request.Verdict,
         };
 
         await _sender.Send(command, cancellationToken);
@@ -88,6 +113,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/team")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> AssignTeam(
         Guid id,
         [FromBody] AssignTeamRequest request,

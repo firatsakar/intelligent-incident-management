@@ -11,12 +11,15 @@ namespace IncidentService.Application.Abstractions;
 // polling, which at least coalesces. It is the same DTO the HTTP endpoint returns, so there is no
 // second contract to keep in step.
 //
-// IncidentCreated carries an id alone, deliberately. Whether a new incident belongs on the first
-// page of a filtered, sorted list is a question only the server can answer; guessing client-side
-// produces a list that disagrees with the server as soon as the user pages.
+// IncidentCreated used to carry an id alone, on the reasoning that whether a new incident belongs
+// on the first page of a filtered, sorted list is a question only the server can answer. That part
+// still holds and the client still re-reads the list — but the DTO was free at both call sites
+// (one of them maps it on the very next line for its HTTP response), and sending it lets the
+// client fill the detail cache at the same time. Opening the incident that just arrived then
+// costs nothing.
 public interface IRealtimeNotifier
 {
-    Task IncidentCreatedAsync(Guid incidentId, CancellationToken cancellationToken = default);
+    Task IncidentCreatedAsync(IncidentDto incident, CancellationToken cancellationToken = default);
 
     Task IncidentChangedAsync(IncidentDto incident, CancellationToken cancellationToken = default);
 }

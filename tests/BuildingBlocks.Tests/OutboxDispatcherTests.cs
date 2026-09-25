@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using BuildingBlocks.Outbox;
+using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -13,6 +15,10 @@ public sealed class OutboxDispatcherTests
 
     private readonly IOutboxStore _store = Substitute.For<IOutboxStore>();
     private readonly List<IOutboxMessageHandler> _handlers = [];
+
+    // For handlers that need their dispatch scope — the organisation in it — rather than being a
+    // singleton the test holds on to.
+    private readonly List<Func<IServiceProvider, IOutboxMessageHandler>> _scopedHandlers = [];
 
     private readonly TaskCompletionSource _saved = new(
         TaskCreationOptions.RunContinuationsAsynchronously
@@ -35,6 +41,7 @@ public sealed class OutboxDispatcherTests
             Type = type,
             Payload = "{}",
             OccurredOn = DateTimeOffset.UtcNow,
+            OrganizationId = Guid.NewGuid(),
         };
 
     private void GivenPending(params OutboxMessage[] messages)
@@ -57,9 +64,13 @@ public sealed class OutboxDispatcherTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(_store);
+        services.AddScoped<IOrganizationContext, OrganizationContext>();
 
         foreach (var handler in _handlers)
             services.AddSingleton(handler);
+
+        foreach (var factory in _scopedHandlers)
+            services.AddScoped(factory);
 
         await using var provider = services.BuildServiceProvider();
 
@@ -169,6 +180,92 @@ public sealed class OutboxDispatcherTests
         await _store.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
+    [Fact]
+    public async Task EachMessageIsHandledInsideTheOrganisationItsRowWasStampedWith()
+    {
+        // The regression this pins: the dispatcher used to hand every message to its handler in
+        // a scope with no organisation. A handler that read through a query filter got nothing
+        // back — AgentOrchestrator's analysis lookup returned null, indexing threw, and the row
+        // was re-published every five seconds indefinitely. Two organisations in one batch,
+        // because a single scope for the batch could only ever be right for one of them.
+        var first = Message("Scoped");
+        var second = Message("Scoped");
+        GivenPending(first, second);
+
+        var seen = new List<Guid?>();
+        _scopedHandlers.Add(provider =>
+            new ScopeRecordingHandler("Scoped", provider.GetRequiredService<IOrganizationContext>(), seen)
+        );
+
+        await RunOneCycleAsync(_saved.Task);
+
+        Assert.Equal([first.OrganizationId, second.OrganizationId], seen);
+        Assert.NotNull(first.ProcessedOn);
+        Assert.NotNull(second.ProcessedOn);
+    }
+
+    [Fact]
+    public async Task DispatchContinuesTheTraceTheRowWasWrittenInside()
+    {
+        // Without this every outbox publish starts a trace of its own, and the path an incident
+        // travels breaks at every service that writes one.
+        using var listener = ListenToOutbox();
+
+        var traceId = ActivityTraceId.CreateRandom();
+        var writerSpanId = ActivitySpanId.CreateRandom();
+
+        var message = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            Type = "SignalPromotedDomainEvent",
+            Payload = "{}",
+            OccurredOn = DateTimeOffset.UtcNow,
+            OrganizationId = Guid.NewGuid(),
+            TraceParent = $"00-{traceId}-{writerSpanId}-01",
+        };
+        GivenPending(message);
+
+        var handler = new RecordingHandler(message.Type);
+        _handlers.Add(handler);
+
+        await RunOneCycleAsync(_saved.Task);
+
+        Assert.Equal(traceId, handler.TraceIdAtHandleTime);
+        Assert.Equal(writerSpanId, handler.ParentSpanIdAtHandleTime);
+    }
+
+    [Fact]
+    public async Task ARowWrittenOutsideAnyTraceStillDispatches()
+    {
+        using var listener = ListenToOutbox();
+
+        var message = Message();
+        GivenPending(message);
+
+        var handler = new RecordingHandler(message.Type);
+        _handlers.Add(handler);
+
+        await RunOneCycleAsync(_saved.Task);
+
+        Assert.NotNull(message.ProcessedOn);
+        Assert.NotNull(handler.TraceIdAtHandleTime);
+        Assert.Equal(default, handler.ParentSpanIdAtHandleTime);
+    }
+
+    private static ActivityListener ListenToOutbox()
+    {
+        var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == OutboxDispatcher.ActivitySourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+        };
+
+        ActivitySource.AddActivityListener(listener);
+
+        return listener;
+    }
+
     // ---- test doubles ----------------------------------------------------------------------
 
     private sealed class RecordingHandler(string messageType) : IOutboxMessageHandler
@@ -180,10 +277,16 @@ public sealed class OutboxDispatcherTests
         // Captured during the call, which is the only moment the ordering is observable.
         public DateTimeOffset? ProcessedOnAtHandleTime { get; private set; }
 
+        public ActivityTraceId? TraceIdAtHandleTime { get; private set; }
+
+        public ActivitySpanId ParentSpanIdAtHandleTime { get; private set; }
+
         public Task HandleAsync(OutboxMessage message, CancellationToken cancellationToken = default)
         {
             WasCalled = true;
             ProcessedOnAtHandleTime = message.ProcessedOn;
+            TraceIdAtHandleTime = Activity.Current?.TraceId;
+            ParentSpanIdAtHandleTime = Activity.Current?.ParentSpanId ?? default;
 
             return Task.CompletedTask;
         }
@@ -195,5 +298,21 @@ public sealed class OutboxDispatcherTests
 
         public Task HandleAsync(OutboxMessage message, CancellationToken cancellationToken = default) =>
             throw new InvalidOperationException(error);
+    }
+
+    private sealed class ScopeRecordingHandler(
+        string messageType,
+        IOrganizationContext organization,
+        List<Guid?> seen
+    ) : IOutboxMessageHandler
+    {
+        public string MessageType { get; } = messageType;
+
+        public Task HandleAsync(OutboxMessage message, CancellationToken cancellationToken = default)
+        {
+            seen.Add(organization.OrganizationId);
+
+            return Task.CompletedTask;
+        }
     }
 }

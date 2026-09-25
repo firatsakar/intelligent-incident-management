@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using NotificationService.Domain.Aggregates;
 
@@ -13,7 +13,14 @@ public sealed class NotificationDeliveryConfiguration
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.OrganizationId).IsRequired();
+
+        // The stats query reads a window of one organisation's deliveries.
+        builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
+
         builder.Property(x => x.IntegrationId).IsRequired();
+        builder.Property(x => x.IntegrationName).HasMaxLength(128);
+        builder.Property(x => x.Channel).HasConversion<string>().HasMaxLength(50);
 
         builder.Property(x => x.IncidentId).IsRequired();
 

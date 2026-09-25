@@ -9,6 +9,9 @@ public sealed record ConnectorTestResult
     // distinguishable from one that connects and works.
     public int? MatchedEvents { get; init; }
 
+    // For a pushed source, which cannot be probed from here: when data last arrived.
+    public DateTime? LastReceivedAt { get; init; }
+
     public static ConnectorTestResult Success(int matchedEvents) =>
         new() { IsSuccess = true, MatchedEvents = matchedEvents };
 

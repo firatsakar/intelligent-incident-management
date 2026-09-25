@@ -9,10 +9,15 @@ public sealed class SetIntegrationEnabledCommandHandler
     : IRequestHandler<SetIntegrationEnabledCommand, IntegrationDto>
 {
     private readonly IIntegrationRepository _integrations;
+    private readonly IRealtimeNotifier _realtime;
 
-    public SetIntegrationEnabledCommandHandler(IIntegrationRepository integrations)
+    public SetIntegrationEnabledCommandHandler(
+        IIntegrationRepository integrations,
+        IRealtimeNotifier realtime
+    )
     {
         _integrations = integrations;
+        _realtime = realtime;
     }
 
     public async Task<IntegrationDto> Handle(
@@ -32,6 +37,11 @@ public sealed class SetIntegrationEnabledCommandHandler
         _integrations.Update(integration);
         await _integrations.SaveChangesAsync(cancellationToken);
 
-        return IntegrationDto.FromDomain(integration);
+        // Worth pushing even though it is one boolean: a paused channel means nobody is being
+        // told anything through it, and a second operator should not have to reload to find out.
+        var dto = IntegrationDto.FromDomain(integration);
+        await _realtime.IntegrationChangedAsync(dto, cancellationToken);
+
+        return dto;
     }
 }

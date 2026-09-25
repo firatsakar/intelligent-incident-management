@@ -4,7 +4,59 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>web</title>
+    <meta name="color-scheme" content="light dark" />
+    <title>Incident Management</title>
+    <script>
+      // next-themes only resolves once React mounts, which in a Vite SPA means one painted frame
+      // of the wrong theme. On a console that is usually opened dark, that frame is a white flash
+      // in a dark room. Reads the same key and the same values ThemeProvider writes.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('iim-theme')
+          var dark =
+            stored === 'dark' ||
+            ((!stored || stored === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+
+          if (dark) document.documentElement.classList.add('dark')
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        } catch {
+          /* Private mode or blocked storage: fall through to the CSS default. */
+        }
+      })()
+
+      // The document's declared language, before React mounts.
+      //
+      // Not about a flash of the wrong words — LanguageProvider resolves the language in its
+      // initial state, so the first React frame is already right. This is for the readers that
+      // never look at React: assistive technology announcing the page, `:lang()`, and the
+      // browser's own offer to translate, all of which read the attribute as the document loads.
+      //
+      // Mirrors detectLanguage() in src/lib/i18n/locale.ts, including the storage key. The two
+      // have to agree, and the duplication is the price of running before any module does.
+      ;(function () {
+        var supported = ['en', 'tr']
+        var chosen = null
+
+        try {
+          var saved = localStorage.getItem('iim.language')
+          if (supported.indexOf(saved) !== -1) chosen = saved
+        } catch {
+          /* Blocked storage: fall through to what the browser asks for. */
+        }
+
+        if (!chosen) {
+          var asked = navigator.languages || [navigator.language || '']
+
+          for (var i = 0; i < asked.length && !chosen; i++) {
+            var subtag = String(asked[i]).toLowerCase().split('-')[0]
+            if (supported.indexOf(subtag) !== -1) chosen = subtag
+          }
+        }
+
+        document.documentElement.lang = chosen || 'en'
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

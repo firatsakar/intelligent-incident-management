@@ -52,6 +52,9 @@ namespace NotificationService.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -62,7 +65,7 @@ namespace NotificationService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("OrganizationId", "Name")
                         .IsUnique();
 
                     b.ToTable("integrations", (string)null);
@@ -77,6 +80,10 @@ namespace NotificationService.Infrastructure.Migrations
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Channel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -89,9 +96,16 @@ namespace NotificationService.Infrastructure.Migrations
                     b.Property<Guid>("IntegrationId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("IntegrationName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<string>("LastError")
                         .HasMaxLength(2048)
                         .HasColumnType("character varying(2048)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("timestamp with time zone");
@@ -110,6 +124,8 @@ namespace NotificationService.Infrastructure.Migrations
 
                     b.HasIndex("IntegrationId", "IncidentId")
                         .IsUnique();
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
 
                     b.ToTable("notification_deliveries", (string)null);
                 });

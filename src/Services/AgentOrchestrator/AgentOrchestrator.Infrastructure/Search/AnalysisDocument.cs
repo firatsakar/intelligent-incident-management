@@ -4,6 +4,9 @@ namespace AgentOrchestrator.Infrastructure.Search;
 
 public sealed record AnalysisDocument
 {
+    [JsonPropertyName("organizationId")]
+    public required Guid OrganizationId { get; init; }
+
     [JsonPropertyName("incidentId")]
     public required Guid IncidentId { get; init; }
 

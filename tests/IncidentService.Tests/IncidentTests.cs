@@ -1,3 +1,4 @@
+﻿using IncidentService.Domain.ValueObjects;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Events;
@@ -6,8 +7,13 @@ namespace IncidentService.Tests;
 
 public sealed class IncidentTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static Incident Create(Guid? id = null, DateTime? detectedAt = null) =>
         Incident.Create(
+            Organization,
             "checkout-service: TimeoutException",
             "Payment gateway stopped responding.",
             IncidentPriority.Medium,
@@ -18,17 +24,16 @@ public sealed class IncidentTests
         );
 
     [Fact]
-    public void Create_OpensTheIncidentAndAnnouncesIt()
+    public void Create_OpensTheIncidentAndRaisesNothing()
     {
         var incident = Create();
 
         Assert.Equal(IncidentStatus.Open, incident.Status);
         Assert.False(incident.IsAiAnalyzed);
 
-        var created = Assert.Single(incident.DomainEvents.OfType<IncidentCreatedDomainEvent>());
-
-        Assert.Equal(incident.Id, created.IncidentId);
-        Assert.Equal(incident.Title, created.Title);
+        // Everything an aggregate raises goes to the outbox, and an event no handler claims is a
+        // row retried forever. Creation is announced by the handler, as IncidentDetectedEvent.
+        Assert.Empty(incident.DomainEvents);
     }
 
     [Fact]
@@ -79,7 +84,8 @@ public sealed class IncidentTests
                 IncidentPriority.Critical,
                 "Application",
                 "Repeated timeouts against the payment gateway.",
-                confidence: 0.82
+                confidence: 0.82,
+                relatedChanges: []
             );
 
             Assert.Equal(IncidentPriority.Critical, incident.Priority);
@@ -103,11 +109,42 @@ public sealed class IncidentTests
                 IncidentPriority.High,
                 "Application",
                 "Because.",
-                confidence: null
+                confidence: null,
+                relatedChanges: []
             );
 
             Assert.Null(incident.AiConfidence);
             Assert.True(incident.IsAiAnalyzed);
+        }
+
+        [Fact]
+        public void KeepsOnlyGitHubLinksAmongTheRelatedChanges()
+        {
+            // The agent builds these links itself; this is the second check, at the edge of the
+            // service that hands them to a browser.
+            var incident = Create();
+            var at = new DateTime(2026, 9, 25, 14, 5, 0, DateTimeKind.Utc);
+
+            incident.ApplyAiAnalysis(
+                IncidentPriority.High,
+                "Application",
+                "Because of a1b2c3d.",
+                confidence: 0.9,
+                relatedChanges:
+                [
+                    new AiRelatedChange("a1b2c3d4", "Lower timeout", "ayse", at, "https://github.com/acme/shop/commit/a1b2c3d4"),
+                    new AiRelatedChange("deadbeef", "Phish", null, at, "https://evil.example/commit/deadbeef"),
+                    new AiRelatedChange("cafebabe", "Script", null, at, "javascript:alert(1)"),
+                ]
+            );
+
+            var kept = Assert.Single(incident.AiRelatedChanges);
+            Assert.Equal("a1b2c3d4", kept.Sha);
+
+            // A later analysis replaces them, including with none.
+            incident.ApplyAiAnalysis(IncidentPriority.High, "Application", "Again.", 0.5, []);
+
+            Assert.Empty(incident.AiRelatedChanges);
         }
 
         [Fact]
@@ -117,7 +154,7 @@ public sealed class IncidentTests
             // be indistinguishable from applying it once.
             var incident = Create();
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
             var afterFirst = (
                 incident.Priority,
                 incident.AiSuggestedCategory,
@@ -125,7 +162,7 @@ public sealed class IncidentTests
                 incident.AiConfidence
             );
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
 
             Assert.Equal(
                 afterFirst,
@@ -148,7 +185,7 @@ public sealed class IncidentTests
             incident.AssignTeam("payments");
             incident.UpdateStatus(IncidentStatus.InProgress);
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
 
             Assert.Equal(IncidentStatus.InProgress, incident.Status);
             Assert.Equal("payments", incident.AssignedTeam);
@@ -160,11 +197,112 @@ public sealed class IncidentTests
     {
         var incident = Create();
 
-        incident.UpdateStatus(IncidentStatus.Resolved);
+        incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
         incident.AssignTeam("payments");
 
         Assert.Equal(IncidentStatus.Resolved, incident.Status);
         Assert.Equal("payments", incident.AssignedTeam);
         Assert.NotNull(incident.UpdatedAt);
+    }
+
+    // The verdict is what telemetry learns from, so when it is asked, and that it is asked only
+    // once, is the rule this whole step rests on.
+    public sealed class Closing
+    {
+        private static IReadOnlyList<IncidentResolvedDomainEvent> Resolved(Incident incident) =>
+            incident.DomainEvents.OfType<IncidentResolvedDomainEvent>().ToList();
+
+        [Theory]
+        [InlineData(IncidentStatus.Resolved)]
+        [InlineData(IncidentStatus.Closed)]
+        public void AnOpenIncidentCannotBeClosedWithoutAVerdict(IncidentStatus closed)
+        {
+            var incident = Create();
+
+            Assert.NotNull(incident.StatusChangeProblem(closed, verdict: null));
+            Assert.Throws<InvalidOperationException>(() => incident.UpdateStatus(closed));
+            Assert.Equal(IncidentStatus.Open, incident.Status);
+        }
+
+        [Theory]
+        [InlineData(IncidentStatus.Resolved, IncidentVerdict.Real)]
+        [InlineData(IncidentStatus.Closed, IncidentVerdict.FalsePositive)]
+        public void ClosingRecordsTheVerdictAndAnnouncesItOnce(
+            IncidentStatus closed,
+            IncidentVerdict verdict
+        )
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.InProgress);
+
+            incident.UpdateStatus(closed, verdict);
+
+            Assert.Equal(verdict, incident.Verdict);
+            Assert.NotNull(incident.ResolvedAt);
+
+            var resolved = Assert.Single(Resolved(incident));
+
+            Assert.Equal(incident.Id, resolved.IncidentId);
+            Assert.Equal(closed, resolved.Status);
+            Assert.Equal(verdict, resolved.Verdict);
+            Assert.Equal(incident.ResolvedAt, resolved.ResolvedAt);
+        }
+
+        [Fact]
+        public void ResolvedToClosedKeepsTheVerdictAndSaysNothingNew()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.FalsePositive);
+            var resolvedAt = incident.ResolvedAt;
+
+            incident.UpdateStatus(IncidentStatus.Closed);
+
+            Assert.Equal(IncidentStatus.Closed, incident.Status);
+            Assert.Equal(IncidentVerdict.FalsePositive, incident.Verdict);
+            Assert.Equal(resolvedAt, incident.ResolvedAt);
+            Assert.Single(Resolved(incident));
+        }
+
+        [Fact]
+        public void AVerdictCannotBeChangedOnceGiven()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
+
+            Assert.NotNull(incident.StatusChangeProblem(IncidentStatus.Closed, IncidentVerdict.FalsePositive));
+            Assert.Throws<InvalidOperationException>(
+                () => incident.UpdateStatus(IncidentStatus.Closed, IncidentVerdict.FalsePositive)
+            );
+            Assert.Equal(IncidentVerdict.Real, incident.Verdict);
+        }
+
+        [Fact]
+        public void AVerdictIsRefusedWhenNothingIsBeingClosed()
+        {
+            var incident = Create();
+
+            Assert.Throws<InvalidOperationException>(
+                () => incident.UpdateStatus(IncidentStatus.InProgress, IncidentVerdict.Real)
+            );
+            Assert.Null(incident.Verdict);
+        }
+
+        [Fact]
+        public void ReopeningClearsTheConclusionAndClosingAgainAsksAgain()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.FalsePositive);
+
+            incident.UpdateStatus(IncidentStatus.Open);
+
+            Assert.Null(incident.Verdict);
+            Assert.Null(incident.ResolvedAt);
+            Assert.NotNull(incident.StatusChangeProblem(IncidentStatus.Resolved, verdict: null));
+
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
+
+            Assert.Equal(IncidentVerdict.Real, incident.Verdict);
+            Assert.Equal(2, Resolved(incident).Count);
+        }
     }
 }

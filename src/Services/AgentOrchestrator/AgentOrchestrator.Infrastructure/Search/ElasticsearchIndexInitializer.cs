@@ -30,10 +30,23 @@ public sealed class ElasticsearchIndexInitializer : IHostedService
         var exists = await _client.Indices.ExistsAsync(indexName, cancellationToken);
         if (exists.Exists)
         {
-            _logger.LogInformation(
-                "Elasticsearch index {IndexName} already exists. Skipping creation.",
-                indexName
+            // An index created before organisations existed has no mapping for the field the
+            // search now filters on, and dynamic mapping would give a guid a text type with a
+            // keyword sub-field — against which the term filter silently matches nothing. Adding
+            // a field to an existing mapping is allowed; changing one is not, so this is safe to
+            // run on every start.
+            var mapped = await _client.Indices.PutMappingAsync<AnalysisDocument>(
+                indexName,
+                m => m.Properties(p => p.Keyword(k => k.OrganizationId)),
+                cancellationToken
             );
+
+            _logger.LogInformation(
+                "Elasticsearch index {IndexName} already exists; organisation mapping {Result}.",
+                indexName,
+                mapped.IsValidResponse ? "ensured" : "could not be ensured: " + mapped.DebugInformation
+            );
+
             return;
         }
 
@@ -42,7 +55,8 @@ public sealed class ElasticsearchIndexInitializer : IHostedService
             c =>
                 c.Mappings(m =>
                     m.Properties<AnalysisDocument>(p =>
-                        p.Keyword(k => k.IncidentId)
+                        p.Keyword(k => k.OrganizationId)
+                            .Keyword(k => k.IncidentId)
                             .Text(t => t.Title, td => td.Analyzer("english"))
                             .Text(t => t.Description, td => td.Analyzer("english"))
                             .Keyword(k => k.SuggestedCategory)

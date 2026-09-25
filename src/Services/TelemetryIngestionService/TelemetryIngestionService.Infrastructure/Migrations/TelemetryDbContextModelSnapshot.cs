@@ -34,6 +34,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("OccurredOn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Payload")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -43,6 +46,10 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.Property<int>("RetryCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TraceParent")
+                        .HasMaxLength(55)
+                        .HasColumnType("character varying(55)");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -80,6 +87,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<double>("PromoteThreshold")
                         .HasColumnType("double precision");
 
@@ -98,7 +108,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Name")
                         .IsUnique();
 
                     b.ToTable("detection_rules", (string)null);
@@ -154,6 +166,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<long>("OccurrenceCount")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("PromotionCount")
                         .HasColumnType("integer");
 
@@ -169,7 +184,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.HasIndex("CurrentIncidentId");
 
-                    b.HasIndex("Fingerprint")
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Fingerprint")
                         .IsUnique();
 
                     b.ToTable("error_signatures", (string)null);
@@ -208,6 +225,12 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
+                    b.Property<int>("Occurrences")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Service")
                         .IsRequired()
                         .HasMaxLength(128)
@@ -237,15 +260,17 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OrganizationId");
+
                     b.HasIndex("Timestamp");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Timestamp"), "brin");
 
-                    b.HasIndex("Fingerprint", "Timestamp");
-
                     b.HasIndex("TelemetrySourceId", "SourceEventId")
                         .IsUnique()
                         .HasFilter("\"SourceEventId\" IS NOT NULL");
+
+                    b.HasIndex("OrganizationId", "Fingerprint", "Timestamp");
 
                     b.ToTable("log_records", (string)null);
                 });
@@ -279,6 +304,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<long>("OccurrenceCount")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Reason")
                         .HasMaxLength(1024)
                         .HasColumnType("character varying(1024)");
@@ -310,6 +338,8 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.HasIndex("ErrorSignatureId");
 
+                    b.HasIndex("OrganizationId");
+
                     b.HasIndex("Status");
 
                     b.ToTable("signals", (string)null);
@@ -334,6 +364,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<DateTime?>("LastPolledAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Position")
                         .HasMaxLength(512)
                         .HasColumnType("character varying(512)");
@@ -345,6 +378,8 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.HasIndex("TelemetrySourceId")
                         .IsUnique();
@@ -361,6 +396,14 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("IngestKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IngestKeyPrefix")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
 
@@ -373,6 +416,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PollIntervalSeconds")
                         .HasColumnType("integer");
@@ -387,7 +433,13 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("IngestKeyHash")
+                        .IsUnique()
+                        .HasFilter("\"IngestKeyHash\" IS NOT NULL");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "Name")
                         .IsUnique();
 
                     b.ToTable("telemetry_sources", (string)null);

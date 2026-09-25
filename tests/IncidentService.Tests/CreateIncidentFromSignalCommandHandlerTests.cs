@@ -1,6 +1,8 @@
+﻿using BuildingBlocks.SharedKernel;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Abstractions;
+using IncidentService.Application.DTOs;
 using IncidentService.Application.Commands.CreateIncidentFromSignal;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
@@ -13,21 +15,33 @@ namespace IncidentService.Tests;
 // delivery without opening the same incident twice.
 public sealed class CreateIncidentFromSignalCommandHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly Guid IncidentId = Guid.NewGuid();
     private static readonly DateTime DetectedAt = DateTime.UtcNow.AddMinutes(-15);
+    private static readonly Guid OrganizationId = Guid.NewGuid();
 
     private readonly IIncidentRepository _repository = Substitute.For<IIncidentRepository>();
     private readonly IEventBus _eventBus = Substitute.For<IEventBus>();
     private readonly IRealtimeNotifier _realtime = Substitute.For<IRealtimeNotifier>();
     private readonly CreateIncidentFromSignalCommandHandler _handler;
 
+    // The scope a real run would have inherited from SignalPromotedEvent, established by the bus
+    // before the handler is reached.
+    private readonly OrganizationContext _organization = new();
+
     public CreateIncidentFromSignalCommandHandlerTests()
     {
+        _organization.Set(OrganizationId);
+
         _handler = new CreateIncidentFromSignalCommandHandler(
             _repository,
             _eventBus,
             _realtime,
-            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance
+            NullLogger<CreateIncidentFromSignalCommandHandler>.Instance,
+            _organization
         );
     }
 
@@ -70,6 +84,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
             .GetByIdAsync(IncidentId, Arg.Any<CancellationToken>())
             .Returns(
                 Incident.Create(
+                    Organization,
                     "already here",
                     "…",
                     IncidentPriority.High,
@@ -91,7 +106,7 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         // Nor a second row sliding into an open list.
         await _realtime
             .DidNotReceive()
-            .IncidentCreatedAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+            .IncidentCreatedAsync(Arg.Any<IncidentDto>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -99,9 +114,15 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
     {
         await Handle();
 
-        // Only the id: whether this incident belongs on the first page of whatever filter someone
-        // has open is a question only the server can answer.
-        await _realtime.Received(1).IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+        // The payload travels now, so a client can fill its detail cache without asking. The
+        // list still re-reads: whether this incident belongs on the first page of whatever filter
+        // someone has open is a question only the server can answer.
+        await _realtime
+            .Received(1)
+            .IncidentCreatedAsync(
+                Arg.Is<IncidentDto>(dto => dto.Id == IncidentId),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Fact]
@@ -113,7 +134,10 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
         Received.InOrder(() =>
         {
             _repository.SaveChangesAsync(Arg.Any<CancellationToken>());
-            _realtime.IncidentCreatedAsync(IncidentId, Arg.Any<CancellationToken>());
+            _realtime.IncidentCreatedAsync(
+                Arg.Any<IncidentDto>(),
+                Arg.Any<CancellationToken>()
+            );
         });
     }
 

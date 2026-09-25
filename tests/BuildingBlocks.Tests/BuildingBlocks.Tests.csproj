@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.9" />
     <!-- The dispatcher takes an IServiceScopeFactory, so the tests need the DI implementation
          and not just the abstractions the Outbox project carries. -->
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.9" />
@@ -21,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\SharedKernel\BuildingBlocks.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

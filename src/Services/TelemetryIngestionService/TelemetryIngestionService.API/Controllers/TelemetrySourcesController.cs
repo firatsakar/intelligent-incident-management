@@ -1,8 +1,11 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using TelemetryIngestionService.API.Contracts;
 using TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 using TelemetryIngestionService.Application.Commands.DeleteTelemetrySource;
+using TelemetryIngestionService.Application.Commands.RotateIngestKey;
 using TelemetryIngestionService.Application.Commands.SetTelemetrySourceEnabled;
 using TelemetryIngestionService.Application.Commands.TestTelemetrySource;
 using TelemetryIngestionService.Application.Commands.UpdateTelemetrySource;
@@ -13,6 +16,9 @@ namespace TelemetryIngestionService.API.Controllers;
 
 [ApiController]
 [Route("api/telemetry-sources")]
+// The organisation's configuration, reads included: only its Admins see where alerts go and which
+// logs are read (Adım 16.5). On the class so an action added later cannot forget it.
+[Authorize(Policy = PlatformPolicies.Administer)]
 public sealed class TelemetrySourcesController : ControllerBase
 {
     private readonly ISender _sender;
@@ -90,6 +96,13 @@ public sealed class TelemetrySourcesController : ControllerBase
         await _sender.Send(new DeleteTelemetrySourceCommand(id), cancellationToken);
 
         return NoContent();
+    }
+
+    // The key is in this response and nowhere else, ever.
+    [HttpPost("{id:guid}/rotate-key")]
+    public async Task<IActionResult> RotateKey(Guid id, CancellationToken cancellationToken)
+    {
+        return Ok(await _sender.Send(new RotateIngestKeyCommand(id), cancellationToken));
     }
 
     [HttpPost("{id:guid}/test")]

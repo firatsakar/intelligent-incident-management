@@ -1,3 +1,4 @@
+﻿using IncidentService.Domain.ValueObjects;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 
@@ -23,6 +24,19 @@ public sealed record IncidentDto
     public bool IsAiAnalyzed { get; init; }
     public double? AiConfidence { get; init; }
 
+    /// <summary>
+    /// Non-null means the analysis ran and failed, which is a different screen state from
+    /// IsAiAnalyzed being false. One of those resolves itself and the other does not.
+    /// </summary>
+    public string? AiAnalysisError { get; init; }
+
+    // Commits the analysis named as likely causes, with links the platform built (Adım 17.5).
+    public IReadOnlyList<AiRelatedChange> AiRelatedChanges { get; init; } = [];
+
+    // The conclusion reached when it was closed, and when. Both null while open.
+    public IncidentVerdict? Verdict { get; init; }
+    public DateTime? ResolvedAt { get; init; }
+
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
@@ -44,6 +58,10 @@ public sealed record IncidentDto
             AiReasoning = incident.AiReasoning,
             IsAiAnalyzed = incident.IsAiAnalyzed,
             AiConfidence = incident.AiConfidence,
+            AiAnalysisError = incident.AiAnalysisError,
+            AiRelatedChanges = incident.AiRelatedChanges,
+            Verdict = incident.Verdict,
+            ResolvedAt = incident.ResolvedAt,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
         };

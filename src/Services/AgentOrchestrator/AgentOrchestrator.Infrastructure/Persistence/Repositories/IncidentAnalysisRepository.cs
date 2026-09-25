@@ -51,6 +51,17 @@ public sealed class IncidentAnalysisRepository : IIncidentAnalysisRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyCollection<IncidentAnalysis>> GetAllCompletedForReindexAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .Analyses.AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Status == AnalysisStatus.Completed)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyCollection<IncidentAnalysis>> GetCompletedAsync(
         CancellationToken cancellationToken = default
     ) =>

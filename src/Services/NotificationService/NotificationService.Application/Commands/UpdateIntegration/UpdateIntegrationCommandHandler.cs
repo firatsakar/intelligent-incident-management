@@ -13,10 +13,15 @@ public sealed class UpdateIntegrationCommandHandler
     : IRequestHandler<UpdateIntegrationCommand, IntegrationDto>
 {
     private readonly IIntegrationRepository _integrations;
+    private readonly IRealtimeNotifier _realtime;
 
-    public UpdateIntegrationCommandHandler(IIntegrationRepository integrations)
+    public UpdateIntegrationCommandHandler(
+        IIntegrationRepository integrations,
+        IRealtimeNotifier realtime
+    )
     {
         _integrations = integrations;
+        _realtime = realtime;
     }
 
     public async Task<IntegrationDto> Handle(
@@ -58,6 +63,11 @@ public sealed class UpdateIntegrationCommandHandler
         _integrations.Update(integration);
         await _integrations.SaveChangesAsync(cancellationToken);
 
-        return IntegrationDto.FromDomain(integration);
+        // The DTO masks the credentials on its way out, so the broadcast carries exactly what a
+        // GET would — the restore above happens on the way in and never leaves this handler.
+        var dto = IntegrationDto.FromDomain(integration);
+        await _realtime.IntegrationChangedAsync(dto, cancellationToken);
+
+        return dto;
     }
 }

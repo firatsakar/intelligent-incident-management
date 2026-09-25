@@ -63,4 +63,44 @@ public sealed class IncidentRepository : IIncidentRepository
     {
         _context.Incidents.Update(incident);
     }
+
+    public async Task<IReadOnlyList<IncidentStatsRow>> GetStatsRowsAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Projected to five scalars before anything is materialised, so a ninety-day window never
+        // pulls a description or a block of AI reasoning across the wire.
+        return await _context
+            .Incidents.AsNoTracking()
+            .Where(x => x.CreatedAt >= from && x.CreatedAt <= to)
+            .OrderBy(x => x.CreatedAt)
+            .Select(x => new IncidentStatsRow(
+                x.CreatedAt,
+                x.DetectedAt,
+                x.Priority,
+                x.Status,
+                x.Source
+            ))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<IncidentPriority, int>> GetOpenCountsByPriorityAsync(
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Open means "still someone's problem", which is both Open and InProgress. Grouping is
+        // safe to push into SQL here because there is no date arithmetic in it.
+        var counts = await _context
+            .Incidents.AsNoTracking()
+            .Where(x =>
+                x.Status == IncidentStatus.Open || x.Status == IncidentStatus.InProgress
+            )
+            .GroupBy(x => x.Priority)
+            .Select(g => new { Priority = g.Key, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+
+        return counts.ToDictionary(x => x.Priority, x => x.Count);
+    }
 }

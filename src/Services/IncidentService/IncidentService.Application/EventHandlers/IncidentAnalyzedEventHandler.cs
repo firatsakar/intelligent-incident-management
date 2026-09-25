@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Contracts;
+﻿using IncidentService.Domain.ValueObjects;
+using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using IncidentService.Application.Commands.ApplyAiAnalysis;
 using MediatR;
@@ -37,6 +38,9 @@ public sealed class IncidentAnalyzedEventHandler : IIntegrationEventHandler<Inci
             SuggestedCategory = integrationEvent.SuggestedCategory,
             Reasoning = integrationEvent.Reasoning,
             Confidence = integrationEvent.Confidence,
+            RelatedChanges = (integrationEvent.RelatedChanges ?? [])
+                .Select(change => new AiRelatedChange(change.Sha, change.Title, change.Author, change.CommittedAt, change.Url))
+                .ToList(),
         };
 
         await _sender.Send(command, cancellationToken);

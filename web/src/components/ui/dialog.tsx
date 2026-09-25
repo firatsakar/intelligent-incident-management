@@ -3,6 +3,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { cn } from "cn"
 
 import { Button } from "@/components/ui/button"
+import { useT } from "@/lib/i18n"
 import { XIcon } from "lucide-react"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
@@ -45,6 +46,12 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
 }) {
+  // The close control is icon-only, so this label is the whole of what a screen reader has to go
+  // on. It lived here as a literal until the Adım 20.7 audit found it — the i18n scan reads JSX
+  // text and labelled props, and a bare `sr-only` span inside a kit primitive is neither.
+  const { common } = useT()
+  const closeLabel = common.close
+
   return (
     <DialogPortal>
       <DialogOverlay />
@@ -70,7 +77,7 @@ function DialogContent({
           >
             <XIcon
             />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </DialogPrimitive.Close>
         )}
       </DialogPrimitive.Popup>

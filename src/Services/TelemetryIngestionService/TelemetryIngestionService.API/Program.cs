@@ -1,3 +1,6 @@
+﻿using TelemetryIngestionService.Application.EventHandlers;
+using TelemetryIngestionService.API.BackgroundServices;
+using BuildingBlocks.Contracts;
 using System.Text.Json.Serialization;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.EventBus;
@@ -12,6 +15,7 @@ using TelemetryIngestionService.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.TelemetryIngestionService);
+builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.TelemetryIngestionService);
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateTelemetrySourceCommand).Assembly)
@@ -43,9 +47,35 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 builder.Services.AddSignalR();
 
-builder.Services.AddSingleton<IRealtimeNotifier, SignalRSignalNotifier>();
+// Scoped rather than singleton, because who a push is addressed to depends on the scope it is
+// sent from. The hub context it wraps is a singleton either way.
+builder.Services.AddScoped<IRealtimeNotifier, SignalRSignalNotifier>();
+
+// A new organisation cannot detect anything until it has a rule, and the service that writes the
+// rule cannot read the table an organisation is born in. This is the subscription that closes it.
+builder.Services.AddScoped<
+    IIntegrationEventHandler<OrganizationCreatedEvent>,
+    OrganizationCreatedEventHandler
+>();
+
+// A closed incident releases the signature that opened it and counts the verdict against it —
+// the feedback the promotion gate learns from (Adım 24).
+builder.Services.AddScoped<
+    IIntegrationEventHandler<IncidentResolvedEvent>,
+    IncidentResolvedEventHandler
+>();
+
+builder.Services.AddHostedService<EventBusSubscriber>();
+
+// The same call IdentityService makes. Every service validates the token on its own:
+// the gateway forwards it, it does not vouch for it.
+builder.Services.AddPlatformAuth(builder.Configuration);
 
 builder.Services.AddOpenApi();
+
+// The OTLP endpoint's senders compress: a collector's otlphttp exporter gzips by default. Only a
+// request that says Content-Encoding is touched, so nothing else here changes.
+builder.Services.AddRequestDecompression();
 
 var app = builder.Build();
 
@@ -56,7 +86,13 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// No UseHttpsRedirection. TLS terminates at the gateway; a service behind it redirecting
+// to https is redirecting a request that already arrived over a private hop, and in
+// development it redirects a plain-HTTP call to a port nothing is listening on.
+app.UseRequestDecompression();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseOrganizationContext();
 app.MapControllers();
 app.MapHub<SignalHub>("/hubs/signals");
 

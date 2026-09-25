@@ -1,4 +1,4 @@
-using TelemetryIngestionService.Domain.Aggregates;
+﻿using TelemetryIngestionService.Domain.Aggregates;
 
 namespace TelemetryIngestionService.Tests;
 
@@ -6,10 +6,15 @@ namespace TelemetryIngestionService.Tests;
 // it, so its ageing rule decides between an incident storm and silence.
 public sealed class ErrorSignatureTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly DateTime Noon = new(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private static ErrorSignature Create(DateTime? seenAt = null) =>
         ErrorSignature.Create(
+            Organization,
             "abc123",
             "checkout-service",
             "TimeoutException",
@@ -121,7 +126,7 @@ public sealed class ErrorSignatureTests
         }
 
         [Fact]
-        public void DetachIncident_AsRealFeedsThePrecedentBonus()
+        public void DetachIncident_AsRealCountsTowardsTheHistory()
         {
             var signature = Create();
             signature.AttachIncident(Guid.NewGuid(), Noon);
@@ -134,7 +139,7 @@ public sealed class ErrorSignatureTests
         }
 
         [Fact]
-        public void DetachIncident_AsFalsePositiveFeedsThePenalty()
+        public void DetachIncident_AsFalsePositiveCountsAgainstTheHistory()
         {
             var signature = Create();
             signature.AttachIncident(Guid.NewGuid(), Noon);

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TelemetryIngestionService.Domain.Aggregates;
 
@@ -12,12 +12,27 @@ public sealed class TelemetrySourceConfiguration : IEntityTypeConfiguration<Tele
 
         builder.HasKey(x => x.Id);
 
+        builder.Property(x => x.OrganizationId).IsRequired();
+        builder.HasIndex(x => x.OrganizationId);
+
         builder.Property(x => x.Name).IsRequired().HasMaxLength(128);
-        builder.HasIndex(x => x.Name).IsUnique();
+        // Unique within an organisation: two teams can each call their source "Production Seq".
+        builder.HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
 
         builder.Property(x => x.Kind).IsRequired().HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.IsEnabled).IsRequired();
         builder.Property(x => x.PollIntervalSeconds).IsRequired();
+
+        // SHA-256 in hex. Unique across the whole table, deliberately and unlike every other
+        // unique index here: the key is looked up before anyone knows whose it is, so it has to
+        // name exactly one row among all organisations' — and 256 random bits make that true.
+        builder.Property(x => x.IngestKeyHash).HasMaxLength(64);
+        builder
+            .HasIndex(x => x.IngestKeyHash)
+            .IsUnique()
+            .HasFilter("\"IngestKeyHash\" IS NOT NULL");
+
+        builder.Property(x => x.IngestKeyPrefix).HasMaxLength(32);
 
         builder.Ignore(x => x.Config);
         builder.Property<Dictionary<string, string>>("_config").AsJsonb("config");

@@ -15,4 +15,10 @@
     <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- For IOrganizationContext. The bus is where a consumed message stops being bytes and starts
+         being work done on somebody's behalf, so it is where that scope is established. -->
+    <ProjectReference Include="..\SharedKernel\BuildingBlocks.SharedKernel.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -16,7 +16,12 @@ public sealed class IntegrationConfiguration : IEntityTypeConfiguration<Integrat
 
         builder.Property(x => x.Name).IsRequired().HasMaxLength(128);
 
-        builder.HasIndex(x => x.Name).IsUnique();
+        builder.Property(x => x.OrganizationId).IsRequired();
+
+        // Unique within an organisation rather than across the table. Two teams can each have an
+        // integration called "On-call email"; one team cannot have two, because the name is how a
+        // person tells them apart on the settings screen.
+        builder.HasIndex(x => new { x.OrganizationId, x.Name }).IsUnique();
 
         builder.Property(x => x.Channel).IsRequired().HasConversion<string>().HasMaxLength(50);
 

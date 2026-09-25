@@ -1,4 +1,4 @@
-using NSubstitute;
+﻿using NSubstitute;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Queries.GetSignals;
 using TelemetryIngestionService.Domain.Aggregates;
@@ -12,6 +12,10 @@ namespace TelemetryIngestionService.Tests;
 // to look at a span in the first place.
 public sealed class GetSignalsQueryHandlerTests
 {
+    // One organisation for the whole file. These are unit tests of rules, not of scoping — the
+    // filters that make the column matter live in the DbContext — so the value only has to be
+    // consistent.
+    private static readonly Guid Organization = Guid.NewGuid();
     private static readonly DateTime Noon = new(2026, 9, 21, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly ISignalRepository _signals = Substitute.For<ISignalRepository>();
@@ -26,6 +30,7 @@ public sealed class GetSignalsQueryHandlerTests
 
     private static ErrorSignature Signature(string service = "checkout-service") =>
         ErrorSignature.Create(
+            Organization,
             "abc123",
             service,
             "TimeoutException",
@@ -36,6 +41,7 @@ public sealed class GetSignalsQueryHandlerTests
     private static Signal SignalFor(Guid signatureId, SignalStatus status = SignalStatus.Weak)
     {
         var signal = Signal.Detect(
+            Organization,
             signatureId,
             SignalKind.LogBurst,
             detectedAt: Noon,
@@ -70,12 +76,25 @@ public sealed class GetSignalsQueryHandlerTests
             .Returns(result);
     }
 
-    private void GivenWindowQueryReturns(params Signal[] signals)
+    private void GivenWindowQueryReturns(params Signal[] signals) =>
+        GivenWindowQueryReturns(signals.Length, signals);
+
+    /// <summary>
+    /// The total is stated separately from the page on purpose: the whole point of the envelope
+    /// is that a truncated window can say how much it left out.
+    /// </summary>
+    private void GivenWindowQueryReturns(int totalCount, params Signal[] signals)
     {
-        IReadOnlyList<Signal> result = signals;
+        (IReadOnlyList<Signal> Items, int TotalCount) result = (signals, totalCount);
 
         _signals
-            .GetRecentAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .GetRecentAsync(
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            )
             .Returns(result);
     }
 
@@ -93,7 +112,13 @@ public sealed class GetSignalsQueryHandlerTests
             .GetByStatusAsync(SignalStatus.Weak, 50, Arg.Any<CancellationToken>());
         await _signals
             .DidNotReceive()
-            .GetRecentAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>());
+            .GetRecentAsync(
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Theory]
@@ -132,7 +157,13 @@ public sealed class GetSignalsQueryHandlerTests
 
         await _signals
             .Received(1)
-            .GetRecentAsync(Noon, Noon.AddHours(1), Arg.Any<CancellationToken>());
+            .GetRecentAsync(
+                Noon,
+                Noon.AddHours(1),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            );
         await _signals
             .DidNotReceive()
             .GetByStatusAsync(
@@ -141,8 +172,93 @@ public sealed class GetSignalsQueryHandlerTests
                 Arg.Any<CancellationToken>()
             );
 
-        Assert.Equal(2, result.Count);
-        Assert.Contains(result, x => x.Status == SignalStatus.Recorded);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Contains(result.Items, x => x.Status == SignalStatus.Recorded);
+    }
+
+    [Fact]
+    public async Task AWindowReportsTheCountItWasCutFrom()
+    {
+        // The reason the envelope exists. A page of two out of ninety is only honest if the
+        // ninety travels with it; otherwise a truncated window is indistinguishable from a quiet
+        // one, and quiet is the answer this product is in the business of proving.
+        var signature = Signature();
+        GivenWindowQueryReturns(90, SignalFor(signature.Id), SignalFor(signature.Id));
+        GivenSignatures(signature);
+
+        var result = await _handler.Handle(
+            new GetSignalsQuery(SignalStatus.Weak, 2, Noon, Noon.AddHours(1)),
+            CancellationToken.None
+        );
+
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal(90, result.TotalCount);
+    }
+
+    [Fact]
+    public async Task AnEmptyWindowStillReportsItsTotal()
+    {
+        // The early return for "no signals" must not skip the envelope, or an offset past the end
+        // would report a total of zero and the screen would lose its place.
+        GivenWindowQueryReturns(90);
+
+        var result = await _handler.Handle(
+            new GetSignalsQuery(SignalStatus.Weak, 50, Noon, Noon.AddHours(1), Offset: 200),
+            CancellationToken.None
+        );
+
+        Assert.Empty(result.Items);
+        Assert.Equal(90, result.TotalCount);
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(-5, 0)]
+    [InlineData(40, 40)]
+    public async Task TheOffsetIsNeverNegative(int requested, int expected)
+    {
+        GivenWindowQueryReturns();
+
+        await _handler.Handle(
+            new GetSignalsQuery(SignalStatus.Weak, 50, Noon, Noon.AddHours(1), requested),
+            CancellationToken.None
+        );
+
+        // Arg.Is rather than a bare value: NSubstitute refuses to mix matchers with literals
+        // across parameters of the same type, and both the limit and the offset are ints.
+        await _signals
+            .Received(1)
+            .GetRecentAsync(
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Any<int>(),
+                Arg.Is(expected),
+                Arg.Any<CancellationToken>()
+            );
+    }
+
+    [Fact]
+    public async Task TheWindowLimitIsClampedToo()
+    {
+        // The cap used to apply only to the status queue, which left the windowed path — the one
+        // the frontend always takes — as the single read in this service whose cost was set by
+        // the customer's error rate.
+        GivenWindowQueryReturns();
+
+        await _handler.Handle(
+            new GetSignalsQuery(SignalStatus.Weak, 5000, Noon, Noon.AddHours(1)),
+            CancellationToken.None
+        );
+
+        await _signals
+            .Received(1)
+            .GetRecentAsync(
+                Arg.Any<DateTime>(),
+                Arg.Any<DateTime>(),
+                Arg.Is(GetSignalsQueryHandler.MaxLimit),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>()
+            );
     }
 
     [Theory]
@@ -183,7 +299,7 @@ public sealed class GetSignalsQueryHandlerTests
         GivenSignatures(signature);
 
         var signal = Assert.Single(
-            await _handler.Handle(new GetSignalsQuery(), CancellationToken.None)
+            (await _handler.Handle(new GetSignalsQuery(), CancellationToken.None)).Items
         );
 
         Assert.Equal("checkout-service", signal.Service);
@@ -201,7 +317,7 @@ public sealed class GetSignalsQueryHandlerTests
         GivenSignatures();
 
         var signal = Assert.Single(
-            await _handler.Handle(new GetSignalsQuery(), CancellationToken.None)
+            (await _handler.Handle(new GetSignalsQuery(), CancellationToken.None)).Items
         );
 
         Assert.Null(signal.Service);
@@ -235,7 +351,9 @@ public sealed class GetSignalsQueryHandlerTests
     {
         GivenStatusQueryReturns();
 
-        Assert.Empty(await _handler.Handle(new GetSignalsQuery(), CancellationToken.None));
+        Assert.Empty(
+            (await _handler.Handle(new GetSignalsQuery(), CancellationToken.None)).Items
+        );
 
         await _signatures
             .DidNotReceive()

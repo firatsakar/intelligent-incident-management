@@ -22,5 +22,14 @@ public interface INotificationDeliveryRepository
         CancellationToken cancellationToken = default
     );
 
+    // Every delivery attempted in a window. The rows are narrow — no payload is stored, only the
+    // outcome — so this is counted from the rows rather than aggregated in SQL, which keeps the
+    // median and the last error in one pass.
+    Task<IReadOnlyList<NotificationDelivery>> GetWindowAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 }

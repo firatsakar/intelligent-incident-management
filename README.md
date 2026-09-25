@@ -35,7 +35,7 @@ This project is built as a deep, hands-on exploration of **production-grade dist
 - **Clean Architecture** — Every service follows a strict layered design (Domain → Application → Infrastructure → API).
 - **CQRS** — Commands and queries are cleanly separated using MediatR.
 - **Smart Notifications** — Stakeholders are alerted automatically as incidents evolve. *(planned)*
-- **Telemetry-Driven Detection** — Incidents can be raised automatically from anomalous telemetry data. *(planned)*
+- **Telemetry-Driven Detection** — Incidents are raised automatically from bursts in the customer's logs, pulled from Seq or pushed over OTLP by any OpenTelemetry Collector or SDK.
 
 ---
 
@@ -80,7 +80,7 @@ The platform is composed of independent microservices coordinated through an eve
 | **IncidentService** | Core incident lifecycle — create, track, update status, assign teams. Consumes AI results and applies them to the incident. |
 | **AgentOrchestrator** | The AI brain — analyzes incidents and suggests priority, category, reasoning, remediation steps, and a confidence score using Anthropic Claude via the Microsoft Agent Framework. Performs **agentic root cause analysis** by searching past incidents (Elasticsearch tool-calling) and delivers results reliably via a Transactional Outbox. |
 | **NotificationService** | Sends notifications (email, webhook) as incidents are created and updated. *(planned)* |
-| **TelemetryIngestionService** | Ingests metrics/alerts and automatically raises incidents on anomalies. *(planned)* |
+| **TelemetryIngestionService** | Pulls logs from Seq or receives them over OTLP/HTTP (`/otlp/v1/logs`), folds bursts into signatures, and promotes anomalous ones to incidents. |
 
 ### Shared Building Blocks
 
@@ -89,7 +89,7 @@ The platform is composed of independent microservices coordinated through an eve
 | **SharedKernel** | Base domain primitives (`Entity`, `AggregateRoot`, `DomainEvent`, `ValueObject`). |
 | **EventBus** | RabbitMQ abstraction for publishing and subscribing to integration events. |
 | **Contracts** | Shared integration event definitions exchanged between services. |
-| **Observability** | Telemetry constants and tracing foundations. |
+| **Observability** | Structured logging (Serilog → Seq) and OpenTelemetry tracing (OTLP → Seq) for every service. |
 
 ---
 
@@ -114,7 +114,7 @@ The result: remediation steps specific to *this* system's history, and a confide
 - **AI:** Anthropic Claude API via [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) — including agentic tool-calling
 - **Patterns:** Clean Architecture, CQRS, Domain-Driven Design, Event-Driven Architecture, Transactional Outbox
 - **Libraries:** MediatR, FluentValidation, Entity Framework Core, Polly
-- **Observability:** Seq (structured logging), OpenTelemetry *(planned)*
+- **Observability:** Seq (structured logs and distributed traces), OpenTelemetry
 - **Infrastructure:** Docker & Docker Compose
 
 ---
@@ -159,12 +159,15 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [x] End-to-end bidirectional event flow (incident created → AI analyzed → incident updated, fully autonomous)
 - [x] AgentOrchestrator refactor onto the Microsoft Agent Framework
 - [x] Root cause analysis (RCA) — Elasticsearch similarity search + Transactional Outbox + agentic tool-calling with suggested remediation steps & evidence-based confidence
-- [ ] NotificationService — email/webhook alerts on incident lifecycle events
-- [ ] TelemetryIngestionService — anomaly-based incident detection
+- [x] NotificationService — email/webhook/Jira alerts on incident lifecycle events
+- [x] TelemetryIngestionService — anomaly-based incident detection, Seq pull and OTLP push ingest
+- [x] Feedback loop — closing an incident records whether it was real or a false positive, and the detector scores that error's next burst accordingly
 - [ ] Comment & timeline (audit trail)
-- [ ] API Gateway (YARP) & JWT authentication
-- [ ] Distributed tracing with OpenTelemetry
-- [ ] **MCP integration** — let the agent consume external systems (Grafana, Kubernetes, GitHub, PagerDuty) as tools, for cross-system root cause analysis
+- [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
+- [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
+- [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
+- [x] **MCP integration, GitHub first** — the analysis reads the failing service's recent commits over GitHub's MCP server (read-only, the organisation's own token) and names a suspected change, linked on the incident
+- [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
 - [ ] Unit & integration tests
 - [ ] React frontend & analytics dashboard (MTTR, trends, model performance)
 - [ ] CI/CD & Kubernetes deployment

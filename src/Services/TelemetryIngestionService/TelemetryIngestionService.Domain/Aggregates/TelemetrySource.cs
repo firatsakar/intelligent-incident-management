@@ -1,4 +1,4 @@
-using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.SharedKernel;
 using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Domain.Aggregates;
@@ -13,6 +13,18 @@ public sealed class TelemetrySource : AggregateRoot
 
     private TelemetrySource() { }
 
+    /// <summary>
+    /// Whose source this is, and therefore whose every log record, signature, signal and incident
+    /// downstream of it is.
+    /// </summary>
+    /// <remarks>
+    /// This is the root of the scope for the whole detection pipeline. Nothing in that pipeline
+    /// runs on a request — a background loop polls, detects and promotes — so there is no claim to
+    /// read anywhere along it. Every organisation the pipeline ever establishes is read from this
+    /// column and then carried on the messages.
+    /// </remarks>
+    public Guid OrganizationId { get; private set; }
+
     public string Name { get; private set; } = default!;
     public TelemetrySourceKind Kind { get; private set; }
     public bool IsEnabled { get; private set; }
@@ -23,7 +35,22 @@ public sealed class TelemetrySource : AggregateRoot
 
     public int PollIntervalSeconds { get; private set; }
 
+    /// <summary>
+    /// SHA-256 of the key a pushed source authenticates with. Null for polled sources.
+    /// </summary>
+    /// <remarks>
+    /// The key is what tells a push which organisation it belongs to — the request carries no
+    /// user and no claim, so without it the push would have to be believed about whose it is.
+    /// Stored hashed for the same reason a refresh token is: the row has to be found by it, and a
+    /// database read must not be enough to send logs as somebody else.
+    /// </remarks>
+    public string? IngestKeyHash { get; private set; }
+
+    /// <summary>The key's first characters, so a person can tell which key a collector holds.</summary>
+    public string? IngestKeyPrefix { get; private set; }
+
     public static TelemetrySource Create(
+        Guid organizationId,
         string name,
         TelemetrySourceKind kind,
         IReadOnlyDictionary<string, string> config,
@@ -34,6 +61,7 @@ public sealed class TelemetrySource : AggregateRoot
         return new TelemetrySource
         {
             Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
             Name = name,
             Kind = kind,
             _config = new Dictionary<string, string>(config),
@@ -52,6 +80,19 @@ public sealed class TelemetrySource : AggregateRoot
     public void UpdateConfig(IReadOnlyDictionary<string, string> config)
     {
         _config = new Dictionary<string, string>(config);
+        SetUpdatedAt();
+    }
+
+    // Replaces whatever key the source had: a rotated key is the old one revoked, in one write.
+    public void IssueIngestKey(string hash, string prefix)
+    {
+        if (!Kind.IsPushed())
+            throw new InvalidOperationException(
+                $"A {Kind} source is polled; it has no ingest key to issue."
+            );
+
+        IngestKeyHash = hash;
+        IngestKeyPrefix = prefix;
         SetUpdatedAt();
     }
 

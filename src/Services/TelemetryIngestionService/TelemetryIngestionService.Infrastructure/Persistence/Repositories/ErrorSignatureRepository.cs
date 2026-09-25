@@ -52,6 +52,19 @@ public sealed class ErrorSignatureRepository : IErrorSignatureRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<ErrorSignature?> GetByCurrentIncidentAsync(
+        Guid incidentId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // No index: one lookup per closed incident, against a table of distinct errors per
+        // organisation. The query filter narrows it to the organisation first.
+        return await _context.ErrorSignatures.FirstOrDefaultAsync(
+            x => x.CurrentIncidentId == incidentId,
+            cancellationToken
+        );
+    }
+
     public async Task AddAsync(
         ErrorSignature signature,
         CancellationToken cancellationToken = default

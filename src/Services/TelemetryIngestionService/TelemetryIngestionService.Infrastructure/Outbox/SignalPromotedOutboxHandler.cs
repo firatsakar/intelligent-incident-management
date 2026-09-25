@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using BuildingBlocks.Outbox;
@@ -33,6 +33,11 @@ public sealed class SignalPromotedOutboxHandler : IOutboxMessageHandler
             {
                 // The outbox row's id, so the event id is stable across retries.
                 Id = message.Id,
+
+                // The organisation the row was stamped with when it was written, inside the
+                // transaction that changed the aggregate. The dispatcher runs minutes later in a
+                // scope of its own, which knows nothing about whose work this was.
+                OrganizationId = message.OrganizationId,
                 IncidentId = domainEvent.IncidentId,
                 SignalId = domainEvent.SignalId,
                 Title = domainEvent.Title,

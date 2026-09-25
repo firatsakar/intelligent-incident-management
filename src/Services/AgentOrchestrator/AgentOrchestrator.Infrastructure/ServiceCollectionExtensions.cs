@@ -1,4 +1,5 @@
-﻿using AgentOrchestrator.Application.Abstractions;
+﻿using AgentOrchestrator.Infrastructure.Mcp;
+using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Infrastructure.Ai;
 using AgentOrchestrator.Infrastructure.Outbox;
 using AgentOrchestrator.Infrastructure.Persistence;
@@ -8,7 +9,9 @@ using BuildingBlocks.Outbox;
 using Elastic.Clients.Elasticsearch;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
 namespace AgentOrchestrator.Infrastructure;
@@ -24,6 +27,12 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<AgentDbContext>(options => options.UseNpgsql(connectionString));
 
         services.AddScoped<IIncidentAnalysisRepository, IncidentAnalysisRepository>();
+        services.AddScoped<IGitHubConnectionRepository, GitHubConnectionRepository>();
+
+        // The organisation's GitHub, read over GitHub's MCP server with the organisation's token.
+        services.Configure<GitHubMcpOptions>(configuration.GetSection(GitHubMcpOptions.SectionName));
+        services.AddHttpClient(GitHubMcpChangeSourceFactory.HttpClientName);
+        services.AddSingleton<IRepositoryChangeSourceFactory, GitHubMcpChangeSourceFactory>();
 
         services.Configure<AiAnalyzerOptions>(
             configuration.GetSection(AiAnalyzerOptions.SectionName)
@@ -50,6 +59,12 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<ElasticsearchIndexInitializer>();
         services.AddSingleton<IAnalysisIndexer, ElasticsearchAnalysisIndexer>();
 
+        // Registered here as well as in AddPlatformAuth, because a background scope has no HTTP
+        // pipeline to have registered it: the outbox interceptor runs in whatever scope saved the
+        // aggregate, and several of those are opened by a hosted service. TryAdd, so the two
+        // registrations cannot become two different lifetimes.
+        services.TryAddScoped<IOrganizationContext, OrganizationContext>();
+
         services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 
         services.AddDbContext<AgentDbContext>(
@@ -65,6 +80,7 @@ public static class ServiceCollectionExtensions
         // The outbox mechanics are shared; only the routing is ours.
         services.AddScoped<IOutboxStore, AgentOutboxStore>();
         services.AddScoped<IOutboxMessageHandler, IncidentAnalysisCompletedOutboxHandler>();
+        services.AddScoped<IOutboxMessageHandler, IncidentAnalysisFailedOutboxHandler>();
 
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();

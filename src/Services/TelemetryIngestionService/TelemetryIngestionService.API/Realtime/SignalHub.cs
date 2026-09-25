@@ -1,5 +1,7 @@
-using Microsoft.AspNetCore.SignalR;
+﻿using BuildingBlocks.Web;
 
 namespace TelemetryIngestionService.API.Realtime;
 
-public sealed class SignalHub : Hub;
+// Broadcast only, and only to the connection's own organisation. OrganizationHub requires an
+// authenticated connection and puts it in exactly one group, taken from its own claim.
+public sealed class SignalHub : OrganizationHub;

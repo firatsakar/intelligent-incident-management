@@ -1,0 +1,48 @@
+# An OpenTelemetry Collector that forwards a customer's logs to IIM.
+#
+# The shape IIM expects a real customer to run: their applications (or Fluent Bit, Vector, a file
+# tail...) send to the Collector they already operate, and the Collector does the filtering before
+# anything leaves their network. IIM keeps errors and fatals by default and drops the rest on
+# arrival, but that is a safety net; this is where the volume decision belongs.
+#
+# Not part of docker-compose on purpose: MonitoredShop exports straight to IIM for the demo, and a
+# Collector is the customer's to run. To try it:
+#
+#   docker run --rm -p 4318:4318 \
+#     -e IIM_INGEST_KEY=iim_otlp_... \
+#     -v ./demo/otel-collector/collector.yaml:/etc/otelcol-contrib/config.yaml \
+#     otel/opentelemetry-collector-contrib
+#
+# then point any OTLP/HTTP exporter at http://localhost:4318.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Drops every record below ERROR. The filter processor removes what its conditions match.
+  filter/errors:
+    logs:
+      log_record:
+        - severity_number < SEVERITY_NUMBER_ERROR
+
+  batch:
+    timeout: 1s
+
+exporters:
+  otlphttp/iim:
+    # A base address: the exporter appends /v1/logs. From inside a container, the host's gateway.
+    endpoint: http://host.docker.internal:5100/otlp
+    headers:
+      X-IIM-Ingest-Key: ${env:IIM_INGEST_KEY}
+    # gzip is the exporter's default and IIM accepts it; stated so nobody wonders.
+    compression: gzip
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [filter/errors, batch]
+      exporters: [otlphttp/iim]

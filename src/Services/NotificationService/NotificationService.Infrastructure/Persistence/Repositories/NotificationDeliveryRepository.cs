@@ -37,6 +37,19 @@ public sealed class NotificationDeliveryRepository : INotificationDeliveryReposi
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<NotificationDelivery>> GetWindowAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .NotificationDeliveries.AsNoTracking()
+            .Where(x => x.CreatedAt >= from && x.CreatedAt <= to)
+            .OrderBy(x => x.CreatedAt)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         NotificationDelivery delivery,
         CancellationToken cancellationToken = default

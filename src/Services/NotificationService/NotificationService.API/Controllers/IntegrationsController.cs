@@ -1,3 +1,5 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using BuildingBlocks.Web;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using NotificationService.API.Contracts;
@@ -13,6 +15,9 @@ namespace NotificationService.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+// The organisation's configuration, reads included: only its Admins see where alerts go and which
+// logs are read (Adım 16.5). On the class so an action added later cannot forget it.
+[Authorize(Policy = PlatformPolicies.Administer)]
 public sealed class IntegrationsController : ControllerBase
 {
     private readonly ISender _sender;

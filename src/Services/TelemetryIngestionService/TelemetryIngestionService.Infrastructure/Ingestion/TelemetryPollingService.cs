@@ -1,4 +1,6 @@
+﻿using System.Diagnostics;
 using MediatR;
+using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -15,6 +17,10 @@ public sealed class TelemetryPollingService : BackgroundService
     // The scheduler ticks faster than any source's interval so a source with a short interval is
     // not held back by the loop itself.
     private static readonly TimeSpan TickInterval = TimeSpan.FromSeconds(5);
+
+    // TelemetryConstants.ActivitySources.TelemetryIngestionService, spelled out for the same reason
+    // the outbox spells out its own: infrastructure emits spans without taking on the SDK.
+    private static readonly ActivitySource ActivitySource = new("TelemetryIngestionService");
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<TelemetryPollingService> _logger;
@@ -57,28 +63,69 @@ public sealed class TelemetryPollingService : BackgroundService
         var cursors = scope.ServiceProvider.GetRequiredService<ISourceCursorRepository>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
-        var enabled = await sources.GetEnabledAsync(cancellationToken);
+        var enabled = await sources.GetEnabledForPollingAsync(cancellationToken);
 
         foreach (var source in enabled)
         {
-            var cursor = await cursors.GetOrCreateAsync(source.Id, cancellationToken);
+            // A source written before organisations existed has no owner, and there is nowhere to
+            // put what polling it would find. Skipped rather than polled with an empty scope,
+            // which the context would refuse anyway — and said out loud, because a source that is
+            // enabled and silent is the failure this platform exists to notice.
+            if (source.OrganizationId == Guid.Empty)
+            {
+                _logger.LogWarning(
+                    "Telemetry source {SourceId} has no organisation and was not polled.",
+                    source.Id
+                );
+
+                continue;
+            }
+
+            var cursor = await cursors.GetForPollingAsync(source.Id, cancellationToken);
 
             if (!IsDue(source, cursor))
                 continue;
+
+            // One trace per poll, and the root of everything the poll sets off. Nothing is in
+            // flight when a timer fires, so without this the fetch, the detection and the outbox
+            // row a promotion writes would each belong to no trace — and a poll that promotes is
+            // where an incident's whole path begins.
+            using var activity = ActivitySource.StartActivity("telemetry poll", ActivityKind.Internal);
+
+            activity?.SetTag("telemetry.source.id", source.Id);
+            activity?.SetTag("telemetry.source.kind", source.Kind.ToString());
+            activity?.SetTag("organization.id", source.OrganizationId);
 
             // Each source gets its own scope: one source's DbContext state, and one source's
             // failure, must not touch another's.
             using var sourceScope = _scopeFactory.CreateScope();
 
-            await sourceScope
+            // The one place in the detection pipeline where an organisation is read from a row
+            // rather than from a claim or a message. Nothing upstream of here has a scope to
+            // inherit — this loop is woken by a timer, not by anybody — so this is where the whole
+            // chain's ownership is decided, and everything after it carries what is set here.
+            sourceScope
+                .ServiceProvider.GetRequiredService<IOrganizationContext>()
+                .Set(source.OrganizationId);
+
+            var result = await sourceScope
                 .ServiceProvider.GetRequiredService<ISender>()
                 .Send(new PollTelemetrySourceCommand(source.Id), cancellationToken);
+
+            activity?.SetTag("telemetry.poll.fetched", result.Fetched);
+            activity?.SetTag("telemetry.poll.stored", result.Stored);
+            activity?.SetTag("telemetry.poll.signatures", result.SignaturesTouched);
+
+            if (result.Error is not null)
+                activity?.SetStatus(ActivityStatusCode.Error, result.Error);
         }
     }
 
-    private static bool IsDue(TelemetrySource source, SourceCursor cursor)
+    // A source with no cursor has never been polled, which makes it due. The cursor is created
+    // on the first poll, inside the source's own scope.
+    private static bool IsDue(TelemetrySource source, SourceCursor? cursor)
     {
-        return cursor.LastPolledAt is null
+        return cursor?.LastPolledAt is null
             || DateTime.UtcNow - cursor.LastPolledAt.Value
                 >= TimeSpan.FromSeconds(source.PollIntervalSeconds);
     }

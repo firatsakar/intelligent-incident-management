@@ -9,6 +9,10 @@ public sealed record PollResult
     public required int Duplicates { get; init; }
 
     public required int Stored { get; init; }
+
+    // Counted onto a stored sample rather than given a row; see SampleFolding.
+    public int Folded { get; init; }
+
     public required int SignaturesTouched { get; init; }
     public string? Error { get; init; }
 

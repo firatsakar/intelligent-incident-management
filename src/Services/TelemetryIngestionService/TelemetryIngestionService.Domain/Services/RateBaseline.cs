@@ -42,6 +42,21 @@ public static class RateBaseline
         DateTime from,
         DateTime to,
         TimeSpan bucketSize
+    ) =>
+        BucketCounts(
+            timestamps.Select(timestamp => new WeightedTimestamp(timestamp, 1)),
+            from,
+            to,
+            bucketSize
+        );
+
+    // The same, for rows that stand for more than one event. A folded sample counts as every
+    // event it carries, in the bucket its own timestamp falls in.
+    public static IReadOnlyList<long> BucketCounts(
+        IEnumerable<WeightedTimestamp> timestamps,
+        DateTime from,
+        DateTime to,
+        TimeSpan bucketSize
     )
     {
         if (bucketSize <= TimeSpan.Zero || to <= from)
@@ -54,7 +69,7 @@ public static class RateBaseline
 
         var buckets = new long[bucketCount];
 
-        foreach (var timestamp in timestamps)
+        foreach (var (timestamp, weight) in timestamps)
         {
             if (timestamp < from || timestamp >= to)
                 continue;
@@ -62,9 +77,11 @@ public static class RateBaseline
             var index = (int)Math.Floor((timestamp - from) / bucketSize);
 
             if (index >= 0 && index < bucketCount)
-                buckets[index]++;
+                buckets[index] += weight;
         }
 
         return buckets;
     }
 }
+
+public readonly record struct WeightedTimestamp(DateTime Timestamp, long Weight);
