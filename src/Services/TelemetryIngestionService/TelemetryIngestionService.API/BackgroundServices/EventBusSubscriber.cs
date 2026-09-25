@@ -31,6 +31,13 @@ public sealed class EventBusSubscriber : IHostedService
 
         _logger.LogInformation("Subscribed to OrganizationCreatedEvent.");
 
+        _eventBus.Subscribe<
+            IncidentResolvedEvent,
+            IIntegrationEventHandler<IncidentResolvedEvent>
+        >();
+
+        _logger.LogInformation("Subscribed to IncidentResolvedEvent.");
+
         return Task.CompletedTask;
     }
 

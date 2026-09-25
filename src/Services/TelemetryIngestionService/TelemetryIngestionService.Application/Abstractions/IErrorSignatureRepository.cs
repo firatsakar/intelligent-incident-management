@@ -19,6 +19,12 @@ public interface IErrorSignatureRepository
         CancellationToken cancellationToken = default
     );
 
+    /// <summary>The signature attached to this incident, if any — tracked, for detaching.</summary>
+    Task<ErrorSignature?> GetByCurrentIncidentAsync(
+        Guid incidentId,
+        CancellationToken cancellationToken = default
+    );
+
     Task AddAsync(ErrorSignature signature, CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(CancellationToken cancellationToken = default);

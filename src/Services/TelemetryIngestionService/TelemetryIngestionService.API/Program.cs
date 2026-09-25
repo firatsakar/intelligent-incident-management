@@ -58,6 +58,13 @@ builder.Services.AddScoped<
     OrganizationCreatedEventHandler
 >();
 
+// A closed incident releases the signature that opened it and counts the verdict against it —
+// the feedback the promotion gate learns from (Adım 24).
+builder.Services.AddScoped<
+    IIntegrationEventHandler<IncidentResolvedEvent>,
+    IncidentResolvedEventHandler
+>();
+
 builder.Services.AddHostedService<EventBusSubscriber>();
 
 // The same call IdentityService makes. Every service validates the token on its own:
