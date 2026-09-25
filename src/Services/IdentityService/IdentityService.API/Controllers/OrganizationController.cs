@@ -2,6 +2,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using BuildingBlocks.Web;
 using IdentityService.Application.Commands.ChangeMemberRole;
+using IdentityService.Application.Commands.InviteMember;
+using IdentityService.Application.Commands.IssuePasswordReset;
+using IdentityService.Application.Commands.RevokeInvitation;
+using IdentityService.Application.Queries.GetInvitations;
 using IdentityService.Application.Commands.SetMemberActive;
 using IdentityService.Application.Queries.GetMembers;
 using IdentityService.Domain.Enums;
@@ -46,6 +50,27 @@ public sealed class OrganizationController : ControllerBase
     public async Task<IActionResult> Activate(Guid id, CancellationToken cancellationToken) =>
         Ok(await _sender.Send(new SetMemberActiveCommand(Actor(), id, IsActive: true), cancellationToken));
 
+    [HttpPost("members/{id:guid}/password-reset")]
+    public async Task<IActionResult> IssuePasswordReset(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new IssuePasswordResetCommand(Actor(), id), cancellationToken));
+
+    // The link is in this response and in the email, and nowhere else, ever.
+    [HttpPost("invitations")]
+    public async Task<IActionResult> Invite([FromBody] InviteRequest request, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new InviteMemberCommand(Actor(), request.Email, request.Role), cancellationToken));
+
+    [HttpGet("invitations")]
+    public async Task<IActionResult> Invitations(CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GetInvitationsQuery(), cancellationToken));
+
+    [HttpPost("invitations/{id:guid}/revoke")]
+    public async Task<IActionResult> RevokeInvitation(Guid id, CancellationToken cancellationToken)
+    {
+        await _sender.Send(new RevokeInvitationCommand(id), cancellationToken);
+
+        return NoContent();
+    }
+
     // The Administer policy already required an authenticated Admin, so a subject is present; a
     // token without one would be malformed rather than anonymous.
     private Guid Actor() =>
@@ -54,4 +79,6 @@ public sealed class OrganizationController : ControllerBase
             : throw new InvalidOperationException("An authenticated caller without a subject claim.");
 
     public sealed record ChangeRoleRequest(UserRole Role);
+
+    public sealed record InviteRequest(string Email, UserRole Role);
 }

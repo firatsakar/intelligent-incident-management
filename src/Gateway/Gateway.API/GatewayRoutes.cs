@@ -58,6 +58,12 @@ internal static class GatewayRoutes
     private static readonly (string Route, string Path, string Cluster, string? RateLimiter)[] Api =
     [
         ("auth-sign-in", "/api/auth/login", IdentityCluster, SignInRateLimiterPolicy),
+        // Every endpoint where a password is set or tested earns the same limit as signing in.
+        // The one-time links are 256 bits and not worth guessing; the limit is for the password
+        // behind the change-password form, and for a client hammering a link it holds.
+        ("auth-invitations", "/api/auth/invitations/{**rest}", IdentityCluster, SignInRateLimiterPolicy),
+        ("auth-password-resets", "/api/auth/password-resets/{**rest}", IdentityCluster, SignInRateLimiterPolicy),
+        ("auth-password", "/api/auth/password", IdentityCluster, SignInRateLimiterPolicy),
         ("auth", "/api/auth/{**rest}", IdentityCluster, null),
         // The organisation's members — IdentityService, which is where accounts live.
         ("organization", "/api/organization/{**rest}", IdentityCluster, null),

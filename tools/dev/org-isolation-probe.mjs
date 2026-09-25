@@ -266,6 +266,8 @@ async function writes(found) {
     // The canary's Viewer: promoting or switching them off from outside must not be possible.
     ['PATCH', `/api/organization/members/${canary.users.Viewer}/role`, { role: 'Admin' }],
     ['POST', `/api/organization/members/${canary.users.Viewer}/deactivate`],
+    // A reset link for the canary's Viewer, issued from outside, would be a way into their account.
+    ['POST', `/api/organization/members/${canary.users.Viewer}/password-reset`],
   ].filter(Boolean)
 
   for (const [method, path, body] of attempts) {
@@ -300,8 +302,15 @@ async function roles() {
 
   // Members are the organisation's too (Adım 16.5).
   for (const role of ['Engineer', 'Viewer']) {
-    const response = await call('GET', '/api/organization/members', token[`canary${role}`])
-    check(`${role} GET /api/organization/members → 403`, response.status === 403, `got ${response.status}`)
+    for (const [method, path, body] of [
+      ['GET', '/api/organization/members'],
+      ['GET', '/api/organization/invitations'],
+      ['POST', '/api/organization/invitations', { email: 'nobody@canary.test', role: 'Viewer' }],
+      ['POST', `/api/organization/members/${canary.users.Viewer}/password-reset`],
+    ]) {
+      const response = await call(method, path, token[`canary${role}`], body)
+      check(`${role} ${method} ${path.replace(/[0-9a-f-]{36}/, (id) => id.slice(0, 8))} → 403`, response.status === 403, `got ${response.status}`)
+    }
   }
 
   const incident = (await call('GET', '/api/incidents?pageSize=1', token.canaryViewer)).json?.items?.[0]
