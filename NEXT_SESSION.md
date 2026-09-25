@@ -65,6 +65,11 @@ UI metni yerine Seq API'si daha güvenilir — oturumlu sekmede
 `fetch('/api/events?filter=...&fromDateUtc=...&toDateUtc=...')` (filtre URL hash'ine yazılınca UI
 sonuçları yenilemiyor, eski akışı gösteriyor — bir yanlış alarm buradan çıktı).
 
+**İzolasyon probu:** `node tools/dev/org-isolation-probe.mjs` — gateway, incident, telemetry,
+notification çalışırken. Bütün veri ve ayarların organizasyon bazlı olduğunu kanarya ↔ Acme
+arasında yeniden kanıtlar (listeler, id'ler, yazmalar, roller, soketler). Organizasyona dokunan her
+değişiklikten sonra koşturulmalı; çıkış kodu 0 değilse bir şey sızıyor demektir.
+
 ---
 
 ## Ortamı ayağa kaldırma

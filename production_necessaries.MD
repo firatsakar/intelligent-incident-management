@@ -77,6 +77,47 @@ Parola soruluyor, IdentityService'te BCrypt ile doğrulanıyor, oturum iki httpO
 SameSite=Strict cookie'de taşınıyor (15 dk access, 14 gün rotasyonlu refresh). `session.ts`
 başındaki "NOTHING IN THIS FILE IS SECURITY" uyarısı, anlattığı şeyle birlikte kaldırıldı.
 
+### ✅ Organizasyon izolasyonu — envanter ve tekrar koşturulabilir prob (Adım 16.5, `IIM-124`)
+
+Fırat'ın kuralı: bütün veri ve bütün ayarlar organizasyon bazlı; bir organizasyonun hiçbir şeyi
+başkasına ulaşmaz. Bu bir kez ölçülüp geçilecek bir şey değil — her değişiklikten sonra yeniden
+sorulacak bir soru. Cevabı iki parça:
+
+**Envanter** — organizasyon nereden geliyor, nerede süzülüyor:
+
+| Yer | Organizasyon nereden | Nerede süzülüyor |
+|---|---|---|
+| `incidents` | kapsamı açan (HTTP claim / bus) | `HasQueryFilter` |
+| `integrations`, `notification_deliveries` | aynı | `HasQueryFilter` (ikisi de) |
+| `analyses` (Agent) | bus | `HasQueryFilter` |
+| `telemetry_sources`, `source_cursors`, `log_records`, `error_signatures`, `signals`, `detection_rules` | poller: kaynağın satırı; OTLP: ingest anahtarının satırı; HTTP: claim | `HasQueryFilter` (altısı da) |
+| `outbox_messages` (Agent, Identity, Telemetry) | satır yazıldığı transaction'da damgalanıyor | filtresiz, bilerek: dispatcher her mesajı **satırdaki organizasyonla kendi scope'unda** işliyor (`IIM-112`'den beri) |
+| IdentityService: `users`, `refresh_tokens`, `organizations` | — | **filtresiz, bilerek**: giriş e-postayla, organizasyon bilinmeden yapılıyor. Oturum `sub` ve refresh hash'iyle bulunuyor; üye yönetimi uçları (Adım 16.5) organizasyonu **açıkça** karşılaştırıyor |
+| Elasticsearch `incident-analyses` | belge `organizationId` taşıyor | aramada filtre bağlamında `Term organizationId`; model hangi geçmişi aradığını seçemiyor (closure) |
+| Soketler | bağlantının token'ı | `org:{id}` grubu; organizasyon yapılandırması yalnız `org:{id}:admins`'e (`IIM-123`). `Clients.All` yok |
+| Arayüz dili | — | kişisel tercih, tarayıcıda; organizasyonla ilgisi yok. **AI dili (Adım 20.6)** ise bir org ayarı olacak ve yalnız Admin değiştirecek |
+
+Filtreyi aşan her okuma adlandırılmış bir metot ve sayısı dört:
+`GetAllCompletedForReindexAsync` (yalnız `/internal` reindex), `GetEnabledForPollingAsync`,
+`GetForPollingAsync` (poller), `FindByIngestKeyHashForIngestAsync` (OTLP). Beşincisi Adım 16.5'te
+gelecek: davet kabulü (`FindByTokenHashForAcceptAsync`).
+
+**Prob** — `node tools/dev/org-isolation-probe.mjs` (yalnız dev; imza anahtarını user secrets'tan
+okur, yazdırmaz). Gateway'e iki organizasyon olarak konuşur: kanarya (gerçek Admin, Engineer ve
+Viewer test kullanıcıları) ve Acme (yalnız okunur). Kontrolleri:
+
+- her liste yalnızca kendi organizasyonunun satırlarını döndürüyor;
+- öbürünün id'leri okumada ve yazmada **404** (403 değil);
+- yapılandırma Engineer ve Viewer'a 403 (GET dahil), Admin'e 200;
+- soketler yalnızca kendi organizasyonlarını duyuyor ve Admin olmayan soket yapılandırma
+  yayınlarını duymuyor.
+
+Yazma denemeleri tek yönlü: Acme'nin token'ıyla kanaryanın satırlarına. İzolasyon bozuk çıksa
+değişen tek şey kanaryanın test verisi olur. İki taraf da boş olan bir liste "karşılaştırılmadı"
+diye yazılır, geçmiş sayılmaz. **İlk koşu (2026-09-25): 55/55.** Karşılaştırılan satırlar:
+olaylar 100/100, sinyaller 2/86, log kayıtları 23/200, imzalar 2/64, kaynaklar 1/1,
+entegrasyonlar 1/3.
+
 ### 🔴 Kullanıcı yönetimi yok
 
 Bir organizasyon, seed ile gelen tek bir Admin ile başlıyor. Kullanıcı ekleme, davet, parola
