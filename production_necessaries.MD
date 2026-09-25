@@ -242,7 +242,22 @@ saklama süresi ve **geri yükleme tatbikatı** tanımlı değil.
 
 ## 3.5 Ürün döngüsündeki kopukluk
 
-### 🔴 Çözülen incident telemetriye geri bildirilmiyor
+### ✅ ~~Çözülen incident telemetriye geri bildirilmiyor~~ — **kapandı** (Adım 24, `IIM-130`)
+
+Olay kapatılırken bir kez **gerçek / yanlış alarm** kararı soruluyor. IncidentService bunu outbox
+üzerinden (`IncidentResolvedEvent`) yayınlıyor. Telemetri tarafında imza olaydan ayrılıyor ve karar
+imzanın sayacına yazılıyor. Puanlamadaki iki ölü bayrak, tek ve sınırlı bir **geçmiş** terimine
+dönüştü: `(0.15·p − 0.25·(1−p)) × n/(n+2)`, her zaman [−0.25, +0.15] aralığında. Kanaryada canlı
+doğrulandı; zincir Seq'te tek trace olarak görünüyor. Kalanlar:
+
+- 🟡 **Karar düzeltilemiyor.** Yeniden açmak kararı temizliyor, ama telemetrinin öğrendiği geri
+  alınmıyor. Yanlış verilmiş bir kararı geri almak için bir "düzeltme" olayı gerekir.
+- 🟡 **Kenar durum:** imza, olay kapanmadan önce yeni bir olaya geçtiyse (sessizlik penceresi
+  dolduysa) o karar sayılmıyor.
+- ⚪ Karar geçmişi yalnız sayaç olarak tutuluyor. "Son N karar" gibi pencereli bir okuma
+  istenirse, imza başına karar satırları gerekir (Fırat 2026-09-25'te ömür boyu oranı seçti).
+
+Eski metin:
 
 `ErrorSignature.DetachIncident` **kod tabanında hiç çağrılmıyor** (Adım 19 sırasında bulundu).
 Bir incident çözüldüğünde ya da kapatıldığında imza `CurrentIncidentId`'yi bırakmıyor ve
