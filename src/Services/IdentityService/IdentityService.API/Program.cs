@@ -59,6 +59,10 @@ if (app.Environment.IsDevelopment())
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Until Adım 16.5 nothing here was scoped to an organisation — sign-in comes before one is known.
+// The members endpoints are, and they read it from the Admin's claim like every other service.
+app.UseOrganizationContext();
+
 app.MapControllers();
 
 app.Run();

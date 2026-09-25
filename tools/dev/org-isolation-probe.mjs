@@ -219,6 +219,21 @@ async function lists() {
     }
   }
 
+  // Members: the canary's list is exactly its test users; the other organisation's never names them.
+  const canaryMembers = await call('GET', '/api/organization/members', token.canaryAdmin)
+  const otherMembers = await call('GET', '/api/organization/members', token.otherAdmin)
+  const canaryIds = ids(canaryMembers.json)
+  const otherIds = ids(otherMembers.json)
+
+  check('members: both lists answer', canaryMembers.status === 200 && otherMembers.status === 200, `${canaryMembers.status} / ${otherMembers.status}`)
+  check(
+    `members: the canary's are its own (${canaryIds.size})`,
+    Object.values(canary.users).every((id) => canaryIds.has(id)) && overlap(canaryIds, otherIds).length === 0,
+    `shared: ${overlap(canaryIds, otherIds).join(', ')}`,
+  )
+
+  found.members = { canary: canaryIds, other: otherIds }
+
   // Deliveries are looked up by incident; another organisation's incident has none of mine.
   for (const id of sample(found.incidents.other, 3)) {
     const deliveries = await call('GET', `/api/notifications/incident/${id}`, token.canaryAdmin)
@@ -248,6 +263,9 @@ async function writes(found) {
     source && ['POST', `/api/telemetry-sources/${source}/rotate-key`],
     integration && ['PATCH', `/api/integrations/${integration}/enabled`, { isEnabled: true }],
     integration && ['POST', `/api/integrations/${integration}/test`],
+    // The canary's Viewer: promoting or switching them off from outside must not be possible.
+    ['PATCH', `/api/organization/members/${canary.users.Viewer}/role`, { role: 'Admin' }],
+    ['POST', `/api/organization/members/${canary.users.Viewer}/deactivate`],
   ].filter(Boolean)
 
   for (const [method, path, body] of attempts) {
@@ -278,6 +296,12 @@ async function roles() {
   for (const path of ['/api/integrations', '/api/telemetry-sources']) {
     const response = await call('GET', path, token.canaryAdmin)
     check(`Admin GET ${path} → 200`, response.status === 200, `got ${response.status}`)
+  }
+
+  // Members are the organisation's too (Adım 16.5).
+  for (const role of ['Engineer', 'Viewer']) {
+    const response = await call('GET', '/api/organization/members', token[`canary${role}`])
+    check(`${role} GET /api/organization/members → 403`, response.status === 403, `got ${response.status}`)
   }
 
   const incident = (await call('GET', '/api/incidents?pageSize=1', token.canaryViewer)).json?.items?.[0]

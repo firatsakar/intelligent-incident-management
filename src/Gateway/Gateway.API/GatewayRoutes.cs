@@ -59,6 +59,8 @@ internal static class GatewayRoutes
     [
         ("auth-sign-in", "/api/auth/login", IdentityCluster, SignInRateLimiterPolicy),
         ("auth", "/api/auth/{**rest}", IdentityCluster, null),
+        // The organisation's members — IdentityService, which is where accounts live.
+        ("organization", "/api/organization/{**rest}", IdentityCluster, null),
         ("incidents", "/api/incidents/{**rest}", IncidentCluster, null),
         // Routed because the endpoint exists and is reachable; the console never calls it. The
         // normal trigger for an analysis is IncidentDetectedEvent over RabbitMQ.
