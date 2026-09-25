@@ -89,6 +89,39 @@ public sealed class OtlpLogsCodecTests
     }
 
     [Fact]
+    public void TheDotNetSdksTemplateBodyIsRenderedEvenWithoutTheOriginalFormatAttribute()
+    {
+        // What the SDK actually sends — found by the acceptance run, not by reading its docs: the
+        // {OriginalFormat} attribute is spent on the body and never sent. Without recognising the
+        // body itself as the template, the evidence screen showed "{OrderId}".
+        var record = new OtlpLogRecord
+        {
+            TimeUnixNano = Nanos(HappenedAt),
+            SeverityNumber = SeverityNumber.Error,
+            Body = new AnyValue { StringValue = "Checkout failed for order {OrderId} of customer {CustomerId}" },
+        };
+        record.Attributes.Add(Attribute("OrderId", 481516));
+        record.Attributes.Add(Attribute("CustomerId", "c-2042"));
+
+        var mapped = Assert.Single(OtlpLogsCodec.Map(Request("checkout-service", record), ReceivedAt).Events);
+
+        Assert.Equal("Checkout failed for order 481516 of customer c-2042", mapped.Message);
+        Assert.Equal("Checkout failed for order {OrderId} of customer {CustomerId}", mapped.MessageTemplate);
+    }
+
+    [Fact]
+    public void BracesThatNameNoAttributeAreJustText()
+    {
+        var record = new OtlpLogRecord { Body = new AnyValue { StringValue = "payload was {\"ok\":false}" } };
+        record.Attributes.Add(Attribute("http.status", 500));
+
+        var mapped = Assert.Single(OtlpLogsCodec.Map(Request("s", record), ReceivedAt).Events);
+
+        Assert.Equal("payload was {\"ok\":false}", mapped.Message);
+        Assert.Null(mapped.MessageTemplate);
+    }
+
+    [Fact]
     public void ARenderedBodyIsKeptAsItCame()
     {
         // Serilog's sink: rendered text in the body, the template in an attribute of its own.

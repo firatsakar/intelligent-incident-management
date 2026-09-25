@@ -33,9 +33,12 @@ public sealed record OtlpDecodedBatch(IReadOnlyList<RawLogEvent> Events, int Rej
 /// </para>
 /// <para>
 /// Two senders shape the message handling. The .NET SDK sends the <em>template</em> as the body and
-/// the values as attributes — so the body is rendered from them here, because a person reading
-/// the evidence wants the order id. Serilog's sink sends the rendered text and the template as an
-/// attribute. Either way the template is kept, since it is the best normalisation there is.
+/// the values as attributes, and spends its <c>{OriginalFormat}</c> attribute on that body rather
+/// than sending it — so a body whose placeholders name attributes is taken to be the template and
+/// rendered from them, because a person reading the evidence wants the order id. (Established by
+/// the acceptance run: the unit tests had assumed the attribute arrived, and the evidence screen
+/// showed "{OrderId}".) Serilog's sink sends the rendered text and the template as an attribute.
+/// Either way the template is kept, since it is the best normalisation there is.
 /// </para>
 /// </remarks>
 public static partial class OtlpLogsCodec
@@ -112,9 +115,11 @@ public static partial class OtlpLogsCodec
     private static RawLogEvent? TryMap(string service, OtlpLogRecord record, DateTime receivedAt)
     {
         var body = record.Body is null ? null : Render(record.Body);
-        var template = TemplateAttributes
-            .Select(key => StringAttribute(record.Attributes, key))
-            .FirstOrDefault(value => !string.IsNullOrEmpty(value));
+        var template =
+            TemplateAttributes
+                .Select(key => StringAttribute(record.Attributes, key))
+                .FirstOrDefault(value => !string.IsNullOrEmpty(value))
+            ?? (IsTemplate(body, record.Attributes) ? body : null);
 
         // The .NET SDK's default: the body is the template itself, the values are attributes.
         var message = template is not null && (string.IsNullOrEmpty(body) || body == template)
@@ -198,6 +203,18 @@ public static partial class OtlpLogsCodec
         var value = attributes?.FirstOrDefault(attribute => attribute.Key == key)?.Value;
 
         return value is null ? null : Render(value);
+    }
+
+    // A body is a template when at least one of its placeholders names an attribute the record
+    // carries. Braces alone are not enough — "{}" and JSON bodies have them too.
+    private static bool IsTemplate(string? body, IEnumerable<KeyValue> attributes)
+    {
+        if (string.IsNullOrEmpty(body) || !body.Contains('{'))
+            return false;
+
+        var keys = attributes.Select(attribute => attribute.Key).ToHashSet(StringComparer.Ordinal);
+
+        return Placeholder().Matches(body).Any(match => keys.Contains(match.Groups["name"].Value));
     }
 
     private static string RenderTemplate(string template, IEnumerable<KeyValue> attributes)
