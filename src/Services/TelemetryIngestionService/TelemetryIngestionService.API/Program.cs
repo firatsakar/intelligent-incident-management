@@ -66,6 +66,10 @@ builder.Services.AddPlatformAuth(builder.Configuration);
 
 builder.Services.AddOpenApi();
 
+// The OTLP endpoint's senders compress: a collector's otlphttp exporter gzips by default. Only a
+// request that says Content-Encoding is touched, so nothing else here changes.
+builder.Services.AddRequestDecompression();
+
 var app = builder.Build();
 
 app.UseExceptionHandler();
@@ -78,6 +82,7 @@ if (app.Environment.IsDevelopment())
 // No UseHttpsRedirection. TLS terminates at the gateway; a service behind it redirecting
 // to https is redirecting a request that already arrived over a private hop, and in
 // development it redirects a plain-HTTP call to a port nothing is listening on.
+app.UseRequestDecompression();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseOrganizationContext();

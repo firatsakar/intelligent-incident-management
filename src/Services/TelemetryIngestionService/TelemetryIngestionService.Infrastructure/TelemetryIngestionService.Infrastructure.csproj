@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.36.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.84.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
       <PrivateAssets>all</PrivateAssets>
@@ -16,6 +21,15 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.7" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
     <PackageReference Include="Polly" Version="8.6.6" />
+  </ItemGroup>
+
+  <!--
+    OTLP v1 message definitions, compiled to C# at build time. Messages only: the receiver speaks
+    OTLP/HTTP, so no gRPC service is generated. ProtoRoot is what lets the files import each other by
+    their upstream paths.
+  -->
+  <ItemGroup>
+    <Protobuf Include="Otlp\Protos\**\*.proto" ProtoRoot="Otlp\Protos" GrpcServices="None" />
   </ItemGroup>
 
   <ItemGroup>

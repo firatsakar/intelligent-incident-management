@@ -67,6 +67,10 @@ internal static class GatewayRoutes
         ("integrations", "/api/integrations/{**rest}", NotificationCluster, null),
         ("telemetry", "/api/telemetry/{**rest}", TelemetryCluster, null),
         ("telemetry-sources", "/api/telemetry-sources/{**rest}", TelemetryCluster, null),
+        // Not under /api: this is where customers' collectors send logs, and an OTLP exporter
+        // given a base address appends /v1/logs to it. Authenticated by the source's ingest key
+        // at the service, not by the session cookie, which a collector does not have.
+        ("otlp", "/otlp/{**rest}", TelemetryCluster, null),
     ];
 
     // The hubs need nothing special from YARP — it proxies the upgrade itself, and the three

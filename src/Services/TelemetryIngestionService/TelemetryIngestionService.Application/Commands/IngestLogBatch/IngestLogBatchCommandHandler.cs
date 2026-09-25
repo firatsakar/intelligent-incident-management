@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using BuildingBlocks.SharedKernel;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,13 @@ public sealed class IngestLogBatchCommandHandler : IRequestHandler<IngestLogBatc
     // How far ahead of our own clock a source timestamp may sit before we call it skew rather
     // than latency.
     private static readonly TimeSpan ClockSkewTolerance = TimeSpan.FromMinutes(2);
+
+    // The column widths of log_records and error_signatures.
+    private const int MaxSourceEventIdLength = 128;
+    private const int MaxServiceLength = 128;
+    private const int MaxMessageLength = 4096;
+    private const int MaxExceptionTypeLength = 512;
+    private const int MaxStackTraceLength = 8192;
 
     private readonly ILogRecordRepository _logRecords;
     private readonly IErrorSignatureRepository _signatures;
@@ -52,7 +61,10 @@ public sealed class IngestLogBatchCommandHandler : IRequestHandler<IngestLogBatc
         if (request.Events.Count == 0)
             return IngestResult.Nothing();
 
-        var fresh = await FilterAlreadyStoredAsync(request.SourceId, request.Events, cancellationToken);
+        // Bounded before anything compares ids, so a long id is matched in the form it was stored.
+        var bounded = request.Events.Select(Bounded).ToList();
+
+        var fresh = await FilterAlreadyStoredAsync(request.SourceId, bounded, cancellationToken);
         var duplicates = request.Events.Count - fresh.Count;
 
         if (fresh.Count == 0)
@@ -175,6 +187,24 @@ public sealed class IngestLogBatchCommandHandler : IRequestHandler<IngestLogBatc
 
         return (raw, normalized, fingerprint);
     }
+
+    // The columns have limits and the sources do not. One stack trace past 8 KB used to fail the
+    // insert for the whole batch — and a poll that fails the same way every time never advances
+    // its cursor. Cut here, the one place both the pulled and the pushed path pass through.
+    private static RawLogEvent Bounded(RawLogEvent raw) =>
+        raw with
+        {
+            SourceEventId = raw.SourceEventId is { Length: > MaxSourceEventIdLength } id
+                // Hashed rather than cut, so two long ids that share a prefix stay two events.
+                ? Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(id)))
+                : raw.SourceEventId,
+            Service = Cut(raw.Service, MaxServiceLength),
+            Message = Cut(raw.Message, MaxMessageLength),
+            ExceptionType = raw.ExceptionType is null ? null : Cut(raw.ExceptionType, MaxExceptionTypeLength),
+            StackTrace = raw.StackTrace is null ? null : Cut(raw.StackTrace, MaxStackTraceLength),
+        };
+
+    private static string Cut(string value, int max) => value.Length <= max ? value : value[..max];
 
     private async Task<IReadOnlyList<RawLogEvent>> FilterAlreadyStoredAsync(
         Guid sourceId,
