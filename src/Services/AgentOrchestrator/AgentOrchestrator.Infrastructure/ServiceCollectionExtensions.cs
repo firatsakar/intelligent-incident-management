@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddDbContext<AgentDbContext>(options => options.UseNpgsql(connectionString));
 
         services.AddScoped<IIncidentAnalysisRepository, IncidentAnalysisRepository>();
+        services.AddScoped<IGitHubConnectionRepository, GitHubConnectionRepository>();
 
         services.Configure<AiAnalyzerOptions>(
             configuration.GetSection(AiAnalyzerOptions.SectionName)

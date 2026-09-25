@@ -71,6 +71,7 @@ internal static class GatewayRoutes
         // Routed because the endpoint exists and is reachable; the console never calls it. The
         // normal trigger for an analysis is IncidentDetectedEvent over RabbitMQ.
         ("analyses", "/api/analyses/{**rest}", AgentCluster, null),
+        ("ai-sources", "/api/ai-sources/{**rest}", AgentCluster, null),
         ("notifications", "/api/notifications/{**rest}", NotificationCluster, null),
         ("integrations", "/api/integrations/{**rest}", NotificationCluster, null),
         ("telemetry", "/api/telemetry/{**rest}", TelemetryCluster, null),

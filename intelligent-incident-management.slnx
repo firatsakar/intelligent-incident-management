@@ -65,6 +65,7 @@
     <Project Path="src/Services/TelemetryIngestionService/TelemetryIngestionService.Infrastructure/TelemetryIngestionService.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AgentOrchestrator.Tests/AgentOrchestrator.Tests.csproj" />
     <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
     <Project Path="tests/IdentityService.Tests/IdentityService.Tests.csproj" />
     <Project Path="tests/IncidentService.Tests/IncidentService.Tests.csproj" />

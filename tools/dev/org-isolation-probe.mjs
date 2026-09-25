@@ -300,6 +300,32 @@ async function roles() {
     check(`Admin GET ${path} → 200`, response.status === 200, `got ${response.status}`)
   }
 
+  // The GitHub connection the analysis reads (Adım 17.5): the token behind it is the most
+  // sensitive thing the organisation gives us.
+  for (const role of ['Engineer', 'Viewer']) {
+    for (const [method, path, body] of [
+      ['GET', '/api/ai-sources/github'],
+      ['PUT', '/api/ai-sources/github', { token: 'x', isEnabled: false, repositories: [] }],
+      ['DELETE', '/api/ai-sources/github'],
+    ]) {
+      const response = await call(method, path, token[`canary${role}`], body)
+      check(`${role} ${method} ${path} → 403`, response.status === 403, `got ${response.status}`)
+    }
+  }
+
+  const canaryGitHub = await call('GET', '/api/ai-sources/github', token.canaryAdmin)
+  check('Admin GET /api/ai-sources/github → 200', canaryGitHub.status === 200, `got ${canaryGitHub.status}`)
+
+  // One connection per organisation and no id to ask for, so the isolation question is whether
+  // another organisation's Admin is answered with this one's.
+  if (canaryGitHub.json?.isConfigured) {
+    const otherGitHub = (await call('GET', '/api/ai-sources/github', token.otherAdmin)).json
+    check(
+      'acme does not read canary’s GitHub connection',
+      JSON.stringify(otherGitHub?.repositories ?? []) !== JSON.stringify(canaryGitHub.json.repositories),
+    )
+  }
+
   // Members are the organisation's too (Adım 16.5).
   for (const role of ['Engineer', 'Viewer']) {
     for (const [method, path, body] of [

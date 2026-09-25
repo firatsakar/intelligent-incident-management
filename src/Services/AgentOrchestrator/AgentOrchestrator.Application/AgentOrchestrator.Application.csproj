@@ -5,11 +5,14 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 	</PropertyGroup>
 	<ItemGroup>
+	  <PackageReference Include="FluentValidation" Version="12.1.1" />
+	  <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
 	  <PackageReference Include="MediatR" Version="14.1.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\AgentOrchestrator.Domain\AgentOrchestrator.Domain.csproj" />
+		<ProjectReference Include="..\..\..\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\Contracts\BuildingBlocks.Contracts.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\EventBus\BuildingBlocks.EventBus.csproj" />
 	</ItemGroup>

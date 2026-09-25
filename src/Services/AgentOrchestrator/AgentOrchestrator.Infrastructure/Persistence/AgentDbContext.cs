@@ -20,6 +20,7 @@ public sealed class AgentDbContext : DbContext
 
     public DbSet<IncidentAnalysis> Analyses => Set<IncidentAnalysis>();
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+    public DbSet<GitHubConnection> GitHubConnections => Set<GitHubConnection>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +32,12 @@ public sealed class AgentDbContext : DbContext
 
         modelBuilder
             .Entity<IncidentAnalysis>()
+            .HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
+
+        // An organisation's GitHub token is the most sensitive thing this service holds; another
+        // organisation's scope resolves to no connection at all.
+        modelBuilder
+            .Entity<GitHubConnection>()
             .HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
 
         base.OnModelCreating(modelBuilder);
