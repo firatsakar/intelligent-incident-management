@@ -209,6 +209,9 @@ export const aiSourcesApi = {
  * member or invitation of another organisation 404.
  */
 export const organizationApi = {
+  /** The caller's own organisation; there is no id to aim at another. */
+  rename: (name: string) => api.patch<{ id: string; name: string }>('/api/organization', { name }),
+
   members: () => api.get<Member[]>('/api/organization/members'),
 
   changeRole: (id: string, role: UserRole) =>

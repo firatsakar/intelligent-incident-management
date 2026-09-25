@@ -400,6 +400,24 @@ hatalarında sessiz kalır.
 
 Compose yalnızca altyapıyı (Postgres, RabbitMQ, ES, Seq, Mailpit) ayağa kaldırıyor. Dört .NET
 servisi geliştirme makinesinde `dotnet run` ile çalışıyor. **Dağıtılabilir bir artefakt yok.**
+Ürün açık kaynak olacağı için (Fırat, 2026-09-25) CI/CD ve Kubernetes adımları çıkarıldı; bu
+maddeyi **Adım 26 — tek komutla kurulum** kapatacak.
+
+### 🟡 Ölçekleme: SignalR backplane ve session affinity (Adım 22'den taşındı)
+
+Bir hub servisi ikinci replikaya çıktığı an iki şey gerekecek. Bugün gerekmiyor; şimdi eklemek
+olmayan bir problem için gerçek bir Redis bağımlılığı almak olurdu. Kendi kurulumunu ölçeklemek
+isteyen için:
+
+1. **SignalR backplane:** WebSocket bağlantısı tek instance'a bağlı. POST'u işleyen replika,
+   başka replikadaki client'a ulaşamaz. `Microsoft.AspNetCore.SignalR.StackExchangeRedis`, bağlantının
+   hangi sunucuda olduğunu bilmeye gerek bırakmadan bunu çözüyor; gruplar da backplane üzerinden
+   yayılıyor.
+2. **Session affinity:** SignalR el sıkışması iki istekten oluşuyor (`/negotiate` + bağlantı).
+   İkisi farklı replikaya düşerse bağlantı kurulamaz. Çözüm YARP'ın cookie tabanlı affinity'si ya
+   da client'ta `skipNegotiation: true` + WebSockets.
+
+Ayrı bir realtime servisi bu ikisini çözmez; o da ölçeklenir, o da backplane ve affinity ister.
 
 ### 🔴 Migration stratejisi tanımsız
 

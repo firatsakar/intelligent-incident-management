@@ -145,7 +145,7 @@ export const en = {
     sections: 'Settings sections',
     pages: {
       profile: 'Profile',
-      members: 'Members',
+      organization: 'Organization',
       integrations: 'Integrations',
     },
   },
@@ -1355,6 +1355,18 @@ export const en = {
           changes === 1 ? 'read; 1 change in the last 7 days' : `read; ${changes} changes in the last 7 days`,
         testFailed: (reason: string) => `could not be read: ${reason}`,
       },
+    },
+
+    // The organisation's own settings (Adım 25): its name here; its members below it.
+    organization: {
+      title: 'Organization name',
+      description:
+        'How this organisation appears across the console and in the emails it sends. Changing it renames it for everyone.',
+      label: 'Name',
+      required: 'The organisation needs a name.',
+      save: 'Save',
+      saving: 'Saving…',
+      saved: 'Organization renamed.',
     },
 
     members: {

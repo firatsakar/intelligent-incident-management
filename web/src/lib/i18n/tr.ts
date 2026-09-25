@@ -117,7 +117,7 @@ export const tr: Dictionary = {
     sections: 'Ayar bölümleri',
     pages: {
       profile: 'Profil',
-      members: 'Üyeler',
+      organization: 'Organizasyon',
       integrations: 'Entegrasyonlar',
     },
   },
@@ -1183,6 +1183,17 @@ export const tr: Dictionary = {
         testOk: (changes: number) => `okundu; son 7 günde ${changes} değişiklik`,
         testFailed: (reason: string) => `okunamadı: ${reason}`,
       },
+    },
+
+    organization: {
+      title: 'Organizasyon adı',
+      description:
+        'Bu organizasyonun konsolda ve gönderdiği e-postalarda görünen adı. Değiştirmek herkes için adı değiştirir.',
+      label: 'Ad',
+      required: 'Organizasyonun bir adı olmalı.',
+      save: 'Kaydet',
+      saving: 'Kaydediliyor…',
+      saved: 'Organizasyonun adı değişti.',
     },
 
     members: {

@@ -14,7 +14,7 @@ import { SignalsPage } from '@/features/signals/SignalsPage'
 import { FunnelPage } from '@/features/telemetry/FunnelPage'
 import { ServicesPage } from '@/features/telemetry/ServicesPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
-import { MembersPage } from '@/features/settings/MembersPage'
+import { OrganizationPage } from '@/features/settings/OrganizationPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
 import { SettingsLayout } from '@/features/settings/SettingsLayout'
 
@@ -56,7 +56,9 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/settings/profile" replace /> },
               { path: 'profile', element: <ProfilePage /> },
-              { path: 'members', element: <MembersPage /> },
+              { path: 'organization', element: <OrganizationPage /> },
+              // Members became a section of the Organization tab (Adım 25).
+              { path: 'members', element: <Navigate to="/settings/organization" replace /> },
               { path: 'integrations', element: <IntegrationsPage /> },
               // Telemetry and the AI sources were tabs of their own until they became groups of
               // the Integrations page. Their addresses keep resolving — to the group, not the top.
