@@ -159,7 +159,7 @@ app.MapPost(
             try
             {
                 throw new TimeoutException(
-                    $"Payment gateway did not respond within 30s for cart {cartId}"
+                    $"Payment gateway did not respond within {PaymentGateway.Timeout.TotalMilliseconds:0} ms for cart {cartId}"
                 );
             }
             catch (Exception ex)
