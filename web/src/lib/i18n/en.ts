@@ -146,8 +146,6 @@ export const en = {
     pages: {
       profile: 'Profile',
       members: 'Members',
-      telemetry: 'Telemetry',
-      aiSources: 'AI sources',
       integrations: 'Integrations',
     },
   },
@@ -1108,9 +1106,6 @@ export const en = {
     },
 
     integrations: {
-      title: 'Integrations',
-      intro:
-        'A notification goes out when an analysis completes. One channel can hold several integrations — two Email entries with different filters is a normal setup.',
       loadError: 'Could not load integrations.',
 
       // Nothing connected and everything paused are different configurations with the same
@@ -1177,9 +1172,6 @@ export const en = {
     },
 
     telemetry: {
-      title: 'Telemetry',
-      intro:
-        'Detection never watches this platform itself — nothing reaches it that you have not connected here.',
       loadError: 'Could not load sources.',
 
       // The most consequential configuration gap in the product: with no source being read,
@@ -1283,11 +1275,37 @@ export const en = {
 
     // What the analysis may read besides the incident (Adım 17.5). The page asks an Admin for a
     // credential to their code, so it says what the credential is and is not used for, in place.
+    // Everything the organisation connects the platform to, grouped by what the connection is for,
+    // in the order data moves through them (Fırat, 2026-09-25).
+    hub: {
+      intro:
+        'Everything this organisation connects the platform to, in the order data moves: where errors are read from, what the analysis may consult, and who is told.',
+      jumpTo: 'Groups on this page',
+      groups: {
+        observability: {
+          title: 'Observability',
+          // Not a description of the group. Operators assume an observability product monitors
+          // its own services; this one does not, and nothing else in the product corrects that.
+          description:
+            'Where errors are read from. Detection never watches this platform itself — nothing reaches it that you have not connected here.',
+        },
+        analysis: {
+          title: 'Analysis',
+          description:
+            'Outside systems the analysis may read while it works out a cause. Read-only, and only for this organisation’s incidents.',
+        },
+        notifications: {
+          title: 'Notifications',
+          // The second sentence is the only thing that explains the "Add another Email" button —
+          // without it the tile grid reads as one integration per channel.
+          description:
+            'Who is told when an analysis completes. One channel can hold several integrations — two Email entries with different filters is a normal setup.',
+        },
+      },
+    },
+
     aiSources: {
-      title: 'AI sources',
-      description:
-        'Outside systems the analysis may read while it works out a cause. Read-only, and only for this organisation’s incidents.',
-      loadError: 'Could not load AI sources',
+      loadError: 'Could not load the GitHub connection.',
 
       github: {
         name: 'GitHub',

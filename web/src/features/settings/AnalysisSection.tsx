@@ -33,9 +33,9 @@ import type { GitHubConnection, RepositoryCheck, RepositoryMapping } from '@/typ
 import { GitHubMark } from './BrandIcons'
 
 /**
- * What the analysis may read besides the incident itself (Adım 17.5). One source today: the
- * organisation's GitHub, so the agent can ask "what changed in this service just before it
- * broke?" — the question our own data cannot answer.
+ * What the analysis may read besides the incident itself (Adım 17.5) — the Analysis group of the
+ * Integrations page. One source today: the organisation's GitHub, so the agent can ask "what
+ * changed in this service just before it broke?", the question our own data cannot answer.
  *
  * The page says plainly what the token is used for and what it is never used for, because an
  * Admin is being asked to hand over a credential to their code, and the reasonable response to
@@ -64,7 +64,7 @@ const toRows = (mappings: RepositoryMapping[]): Row[] =>
 
 const repositoryPattern = /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/
 
-export function AiSourcesPage() {
+export function AnalysisSection() {
   const t = useT().settings.aiSources
   const queryClient = useQueryClient()
 
@@ -72,11 +72,6 @@ export function AiSourcesPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      <div className="max-w-2xl">
-        <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
-        <p className="text-muted-foreground mt-1 text-sm">{t.description}</p>
-      </div>
-
       {query.isPending && <Skeleton className="h-72 w-full" />}
 
       {query.isError && (

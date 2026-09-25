@@ -118,8 +118,6 @@ export const tr: Dictionary = {
     pages: {
       profile: 'Profil',
       members: 'Üyeler',
-      telemetry: 'Telemetri',
-      aiSources: 'AI kaynakları',
       integrations: 'Entegrasyonlar',
     },
   },
@@ -960,9 +958,6 @@ export const tr: Dictionary = {
     },
 
     integrations: {
-      title: 'Entegrasyonlar',
-      intro:
-        'Bir analiz tamamlandığında bildirim çıkar. Bir kanal birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
       loadError: 'Entegrasyonlar yüklenemedi.',
 
       silenceNone: 'Hiçbir şey bağlı değil. Bir analiz tamamlandığında kimseye haber verilmez.',
@@ -1023,9 +1018,6 @@ export const tr: Dictionary = {
     },
 
     telemetry: {
-      title: 'Telemetri',
-      intro:
-        'Tespit, bu platformun kendisini izlemez — buradan bağlamadığınız hiçbir şey ona ulaşmaz.',
       loadError: 'Kaynaklar yüklenemedi.',
 
       blindnessNone: 'Hiçbir kaynak bağlı değil. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilemeyecek.',
@@ -1118,11 +1110,31 @@ export const tr: Dictionary = {
         `— buradan bir şey okunmuyor. Devam ettirilirse ${what} için her ${seconds} saniyede bir sorgulayacak.`,
     },
 
+    hub: {
+      intro:
+        'Bu organizasyonun platformu bağladığı her şey, verinin aktığı sırayla: hataların nereden okunduğu, analizin neye bakabildiği ve kime haber verildiği.',
+      jumpTo: 'Bu sayfadaki gruplar',
+      groups: {
+        observability: {
+          title: 'Gözlemlenebilirlik',
+          description:
+            'Hataların okunduğu yer. Tespit, bu platformun kendisini izlemez — buradan bağlamadığınız hiçbir şey ona ulaşmaz.',
+        },
+        analysis: {
+          title: 'Analiz',
+          description:
+            'Analizin bir nedeni ararken okuyabileceği dış sistemler. Yalnız okuma; yalnız bu organizasyonun olayları için.',
+        },
+        notifications: {
+          title: 'Bildirimler',
+          description:
+            'Bir analiz tamamlandığında kime haber verildiği. Bir kanal birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
+        },
+      },
+    },
+
     aiSources: {
-      title: 'AI kaynakları',
-      description:
-        'Analizin bir nedeni ararken okuyabileceği dış sistemler. Yalnız okuma; yalnız bu organizasyonun olayları için.',
-      loadError: 'AI kaynakları yüklenemedi',
+      loadError: 'GitHub bağlantısı yüklenemedi.',
 
       github: {
         name: 'GitHub',

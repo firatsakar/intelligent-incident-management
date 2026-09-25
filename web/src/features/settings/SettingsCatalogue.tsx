@@ -31,9 +31,9 @@ export interface PlannedEntry {
 export function SectionHeading({ title, detail }: { title: string; detail?: string }) {
   return (
     <div className="flex items-baseline gap-3">
-      <h2 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
+      <h3 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {title}
-      </h2>
+      </h3>
       <span className="bg-border h-px flex-1" aria-hidden />
       {detail && <span className="text-muted-foreground text-xs tabular-nums">{detail}</span>}
     </div>
