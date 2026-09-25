@@ -381,6 +381,18 @@ function LogLine({ record, showService }: { record: LogRecord; showService: bool
         {record.message}
       </span>
 
+      {/* A burst is stored as a few samples, the newest carrying the rest. Without the count this
+          row would read as one event and the list as a quiet window. */}
+      {record.occurrences > 1 && (
+        <Badge
+          variant="secondary"
+          className="shrink-0 text-xs tabular-nums"
+          title={telemetry.evidence.foldedTitle(record.occurrences)}
+        >
+          {telemetry.evidence.folded(record.occurrences)}
+        </Badge>
+      )}
+
       {record.hasClockSkew && (
         // Recorded rather than rejected upstream, so it should be visible here.
         <Badge variant="outline" className="shrink-0 text-xs">

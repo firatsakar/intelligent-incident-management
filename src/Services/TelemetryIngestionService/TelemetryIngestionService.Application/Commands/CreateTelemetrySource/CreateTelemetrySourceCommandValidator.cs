@@ -1,5 +1,6 @@
 using FluentValidation;
 using TelemetryIngestionService.Application.Validators;
+using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 
@@ -17,8 +18,11 @@ public sealed class CreateTelemetrySourceCommandValidator
             .When(x => x.PollIntervalSeconds.HasValue)
             .WithMessage("Polling faster than every 5 seconds hammers the source for no benefit.");
 
+        // A polled source cannot be reached without settings; a pushed one has none of its own.
+        RuleFor(x => x.Config).NotEmpty().When(x => !x.Kind.IsPushed());
+
         RuleFor(x => x.Config)
-            .NotEmpty()
+            .NotNull()
             .Custom(
                 (config, context) =>
                 {
@@ -30,6 +34,9 @@ public sealed class CreateTelemetrySourceCommandValidator
                             nameof(CreateTelemetrySourceCommand.Config),
                             TelemetrySourceConfigRules.Describe(kind, missing)
                         );
+
+                    if (TelemetrySourceConfigRules.Invalid(kind, config) is { } invalid)
+                        context.AddFailure(nameof(CreateTelemetrySourceCommand.Config), invalid);
                 }
             );
     }

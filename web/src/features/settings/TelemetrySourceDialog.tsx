@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { maskedValue, type TelemetrySource, type TelemetrySourceKind } from '@/types/api'
+import { isPushed, maskedValue, type TelemetrySource, type TelemetrySourceKind } from '@/types/api'
 
 import { buildConfig, ConfigFields, withStrayFields } from './ConfigFields'
 import { telemetrySourceFields } from './configSchema'
@@ -31,6 +31,9 @@ const minimumPollSeconds = 5
  *
  * The kind is not a field, for the same reason the channel is not one on the integrations dialog:
  * it arrives from the tile that was pressed, and it was never editable after creation anyway.
+ *
+ * A pushed kind has no schedule, so the interval and the sentence it drives are not shown; what it
+ * has instead is a key, which the server issues on creation and the page shows once.
  */
 export function TelemetrySourceDialog({
   kind,
@@ -42,12 +45,14 @@ export function TelemetrySourceDialog({
   /** Null when connecting a new one. */
   source: TelemetrySource | null
   onClose: () => void
-  onSaved: () => void
+  /** The saved source — for a new pushed one, with its key, which the page shows next. */
+  onSaved: (saved: TelemetrySource) => void
 }) {
   const dictionary = useT()
   const { labels, settings } = dictionary
   const t = settings.telemetry
   const kindName = labels.telemetryKind[kind]
+  const pushed = isPushed(kind)
 
   const [name, setName] = useState(source?.name ?? '')
   const [pollInterval, setPollInterval] = useState(String(source?.pollIntervalSeconds ?? 15))
@@ -79,23 +84,25 @@ export function TelemetrySourceDialog({
 
   const parsedPoll = Number(pollInterval.trim())
   const pollIsValid =
-    Number.isInteger(parsedPoll) && parsedPoll >= minimumPollSeconds && pollInterval.trim() !== ''
+    pushed ||
+    (Number.isInteger(parsedPoll) && parsedPoll >= minimumPollSeconds && pollInterval.trim() !== '')
 
   const save = useMutation({
     mutationFn: () => {
       const input: TelemetrySourceInput = {
         name: name.trim(),
         config: buildConfig(fields, values, stored),
-        pollIntervalSeconds: parsedPoll,
+        // Nothing polls a pushed source; the server keeps its default.
+        pollIntervalSeconds: pushed ? undefined : parsedPoll,
       }
 
       return source
         ? telemetrySourcesApi.update(source.id, input)
         : telemetrySourcesApi.create({ ...input, kind, isEnabled: true })
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       toast.success(source ? t.updated : t.connected(kindName))
-      onSaved()
+      onSaved(saved)
     },
   })
 
@@ -138,6 +145,7 @@ export function TelemetrySourceDialog({
             onChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
           />
 
+          {!pushed && (
           <div className="space-y-2">
             <div className="space-y-1.5">
               <Label htmlFor="poll">{t.pollLabel}</Label>
@@ -165,6 +173,7 @@ export function TelemetrySourceDialog({
                 : t.pollInvalid(minimumPollSeconds)}
             </p>
           </div>
+          )}
 
           {/* Inline rather than a toast: a rejected save is usually a missing setting, and the
               operator needs to read it while looking at the field it names. */}

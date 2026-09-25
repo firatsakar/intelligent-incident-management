@@ -46,6 +46,8 @@ const allowedStrings = new Set([
   'Service',
   'Task',
   'OPS',
+  // The OTLP source's MinimumSeverity placeholder: a value the server parses, Warning or Error.
+  'Error',
   // Trademarks on the "coming soon" rows.
   'Slack',
   'Microsoft Teams',

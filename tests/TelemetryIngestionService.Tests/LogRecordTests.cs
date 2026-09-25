@@ -76,4 +76,34 @@ public sealed class LogRecordTests
 
         Assert.Null(record.Fingerprint);
     }
+
+    [Fact]
+    public void ARecordStandsForOneEventUnlessToldOtherwise()
+    {
+        Assert.Equal(1, Create(DateTime.UtcNow).Occurrences);
+    }
+
+    [Fact]
+    public void ARecordCannotStandForNoEvents()
+    {
+        // A zero-weight row would be stored and then vanish from every count — a line in the
+        // evidence that detection cannot see.
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            LogRecord.Create(
+                Organization,
+                Guid.NewGuid(),
+                "event-1",
+                "checkout-service",
+                LogSeverity.Error,
+                "Payment failed",
+                "Payment failed",
+                null,
+                null,
+                "abc123",
+                DateTime.UtcNow,
+                Tolerance,
+                occurrences: 0
+            )
+        );
+    }
 }

@@ -41,6 +41,9 @@ public sealed record LogRecordDto
     public required string Message { get; init; }
     public string? ExceptionType { get; init; }
     public string? Fingerprint { get; init; }
+
+    // How many events this row stands for — above one when a burst was folded onto it.
+    public required int Occurrences { get; init; }
     public required DateTime Timestamp { get; init; }
     public required DateTime IngestedAt { get; init; }
     public required bool HasClockSkew { get; init; }
@@ -54,6 +57,7 @@ public sealed record LogRecordDto
             Message = record.Message,
             ExceptionType = record.ExceptionType,
             Fingerprint = record.Fingerprint,
+            Occurrences = record.Occurrences,
             Timestamp = record.Timestamp,
             IngestedAt = record.IngestedAt,
             HasClockSkew = record.HasClockSkew,

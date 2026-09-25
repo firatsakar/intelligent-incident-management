@@ -518,6 +518,9 @@ export const tr: Dictionary = {
       rereading: 'Yeniden okunuyor…',
 
       clockSkew: 'saat kayması',
+      folded: (count: number) => `×${count}`,
+      foldedTitle: (count: number) =>
+        `Bu satır bir patlamanın ${count} olayını temsil ediyor. Patlamanın geri kalanı ayrı ayrı saklanmak yerine bu satıra sayıldı.`,
       ingestionLag: 'Alım gecikmesi — kaynağın zaman damgasından bizimkine',
       lag: (duration: string) => `+${duration}`,
       muted: 'susturulmuş',
@@ -847,6 +850,7 @@ export const tr: Dictionary = {
         'seq.filter': 'Filtre',
         'seq.serviceProperty': 'Servis alanı',
         'seq.initialLookback': 'İlk geriye bakış (dakika)',
+        'otlp.minimumSeverity': 'En düşük şiddet',
       },
 
       hints: {
@@ -860,6 +864,8 @@ export const tr: Dictionary = {
           'Bir log satırının hangi servisten geldiğini söyleyen alanın adı.',
         'seq.initialLookback':
           'İlk sorgulama ne kadar geriye bakar. Sonrakiler sonuncunun bıraktığı yerden devam eder.',
+        'otlp.minimumSeverity':
+          'Warning ya da Error. Boş bırakılırsa yalnızca hata ve ölümcül kayıtlar saklanır; altındaki her şey gelir gelmez atılır.',
       },
     },
 
@@ -938,20 +944,17 @@ export const tr: Dictionary = {
         `${total} kaynağın hepsi duraklatılmış. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilmeyecek.`,
 
       comingSoonNote:
-        'İkisi de henüz yapılmadı. Amaç bilerek sağlayıcı başına bir connector değil: tek bir standart aktarım formatı ve geri kalanını zaten çalıştırdığınız shipper’ın halletmesi.',
+        'Henüz yapılmadı. Loglar için genel cevap yukarıdaki OTLP: tek bir standart aktarım formatı, geri kalanını zaten çalıştırdığınız shipper hallediyor.',
 
       addAnother: (name: string) => `Bir ${name} kaynağı daha ekle`,
       connectOne: (name: string) => `${name} bağla`,
 
       summary: {
         Seq: 'Bir Seq örneğinin sorgu API’sinden belirli aralıklarla çeker.',
+        Otlp: 'Collector’ınız ya da SDK’nız logları OpenTelemetry’nin aktarım formatında gönderir — hangi log deposunu kullanırsanız kullanın.',
       },
 
       planned: {
-        otlp: {
-          name: 'OTLP log alımı',
-          summary: 'Sizin collector’ınız gönderir; sağlayıcı başına connector yok.',
-        },
         alerts: {
           name: 'Alarm webhook alımı',
           summary: 'Log değil, izleme sisteminizden gelen alarmlar.',
@@ -973,6 +976,8 @@ export const tr: Dictionary = {
 
       deleteBody: (kind: string) =>
         `Bu ${kind} kaynağı ve onunla saklanan kimlik bilgileri kaldırılıyor ve tespit hemen ondan okumayı bırakıyor. Zaten alınmış loglar ve imzalar korunuyor — onlar zaten açılmış olayların arkasındaki kanıt. Buraya yeniden bağlanan bir kaynak, bunun bıraktığı yerden değil kendi ilk geriye bakış penceresinden başlar.`,
+      deleteBodyPushed: (kind: string) =>
+        `Bu ${kind} kaynağı kaldırılıyor ve anahtarı hemen çalışmaz oluyor — onunla göndermeye devam eden her şey 401 alır. Zaten alınmış loglar ve imzalar korunuyor; onlar zaten açılmış olayların arkasındaki kanıt.`,
       deleteConfirm: 'Kaynağı sil',
 
       editTitle: (kind: string) => `${kind} kaynağını düzenle`,
@@ -982,6 +987,38 @@ export const tr: Dictionary = {
       pollLabel: 'Sorgulama aralığı (saniye)',
       pollInvalid: (minimum: number) =>
         `Tam sayı olarak ${minimum} saniye ya da daha fazlasını girin. Bundan daha sık sorgulamak kaynağı boşuna yorar.`,
+
+      pushedSchedule: (minimum: string) =>
+        `Gönderilen logları alır; ${minimum} ve üstünü saklar.`,
+      pushedPausedNote:
+        '— devam ettirilene kadar gönderimler 403 ile reddedilir; gönderen taraf 403’ü yeniden denemez.',
+      endpointLabel: 'Adres',
+      keyLabel: 'Anahtar',
+      rotateKey: 'Yeni anahtar',
+      rotatingKey: 'Üretiliyor…',
+      rotated: 'Yeni anahtar üretildi. Eskisi şu an itibarıyla çalışmıyor.',
+      lastReceived: (when: string) => `Son batch ${when} geldi.`,
+      nothingReceived: 'Bir collector’ı ya da SDK’yı bu kaynağın anahtarıyla adrese yönlendirin.',
+      receivedOkLabel: 'Alınıyor',
+      receivedFailLabel: 'Hiçbir şey gelmedi',
+
+      keyPanel: {
+        title: (name: string) => `${name} kaynağına log gönderin`,
+        once: 'Bu anahtar yalnızca bir kez gösteriliyor. Sadece hash’i saklanıyor, yani bir daha gösterilemez — kaybolursa yenisini üretin.',
+        keyLabel: 'Alım anahtarı',
+        endpointLabel: 'OTLP/HTTP adresi',
+        endpointHint:
+          'Protobuf ya da JSON; gzip olur. Exporter’lar /v1/logs’u bu adrese kendileri ekler.',
+        headerHint: (header: string) => `Anahtarı ${header} başlığında gönderin.`,
+        collectorLabel: 'OpenTelemetry Collector',
+        collectorHint:
+          'Göndermeden önce hatalara süzer. Süzmenin yeri kaynaktır; bu kaynak da en düşük şiddetin altındakini gelir gelmez atar.',
+        sdkLabel: 'Doğrudan bir SDK’dan',
+        sdkHint: 'Her OpenTelemetry SDK’sının okuduğu ortam değişkenleri; arada collector yok.',
+        copy: 'Kopyala',
+        copied: 'Kopyalandı',
+        done: 'Tamam',
+      },
 
       // "sorguluyor" rather than "bakıyor": the form label two rows above says "Sorgulama
       // aralığı", and one screen should not have two verbs for one action.
@@ -1053,6 +1090,7 @@ export const tr: Dictionary = {
 
     telemetryKind: {
       Seq: 'Seq',
+      Otlp: 'OTLP',
     },
   },
 

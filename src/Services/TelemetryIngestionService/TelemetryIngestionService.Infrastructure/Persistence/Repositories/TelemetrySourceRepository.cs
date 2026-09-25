@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Infrastructure.Persistence.Repositories;
 
@@ -11,6 +12,17 @@ public sealed class TelemetrySourceRepository : ITelemetrySourceRepository
     public TelemetrySourceRepository(TelemetryDbContext context)
     {
         _context = context;
+    }
+
+    public async Task<TelemetrySource?> FindByIngestKeyHashForIngestAsync(
+        string ingestKeyHash,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .TelemetrySources.AsNoTracking()
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.IngestKeyHash == ingestKeyHash, cancellationToken);
     }
 
     public async Task<TelemetrySource?> GetByIdAsync(
@@ -42,6 +54,8 @@ public sealed class TelemetrySourceRepository : ITelemetrySourceRepository
             .TelemetrySources.AsNoTracking()
             .IgnoreQueryFilters()
             .Where(x => x.IsEnabled && x.OrganizationId != Guid.Empty)
+            // A pushed source has nothing to poll; it arrives at the OTLP endpoint on its own.
+            .Where(x => !TelemetrySourceKinds.Pushed.Contains(x.Kind))
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
     }

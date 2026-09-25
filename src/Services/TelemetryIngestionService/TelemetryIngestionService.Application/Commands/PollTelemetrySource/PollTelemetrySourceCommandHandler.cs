@@ -1,58 +1,39 @@
-﻿using BuildingBlocks.SharedKernel;
-using MediatR;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
-using TelemetryIngestionService.Application.Commands.DetectSignals;
+using TelemetryIngestionService.Application.Commands.IngestLogBatch;
 using TelemetryIngestionService.Application.DTOs;
-using TelemetryIngestionService.Domain.Aggregates;
-using TelemetryIngestionService.Domain.Enums;
 using TelemetryIngestionService.Domain.Exceptions;
-using TelemetryIngestionService.Domain.Services;
 
 namespace TelemetryIngestionService.Application.Commands.PollTelemetrySource;
 
-// One poll of one source: fetch since the cursor, drop what we already hold, normalise the rest
-// into log records, and fold the errors into their signatures.
+// One poll of one source: fetch since the cursor, hand the batch to the ingest pipeline, and move
+// the cursor. What receiving an event means is IngestLogBatchCommand's to decide — the pushed
+// path uses the same one.
 public sealed class PollTelemetrySourceCommandHandler
     : IRequestHandler<PollTelemetrySourceCommand, PollResult>
 {
     private const int MaxEventsPerPoll = 200;
 
-    // How far ahead of our own clock a source timestamp may sit before we call it skew rather
-    // than latency.
-    private static readonly TimeSpan ClockSkewTolerance = TimeSpan.FromMinutes(2);
-
     private readonly ITelemetrySourceRepository _sources;
     private readonly ISourceCursorRepository _cursors;
-    private readonly ILogRecordRepository _logRecords;
-    private readonly IErrorSignatureRepository _signatures;
     private readonly ITelemetrySourceConnectorResolver _connectors;
     private readonly ISender _sender;
-    private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<PollTelemetrySourceCommandHandler> _logger;
-    private readonly IOrganizationContext _organization;
 
     public PollTelemetrySourceCommandHandler(
         ITelemetrySourceRepository sources,
         ISourceCursorRepository cursors,
-        ILogRecordRepository logRecords,
-        IErrorSignatureRepository signatures,
         ITelemetrySourceConnectorResolver connectors,
         ISender sender,
-        IRealtimeNotifier realtime,
-        ILogger<PollTelemetrySourceCommandHandler> logger,
-        IOrganizationContext organization
+        ILogger<PollTelemetrySourceCommandHandler> logger
     )
     {
         _sources = sources;
         _cursors = cursors;
-        _logRecords = logRecords;
-        _signatures = signatures;
         _connectors = connectors;
         _sender = sender;
-        _realtime = realtime;
         _logger = logger;
-        _organization = organization;
     }
 
     public async Task<PollResult> Handle(
@@ -87,233 +68,21 @@ public sealed class PollTelemetrySourceCommandHandler
             return PollResult.Failed(ex.Message);
         }
 
-        var stored = await IngestAsync(source, fetch, cancellationToken);
+        var ingested = await _sender.Send(
+            new IngestLogBatchCommand(source.Id, fetch.Events),
+            cancellationToken
+        );
 
         cursor.Advance(fetch.NextPosition, fetch.LastEventTimestamp);
         await _cursors.SaveChangesAsync(cancellationToken);
 
-        // One message for the cycle, carrying counts rather than rows. A poll writes up to two
-        // hundred records, so a row-level push would be around forty messages a second at the
-        // configured floor, fanned to every connected client because the hubs have no groups.
-        // A screen does not need the rows to know its window is out of date.
-        //
-        // Nothing is announced when nothing arrived: the steady state of a healthy system is an
-        // empty poll every few seconds, and a heartbeat nobody can act on is noise.
-        if (stored.Stored > 0)
-        {
-            await _realtime.IngestionCompletedAsync(
-                new IngestionTickDto
-                {
-                    TelemetrySourceId = source.Id,
-                    NewRecords = stored.Stored,
-                    TouchedSignatures = stored.SignaturesTouched,
-                    LatestEventAt = fetch.LastEventTimestamp,
-                    CompletedAt = DateTime.UtcNow,
-                },
-                cancellationToken
-            );
-        }
-
-        return stored;
-    }
-
-    private async Task<PollResult> IngestAsync(
-        TelemetrySource source,
-        ConnectorFetchResult fetch,
-        CancellationToken cancellationToken
-    )
-    {
-        if (fetch.Events.Count == 0)
-            return new PollResult
-            {
-                Fetched = 0,
-                Duplicates = 0,
-                Stored = 0,
-                SignaturesTouched = 0,
-            };
-
-        var fresh = await FilterAlreadyStoredAsync(source, fetch.Events, cancellationToken);
-        var duplicates = fetch.Events.Count - fresh.Count;
-
-        if (fresh.Count == 0)
-        {
-            _logger.LogDebug(
-                "Telemetry source {SourceName}: all {Count} fetched event(s) were already stored.",
-                source.Name,
-                fetch.Events.Count
-            );
-
-            return new PollResult
-            {
-                Fetched = fetch.Events.Count,
-                Duplicates = duplicates,
-                Stored = 0,
-                SignaturesTouched = 0,
-            };
-        }
-
-        var records = new List<LogRecord>(fresh.Count);
-        var occurrences = new Dictionary<string, SignatureOccurrence>();
-
-        foreach (var raw in fresh)
-        {
-            var normalized = LogFingerprint.Normalize(raw.Message, raw.MessageTemplate);
-
-            // Only errors get a fingerprint. Information and Warning records are kept as context
-            // for the evidence window, but they are not what incidents are raised from.
-            var fingerprint = raw.Severity >= LogSeverity.Error
-                ? LogFingerprint.Compute(raw.Service, raw.ExceptionType, normalized)
-                : null;
-
-            records.Add(
-                LogRecord.Create(
-                    _organization.Required,
-                    source.Id,
-                    raw.SourceEventId,
-                    raw.Service,
-                    raw.Severity,
-                    raw.Message,
-                    normalized,
-                    raw.ExceptionType,
-                    raw.StackTrace,
-                    fingerprint,
-                    raw.Timestamp,
-                    ClockSkewTolerance
-                )
-            );
-
-            if (fingerprint is null)
-                continue;
-
-            // Fold the batch first, so one signature seen 200 times costs one read and one write
-            // rather than 200 of each.
-            if (occurrences.TryGetValue(fingerprint, out var existing))
-                occurrences[fingerprint] = existing.Add(raw.Timestamp);
-            else
-                occurrences[fingerprint] = SignatureOccurrence.First(raw, normalized);
-        }
-
-        await _logRecords.AddRangeAsync(records, cancellationToken);
-        await _logRecords.SaveChangesAsync(cancellationToken);
-
-        await ApplyOccurrencesAsync(occurrences, cancellationToken);
-
-        // Storing what happened and deciding what it means are separate jobs, and detection runs
-        // only on the signatures this batch actually touched.
-        if (occurrences.Count > 0)
-            await _sender.Send(new DetectSignalsCommand(occurrences.Keys.ToList()), cancellationToken);
-
-        _logger.LogInformation(
-            "Telemetry source {SourceName}: stored {Stored} of {Fetched} event(s), {Duplicates} already held, {Signatures} signature(s) touched.",
-            source.Name,
-            records.Count,
-            fetch.Events.Count,
-            duplicates,
-            occurrences.Count
-        );
-
         return new PollResult
         {
-            Fetched = fetch.Events.Count,
-            Duplicates = duplicates,
-            Stored = records.Count,
-            SignaturesTouched = occurrences.Count,
+            Fetched = ingested.Received,
+            Duplicates = ingested.Duplicates,
+            Stored = ingested.Stored,
+            Folded = ingested.Folded,
+            SignaturesTouched = ingested.SignaturesTouched,
         };
-    }
-
-    private async Task<IReadOnlyList<RawLogEvent>> FilterAlreadyStoredAsync(
-        TelemetrySource source,
-        IReadOnlyList<RawLogEvent> events,
-        CancellationToken cancellationToken
-    )
-    {
-        var ids = events
-            .Select(x => x.SourceEventId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
-            .Distinct()
-            .ToList();
-
-        if (ids.Count == 0)
-            return events;
-
-        var known = await _logRecords.GetExistingSourceEventIdsAsync(
-            source.Id,
-            ids,
-            cancellationToken
-        );
-
-        // An event without a source id cannot be deduplicated, so it is kept rather than dropped.
-        return events
-            .Where(x => x.SourceEventId is null || !known.Contains(x.SourceEventId))
-            .ToList();
-    }
-
-    private async Task ApplyOccurrencesAsync(
-        Dictionary<string, SignatureOccurrence> occurrences,
-        CancellationToken cancellationToken
-    )
-    {
-        if (occurrences.Count == 0)
-            return;
-
-        var existing = await _signatures.GetByFingerprintsAsync(
-            occurrences.Keys.ToList(),
-            cancellationToken
-        );
-
-        var byFingerprint = existing.ToDictionary(x => x.Fingerprint);
-
-        foreach (var (fingerprint, occurrence) in occurrences)
-        {
-            if (byFingerprint.TryGetValue(fingerprint, out var signature))
-            {
-                signature.RecordOccurrence(occurrence.LastSeenAt, occurrence.Count);
-
-                // The earliest occurrence matters too: a batch can arrive out of order, and
-                // DetectedAt is meant to be when the problem started.
-                signature.RecordOccurrence(occurrence.FirstSeenAt, count: 0);
-
-                continue;
-            }
-
-            var created = ErrorSignature.Create(
-                _organization.Required,
-                fingerprint,
-                occurrence.Service,
-                occurrence.ExceptionType,
-                occurrence.NormalizedMessage,
-                occurrence.FirstSeenAt
-            );
-
-            // Create() already counts the first one.
-            if (occurrence.Count > 1)
-                created.RecordOccurrence(occurrence.LastSeenAt, occurrence.Count - 1);
-
-            await _signatures.AddAsync(created, cancellationToken);
-        }
-
-        await _signatures.SaveChangesAsync(cancellationToken);
-    }
-
-    private readonly record struct SignatureOccurrence(
-        string Service,
-        string? ExceptionType,
-        string NormalizedMessage,
-        DateTime FirstSeenAt,
-        DateTime LastSeenAt,
-        long Count
-    )
-    {
-        public static SignatureOccurrence First(RawLogEvent raw, string normalizedMessage) =>
-            new(raw.Service, raw.ExceptionType, normalizedMessage, raw.Timestamp, raw.Timestamp, 1);
-
-        public SignatureOccurrence Add(DateTime timestamp) =>
-            this with
-            {
-                FirstSeenAt = timestamp < FirstSeenAt ? timestamp : FirstSeenAt,
-                LastSeenAt = timestamp > LastSeenAt ? timestamp : LastSeenAt,
-                Count = Count + 1,
-            };
     }
 }

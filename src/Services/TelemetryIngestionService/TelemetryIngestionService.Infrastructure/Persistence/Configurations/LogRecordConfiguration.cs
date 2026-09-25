@@ -24,6 +24,7 @@ public sealed class LogRecordConfiguration : IEntityTypeConfiguration<LogRecord>
         builder.Property(x => x.ExceptionType).HasMaxLength(512);
         builder.Property(x => x.StackTrace).HasMaxLength(8192);
         builder.Property(x => x.Fingerprint).HasMaxLength(64);
+        builder.Property(x => x.Occurrences).IsRequired();
         builder.Property(x => x.Timestamp).IsRequired();
         builder.Property(x => x.IngestedAt).IsRequired();
         builder.Property(x => x.HasClockSkew).IsRequired();

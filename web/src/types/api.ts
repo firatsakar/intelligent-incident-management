@@ -133,6 +133,8 @@ export interface LogRecord {
   message: string
   exceptionType: string | null
   fingerprint: string | null
+  /** How many events this row stands for: above one when a burst was folded onto it as a sample. */
+  occurrences: number
   /** The source clock. */
   timestamp: string
   /** Our clock. The gap is ingestion lag. */
@@ -155,11 +157,17 @@ export interface EvidenceWindow {
   signals: Signal[]
 }
 
-export type TelemetrySourceKind = 'Seq'
+export type TelemetrySourceKind = 'Seq' | 'Otlp'
 
 /** The runtime twin of the union, so the settings catalogue can be built from it rather than by
-    hand. One member today; the point is that a second one has to pass through here. */
-export const telemetrySourceKinds: TelemetrySourceKind[] = ['Seq']
+    hand. The second member arrived exactly as intended: through here, and then through every
+    Record the compiler made total over it. */
+export const telemetrySourceKinds: TelemetrySourceKind[] = ['Seq', 'Otlp']
+
+/** Kinds that send to us rather than being polled — TelemetrySourceKinds.Pushed on the server. */
+export const pushedSourceKinds: readonly TelemetrySourceKind[] = ['Otlp']
+
+export const isPushed = (kind: TelemetrySourceKind) => pushedSourceKinds.includes(kind)
 
 export interface TelemetrySource {
   id: string
@@ -169,6 +177,10 @@ export interface TelemetrySource {
   /** Credential-looking values read back as "***". Never send that value back. */
   config: Record<string, string>
   pollIntervalSeconds: number
+  /** Pushed sources only: enough of the key to tell which one a collector holds. */
+  ingestKeyPrefix: string | null
+  /** The whole key — present only on the response that issued it, and never again. */
+  ingestKey?: string | null
   createdAt: string
   updatedAt: string | null
 }
@@ -211,6 +223,8 @@ export interface TestResult {
   /** Telemetry sources only: how many events the probe could see. A source that connects but
       matches nothing is a different problem from one that cannot connect. */
   matchedEvents?: number | null
+  /** Pushed telemetry sources, which cannot be probed from here: when data last arrived. */
+  lastReceivedAt?: string | null
 }
 
 /** The value the API substitutes for anything that looks like a credential. */

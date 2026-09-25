@@ -225,6 +225,9 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .HasMaxLength(4096)
                         .HasColumnType("character varying(4096)");
 
+                    b.Property<int>("Occurrences")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("OrganizationId")
                         .HasColumnType("uuid");
 
@@ -393,6 +396,14 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("IngestKeyHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IngestKeyPrefix")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");
 
@@ -421,6 +432,10 @@ namespace TelemetryIngestionService.Infrastructure.Migrations
                         .HasColumnName("config");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IngestKeyHash")
+                        .IsUnique()
+                        .HasFilter("\"IngestKeyHash\" IS NOT NULL");
 
                     b.HasIndex("OrganizationId");
 

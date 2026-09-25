@@ -56,6 +56,13 @@ public sealed class UpdateTelemetrySourceCommandHandler
             );
         }
 
+        if (TelemetrySourceConfigRules.Invalid(source.Kind, config) is { } invalid)
+        {
+            throw new ValidationException(
+                [new ValidationFailure(nameof(UpdateTelemetrySourceCommand.Config), invalid)]
+            );
+        }
+
         source.Update(request.Name, request.PollIntervalSeconds);
         source.UpdateConfig(config);
 

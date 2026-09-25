@@ -14,6 +14,7 @@ import type {
   SignalPage,
   SignalStatus,
   TelemetrySource,
+  TelemetrySourceKind,
   TelemetryStats,
   TestResult,
 } from '@/types/api'
@@ -78,7 +79,8 @@ export interface TelemetrySourceInput {
 export const telemetrySourcesApi = {
   list: () => api.get<TelemetrySource[]>('/api/telemetry-sources'),
 
-  create: (input: TelemetrySourceInput & { kind: 'Seq'; isEnabled: boolean }) =>
+  /** A pushed source's response carries its key, once. */
+  create: (input: TelemetrySourceInput & { kind: TelemetrySourceKind; isEnabled: boolean }) =>
     api.post<TelemetrySource>('/api/telemetry-sources', input),
 
   update: (id: string, input: TelemetrySourceInput) =>
@@ -91,6 +93,10 @@ export const telemetrySourcesApi = {
 
   /** Returns 502 with a body when the customer's source or credentials are wrong. */
   test: (id: string) => api.post<TestResult>(`/api/telemetry-sources/${id}/test`),
+
+  /** Revokes the key in the same write. The response is the only place the new one appears. */
+  rotateKey: (id: string) =>
+    api.post<TelemetrySource>(`/api/telemetry-sources/${id}/rotate-key`),
 }
 
 export const notificationsApi = {

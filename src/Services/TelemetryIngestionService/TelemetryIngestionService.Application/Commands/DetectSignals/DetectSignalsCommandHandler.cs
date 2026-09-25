@@ -286,7 +286,7 @@ public sealed class DetectSignalsCommandHandler : IRequestHandler<DetectSignalsC
     {
         var baselineStart = windowStart - (rule.Window * BaselineWindows);
 
-        var timestamps = await _logRecords.GetTimestampsByFingerprintAsync(
+        var timestamps = await _logRecords.GetOccurrencesByFingerprintAsync(
             signature.Fingerprint,
             baselineStart,
             windowStart,

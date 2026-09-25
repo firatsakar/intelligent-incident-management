@@ -84,9 +84,13 @@ sıfırlama, rol değiştirme, organizasyon oluşturma için **hiçbir uç yok**
 ancak veritabanına elle yazılarak var olabilir. Adım 16'nın kapsam dışı bıraktığı iş; bir
 müşteriye verilmeden önce gerekli.
 
-- Viewer rolünün ekranları bu yüzden **tarayıcıda hiç görülmedi**: Viewer hesabı yok, ve
-  cookie httpOnly olduğu için elle yerleştirilemiyor. Sunucu tarafı ölçüldü (Viewer'ın her
-  yazması 403); arayüzdeki gizleme tek bir fonksiyon ve derleniyor, ama gözle doğrulanmadı.
+- ~~Viewer rolünün ekranları tarayıcıda hiç görülmedi~~ — artık görülebilir: kanarya
+  organizasyonunda parolasız bir test Viewer'ı var (`IIM-121`, `NEXT_SESSION.md`). Kullanıcı
+  yönetimi hâlâ yok.
+- **Karar önerisi (2026-09-25, Fırat'ın "neden register yok" sorusu üzerine):** herkese açık
+  kayıt değil **davetle** kullanıcı ekleme — B2B'de hesabı organizasyonun Admin'i açar; açık
+  kayıt herkesin organizasyon açabilmesi demek ve her incident ücretli bir AI analizi tetikliyor.
+  Yol haritasında Adım 16.5.
 
 ### 🟡 Oturum iptali yalnızca refresh tarafında
 
@@ -165,9 +169,12 @@ test bir index görmüyor. Adım 23'ün (Testcontainers + gerçek Postgres) en s
 Telemetri her poll'da Error/Fatal kayıtları yazıyor ve **hiçbir temizlik yok**. Gerçek bir
 müşteri hacminde tablo kısa sürede yönetilemez hale gelir ve pencere sorguları yavaşlar.
 
-- Yapılacak: retention job (öneri: 7 gün) — `OutboxCleanupService` deseninin aynısı.
-- Ölçek cevabı: zaman-bazlı partition ya da ES'e taşımak. Karar Adım 13.5 notunda:
-  *her satır saklanmaz, imza başına sayım + örnek satırlar saklanır.*
+- **Adım 13.5 büyümenin eğimini kırdı** (`IIM-116`): her batch'te imza başına en fazla 10 örnek
+  satır saklanıyor, gerisi en yenisinin `Occurrences`'ına sayılıyor — canlıda 300 olaylık bir
+  fırtına 10 satır. Tespit, baseline ve huni satır saymak yerine topluyor. Push kaynağı ayrıca
+  en düşük şiddetin altını geldiği anda atıyor.
+- Hâlâ yapılacak: retention job (öneri: 7 gün) — `OutboxCleanupService` deseninin aynısı.
+  Katlama sabit bir hata oranını sınırlamıyor, yalnızca patlamaları sıkıştırıyor.
 
 ### 🟡 Yedekleme ve geri yükleme prosedürü yok
 
@@ -409,10 +416,16 @@ paketi aktif dile göre kuruluyor, tarayıcının diline göre değil.
 
 ## 9. Ürünleştirme öncesi operasyonel notlar
 
-**Telemetri kaynağı bağlama:** `POST /api/telemetry-sources` — `kind: Seq`, `config.Url` zorunlu,
-`ApiKey` kimlik doğrulaması açık kaynaklarda gerekli. `POST {id}/test` ayarları kaydetmeden
-doğrular. Şu an tek connector Seq; Elasticsearch/Loki/Datadog için Adım 13.5'teki OTLP kararına
-bakılmalı — vendor başına connector yazmak yerine tek standart format kabul edilecek.
+**Telemetri kaynağı bağlama:** iki tür.
+- `kind: Seq` (çekilen) — `config.Url` zorunlu, `ApiKey` kimlik doğrulaması açık kaynaklarda
+  gerekli. `POST {id}/test` ayarları kaydetmeden doğrular.
+- `kind: Otlp` (gönderilen, Adım 13.5) — ayarı yok, isteğe bağlı `MinimumSeverity`
+  (Warning|Error). Oluşturma yanıtı **anahtarı bir kez** döndürür; konsol onu adres, başlık
+  adı ve doldurulmuş Collector config'iyle birlikte gösterir. Gönderen `POST {gateway}/otlp/v1/logs`'a
+  OTLP/HTTP (protobuf ya da JSON, gzip) ile, anahtarı `X-IIM-Ingest-Key` başlığında yollar.
+  Kaybolan anahtarın cevabı `POST {id}/rotate-key`. Elasticsearch/Loki/Datadog kullanan müşteri
+  için yol budur: shipper'ı (OTel Collector, Fluent Bit, Vector) IIM'e yönlendirmek.
+  Örnek: `demo/otel-collector/collector.yaml`.
 
 **Bildirim entegrasyonu:** `POST /api/integrations` — email (`Host`, `Port`, `From`, `To`),
 webhook (`Url`, opsiyonel `Header:*`), Jira (`BaseUrl`, `ProjectKey`, `Email`, `ApiToken`).

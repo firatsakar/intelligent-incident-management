@@ -1,6 +1,6 @@
 ﻿import { useCanOperate } from '@/features/auth/AuthProvider'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusIcon, TrashIcon } from 'lucide-react'
+import { KeyRoundIcon, PlusIcon, TrashIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 
@@ -24,9 +24,12 @@ import {
 } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
+import { formatRelative } from '@/lib/format'
 import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import type { TelemetrySource, TelemetrySourceKind } from '@/types/api'
+import { isPushed, type TelemetrySource, type TelemetrySourceKind } from '@/types/api'
+
+import { IngestKeyDialog, otlpEndpoint } from './IngestKeyDialog'
 
 import {
   Notice,
@@ -63,6 +66,8 @@ export function TelemetrySourcesPage() {
     source: TelemetrySource | null
   } | null>(null)
   const [deleting, setDeleting] = useState<TelemetrySource | null>(null)
+  // A source whose key was just issued. Its only appearance: close this and the key is gone.
+  const [issued, setIssued] = useState<TelemetrySource | null>(null)
   const [outcomes, setOutcomes] = useState<Record<string, TestOutcome>>({})
 
   const query = useQuery({ queryKey: ['telemetry-sources'], queryFn: telemetrySourcesApi.list })
@@ -101,17 +106,36 @@ export function TelemetrySourcesPage() {
   }
 
   const test = useMutation({
-    mutationFn: (id: string) => telemetrySourcesApi.test(id),
-    onSuccess: (result, id) =>
-      record(id, {
+    mutationFn: (source: TelemetrySource) => telemetrySourcesApi.test(source.id),
+    onSuccess: (result, source) =>
+      record(source.id, {
         ok: result.isSuccess,
-        detail: result.isSuccess ? describeProbe(t, result.matchedEvents) : (result.error ?? t.probeRejected),
+        detail: isPushed(source.kind)
+          ? t.lastReceived(formatRelative(result.lastReceivedAt))
+          : result.isSuccess
+            ? describeProbe(t, result.matchedEvents)
+            : (result.error ?? t.probeRejected),
         at: new Date().toISOString(),
       }),
     // The 502 body carries the real reason — the customer's instance or its API key, not a bad
-    // request to us — and ApiError has already pulled it out of the problem document.
-    onError: (error: Error, id) =>
-      record(id, { ok: false, detail: error.message, at: new Date().toISOString() }),
+    // request to us — and ApiError has already pulled it out of the problem document. A pushed
+    // source's only failure is that nothing has arrived, said here in the reader's language.
+    onError: (error: Error, source) =>
+      record(source.id, {
+        ok: false,
+        detail: isPushed(source.kind) ? t.nothingReceived : error.message,
+        at: new Date().toISOString(),
+      }),
+  })
+
+  const rotate = useMutation({
+    mutationFn: (id: string) => telemetrySourcesApi.rotateKey(id),
+    onSuccess: (source) => {
+      setIssued(source)
+      void invalidate()
+      toast.success(t.rotated)
+    },
+    onError: (error: Error) => toast.error(error.message),
   })
 
   const sources = query.data ?? []
@@ -159,11 +183,13 @@ export function TelemetrySourcesPage() {
               instances={byKind.get(entry.kind) ?? []}
               loading={query.isPending}
               outcomes={outcomes}
-              testingId={test.isPending ? test.variables : undefined}
+              testingId={test.isPending ? test.variables.id : undefined}
               togglingId={setEnabled.isPending ? setEnabled.variables?.id : undefined}
+              rotatingId={rotate.isPending ? rotate.variables : undefined}
               onConnect={() => setEditing({ kind: entry.kind, source: null })}
               onEdit={(source) => setEditing({ kind: entry.kind, source })}
-              onTest={(source) => test.mutate(source.id)}
+              onTest={(source) => test.mutate(source)}
+              onRotate={(source) => rotate.mutate(source.id)}
               onToggle={(source, isEnabled) => setEnabled.mutate({ id: source.id, isEnabled })}
               onDelete={setDeleting}
               onDismiss={dismiss}
@@ -196,12 +222,16 @@ export function TelemetrySourcesPage() {
           kind={editing.kind}
           source={editing.source}
           onClose={() => setEditing(null)}
-          onSaved={() => {
+          onSaved={(saved) => {
             setEditing(null)
             void invalidate()
+
+            if (saved.ingestKey) setIssued(saved)
           }}
         />
       )}
+
+      {issued && <IngestKeyDialog source={issued} onClose={() => setIssued(null)} />}
 
       {deleting && (
         <DeleteDialog
@@ -257,9 +287,11 @@ function KindTile({
   outcomes,
   testingId,
   togglingId,
+  rotatingId,
   onConnect,
   onEdit,
   onTest,
+  onRotate,
   onToggle,
   onDelete,
   onDismiss,
@@ -270,9 +302,11 @@ function KindTile({
   outcomes: Record<string, TestOutcome>
   testingId: string | undefined
   togglingId: string | undefined
+  rotatingId: string | undefined
   onConnect: () => void
   onEdit: (source: TelemetrySource) => void
   onTest: (source: TelemetrySource) => void
+  onRotate: (source: TelemetrySource) => void
   onToggle: (source: TelemetrySource, isEnabled: boolean) => void
   onDelete: (source: TelemetrySource) => void
   onDismiss: (id: string) => void
@@ -320,8 +354,10 @@ function KindTile({
                 outcome={outcomes[source.id]}
                 testing={testingId === source.id}
                 toggling={togglingId === source.id}
+                rotating={rotatingId === source.id}
                 onEdit={() => onEdit(source)}
                 onTest={() => onTest(source)}
+                onRotate={() => onRotate(source)}
                 onToggle={(isEnabled) => onToggle(source, isEnabled)}
                 onDelete={() => onDelete(source)}
                 onDismiss={() => onDismiss(source.id)}
@@ -352,8 +388,10 @@ function SourceRow({
   outcome,
   testing,
   toggling,
+  rotating,
   onEdit,
   onTest,
+  onRotate,
   onToggle,
   onDelete,
   onDismiss,
@@ -362,8 +400,10 @@ function SourceRow({
   outcome: TestOutcome | undefined
   testing: boolean
   toggling: boolean
+  rotating: boolean
   onEdit: () => void
   onTest: () => void
+  onRotate: () => void
   onToggle: (isEnabled: boolean) => void
   onDelete: () => void
   onDismiss: () => void
@@ -373,6 +413,7 @@ function SourceRow({
   const canOperate = useCanOperate()
   const t = settings.telemetry
 
+  const pushed = isPushed(source.kind)
   const url = source.config.Url
 
   return (
@@ -401,6 +442,12 @@ function SourceRow({
             <Button variant="outline" size="sm" disabled={testing} onClick={onTest}>
               {testing ? settings.shared.testing : settings.shared.test}
             </Button>
+            {pushed && (
+              <Button variant="outline" size="sm" disabled={rotating} onClick={onRotate}>
+                <KeyRoundIcon aria-hidden />
+                {rotating ? t.rotatingKey : t.rotateKey}
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={onEdit}>
               {settings.shared.edit}
             </Button>
@@ -425,18 +472,39 @@ function SourceRow({
         </p>
       )}
 
+      {/* A pushed source's identity is the other way round: where it receives, and which key a
+          sender holds for it. The prefix is all there is to show — the key itself was shown once. */}
+      {pushed && (
+        <p className="text-muted-foreground mt-1 flex flex-wrap gap-x-3 font-mono text-xs">
+          <span className="truncate" title={otlpEndpoint()}>
+            <span className="font-sans">{t.endpointLabel}:</span> {otlpEndpoint()}
+          </span>
+          {source.ingestKeyPrefix && (
+            <span>
+              <span className="font-sans">{t.keyLabel}:</span> {source.ingestKeyPrefix}…
+            </span>
+          )}
+        </p>
+      )}
+
       {/* Paused is a word, not just a switch position — the state has to survive being read by
           someone who cannot see the toggle, and it changes what the schedule line means. */}
       <p className="text-muted-foreground mt-1 text-xs">
         {source.isEnabled ? (
-          describeSchedule(dictionary, source)
+          pushed ? (
+            t.pushedSchedule(source.config.MinimumSeverity?.trim() || 'Error')
+          ) : (
+            describeSchedule(dictionary, source)
+          )
         ) : (
           <>
             <span className="text-foreground font-medium">{settings.shared.paused}</span>{' '}
-            {t.pausedNote(
-              source.pollIntervalSeconds,
-              scheduleTarget(dictionary, source.config.Filter ?? ''),
-            )}
+            {pushed
+              ? t.pushedPausedNote
+              : t.pausedNote(
+                  source.pollIntervalSeconds,
+                  scheduleTarget(dictionary, source.config.Filter ?? ''),
+                )}
           </>
         )}
       </p>
@@ -444,8 +512,8 @@ function SourceRow({
       {outcome && (
         <TestReport
           outcome={outcome}
-          okLabel={t.testOkLabel}
-          failLabel={t.testFailLabel}
+          okLabel={pushed ? t.receivedOkLabel : t.testOkLabel}
+          failLabel={pushed ? t.receivedFailLabel : t.testFailLabel}
           onDismiss={onDismiss}
         />
       )}
@@ -477,7 +545,11 @@ function DeleteDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{settings.shared.deleteTitle(source.name)}</DialogTitle>
-          <DialogDescription>{t.deleteBody(labels.telemetryKind[source.kind])}</DialogDescription>
+          <DialogDescription>
+            {isPushed(source.kind)
+              ? t.deleteBodyPushed(labels.telemetryKind[source.kind])
+              : t.deleteBody(labels.telemetryKind[source.kind])}
+          </DialogDescription>
         </DialogHeader>
 
         <DialogFooter>

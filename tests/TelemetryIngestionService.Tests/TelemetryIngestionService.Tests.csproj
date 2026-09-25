@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\TelemetryIngestionService\TelemetryIngestionService.Application\TelemetryIngestionService.Application.csproj" />
     <ProjectReference Include="..\..\src\Services\TelemetryIngestionService\TelemetryIngestionService.Domain\TelemetryIngestionService.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Services\TelemetryIngestionService\TelemetryIngestionService.Infrastructure\TelemetryIngestionService.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

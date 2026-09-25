@@ -19,6 +19,19 @@ public interface ITelemetrySourceRepository
         CancellationToken cancellationToken = default
     );
 
+    /// <summary>
+    /// The source a pushed batch's key belongs to, whichever organisation that is.
+    /// </summary>
+    /// <remarks>
+    /// Crosses organisations for the same reason polling does, and is named for it: a push arrives
+    /// with a key and nothing else, so the organisation cannot be known until the row is found. The
+    /// endpoint then scopes everything after this from the row it returns.
+    /// </remarks>
+    Task<TelemetrySource?> FindByIngestKeyHashForIngestAsync(
+        string ingestKeyHash,
+        CancellationToken cancellationToken = default
+    );
+
     Task<IReadOnlyList<TelemetrySource>> GetEnabledAsync(
         CancellationToken cancellationToken = default
     );
