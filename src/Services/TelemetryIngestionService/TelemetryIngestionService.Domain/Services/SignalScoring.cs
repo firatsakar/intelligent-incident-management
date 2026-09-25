@@ -12,10 +12,17 @@ public static class SignalScoring
     private const double OverThresholdStep = 0.10;
     private const double OverThresholdCap = 0.30;
     private const double AnomalyBonus = 0.25;
-    private const double PrecedentBonus = 0.15;
     private const double BlastRadiusBonus = 0.10;
     private const double MutedPenalty = -0.40;
-    private const double FalsePositivePenalty = -0.25;
+
+    // The history term's two ends: what an all-real record is worth, and what an all-false one
+    // costs. Asymmetric on purpose — waking somebody for nothing again is the worse mistake.
+    public const double HistoryCeiling = 0.15;
+    public const double HistoryFloor = -0.25;
+
+    // How many verdicts it takes to be believed. With n of them the term carries n/(n+2) of its
+    // value: one verdict a third, ten five-sixths. A single closure is an anecdote, not a record.
+    private const double HistoryPriorWeight = 2.0;
 
     // Above this the rate is unusual enough for its own history to count as corroboration.
     private const double AnomalyZScoreThreshold = 2.0;
@@ -73,24 +80,18 @@ public static class SignalScoring
             breakdown["rateAnomaly"] = AnomalyBonus;
         }
 
-        // This signature has produced a real incident before. This is the term that makes the
-        // system improve with use.
-        if (inputs.ConfirmedRealCount > 0)
+        // What this signature's incidents turned out to be when people closed them. This is the
+        // term that makes the system improve with use.
+        if (History(inputs.ConfirmedRealCount, inputs.FalsePositiveCount) is { } history)
         {
-            confidence += PrecedentBonus;
-            breakdown["precedent"] = PrecedentBonus;
+            confidence += history;
+            breakdown["history"] = history;
         }
 
         if (inputs.DistinctServices >= 2)
         {
             confidence += BlastRadiusBonus;
             breakdown["blastRadius"] = BlastRadiusBonus;
-        }
-
-        if (inputs.FalsePositiveCount > 0)
-        {
-            confidence += FalsePositivePenalty;
-            breakdown["falsePositivePrecedent"] = FalsePositivePenalty;
         }
 
         if (inputs.IsMuted)
@@ -103,6 +104,33 @@ public static class SignalScoring
         breakdown["total"] = confidence;
 
         return new Result(confidence, breakdown);
+    }
+
+    /// <summary>
+    /// The signature's record as one bounded number, or null when it has none.
+    /// </summary>
+    /// <remarks>
+    /// It replaced two independent flags — +0.15 if any incident was ever real, −0.25 if any was
+    /// ever a false alarm — which looked at whether a count was non-zero and nothing else. Nine
+    /// real incidents and one false alarm scored −0.10 under them: a single mistake outweighed
+    /// nine confirmations, for ever. This reads the share instead, and discounts it while there
+    /// are few verdicts; however many accumulate, it stays within
+    /// [<see cref="HistoryFloor"/>, <see cref="HistoryCeiling"/>], so a record corroborates a
+    /// burst and can never stand in for one.
+    /// </remarks>
+    public static double? History(int confirmedReal, int falsePositive)
+    {
+        var verdicts = confirmedReal + falsePositive;
+
+        if (verdicts == 0)
+            return null;
+
+        var realShare = (double)confirmedReal / verdicts;
+        var value = HistoryCeiling * realShare + HistoryFloor * (1 - realShare);
+        var belief = verdicts / (verdicts + HistoryPriorWeight);
+
+        // Four places: the breakdown is shown and quoted to the model, and 0.091666… is noise.
+        return Math.Round(value * belief, 4);
     }
 
     // Severity is only a starting point — the AI analysis that follows sets the real priority.

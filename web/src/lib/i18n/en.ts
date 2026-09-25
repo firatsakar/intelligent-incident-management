@@ -10,15 +10,20 @@ import type { Language } from './locale'
 import { plural } from './translate'
 
 /**
- * The eight scoring terms this build has been taught. Not every key the gate can emit —
- * that set is open and `scoreTerm()` falls back to splitting the camel case — but these
- * eight must have words in every language, so they go through `byKey`.
+ * The scoring terms this build has been taught. Not every key the gate can emit — that set is
+ * open and `scoreTerm()` falls back to splitting the camel case — but these must have words in
+ * every language, so they go through `byKey`.
+ *
+ * `precedent` and `falsePositivePrecedent` are no longer emitted: Adım 24 folded them into
+ * `history`. They stay because signals recorded before then carry them in their breakdown, and an
+ * old record should keep reading as what it was.
  */
 type ScoreTerm =
   | 'fatal'
   | 'burstBase'
   | 'overThreshold'
   | 'rateAnomaly'
+  | 'history'
   | 'precedent'
   | 'blastRadius'
   | 'falsePositivePrecedent'
@@ -510,6 +515,7 @@ export const en = {
       burstBase: 'burst base',
       overThreshold: 'over threshold',
       rateAnomaly: 'rate anomaly',
+      history: 'track record',
       precedent: 'precedent',
       blastRadius: 'blast radius',
       falsePositivePrecedent: 'false-positive history',
@@ -524,6 +530,8 @@ export const en = {
         'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
       rateAnomaly:
         'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
+      history:
+        'What this signature’s past incidents turned out to be when they were closed: the share judged real, discounted while there are few verdicts. Always between −0.25 (every one a false positive) and +0.15 (every one real).',
       precedent: 'This signature has produced a confirmed real incident before.',
       blastRadius: 'Two or more services are raising it, not one.',
       falsePositivePrecedent:

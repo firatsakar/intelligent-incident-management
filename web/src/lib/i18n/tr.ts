@@ -42,6 +42,8 @@
  *   window                pencere
  *   dashboard             genel bakış
  *   event (log)           kayıt / log kaydı — asla "olay"
+ *   false positive        yanlış alarm (olay kapatılırken verilen karar; eski puan dökümlerindeki
+ *                         "yanlış pozitif geçmişi" etiketi kayıtlı veriyi okuduğu için kaldı)
  *
  * Son iki satır çakışma önlemek için. **"olay" `incident`'a harcandı**, o yüzden Seq event'i ya
  * da log event'i asla "olay" olamaz — bu bir kez `seq.serviceProperty` ipucunda oldu ve düzeltildi.
@@ -436,6 +438,7 @@ export const tr: Dictionary = {
       burstBase: 'patlama tabanı',
       overThreshold: 'eşik aşımı',
       rateAnomaly: 'hız anomalisi',
+      history: 'geçmiş',
       precedent: 'emsal',
       blastRadius: 'etki alanı',
       falsePositivePrecedent: 'yanlış pozitif geçmişi',
@@ -450,6 +453,8 @@ export const tr: Dictionary = {
         'Patlamanın kuralın eşiğini ne kadar aştığı — katlanarak sayılıyor ve bir tavanı var: iki katı anlamlı şekilde daha kötü, elli katı değil.',
       rateAnomaly:
         'İmzanın kendi hız geçmişi, bu hacmin onun için olağandışı olduğunu söylüyor. İkinci bir veri kaynağı olmadan elde edilebilecek en güçlü destek.',
+      history:
+        'Bu imzanın önceki olayları kapatılırken ne çıktığı: gerçek bulunanların oranı, az karar varken indirimli. Her zaman −0,25 (hepsi yanlış alarm) ile +0,15 (hepsi gerçek) arasında.',
       precedent: 'Bu imza daha önce gerçek olduğu doğrulanmış bir olay üretti.',
       blastRadius: 'Bunu bir servis değil, iki ya da daha fazlası bildiriyor.',
       falsePositivePrecedent:
