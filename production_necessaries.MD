@@ -34,7 +34,10 @@ düz metin duruyor ve bu dosyalar repoda. Geliştirme için kabul edilebilir, ü
 ### 🔴 Müşteri credential'ları veritabanında düz metin
 
 `Integration.config` ve `TelemetrySource.config` (jsonb) müşterinin SMTP parolasını, Jira API
-token'ını ve log sistemi anahtarını olduğu gibi saklıyor.
+token'ını ve log sistemi anahtarını olduğu gibi saklıyor. Adım 17.5'ten beri bunlara
+**`github_connections.Token`** da eklendi: müşterinin koduna salt-okunur erişim veren token.
+Bu token API yanıtlarında hiç yer almıyor, `hasToken` dışında maskeli hâli bile dönmüyor; ama
+veritabanında düz metin.
 
 - Okuma yanıtlarında maskeleme **var** (`IntegrationDto`, `TelemetrySourceDto`), ama bu yalnızca
   API'yi korur; veritabanını, yedeği ve logu korumaz.
@@ -302,8 +305,37 @@ eksikliği yüzünden deterministik olarak düşen bir satır **519. denemedeydi
 `IncidentAnalyzedEvent`'i 43 dakikadır 5 saniyede bir yeniden yayınlıyordu. Kök neden kapandı
 (`IIM-112`), sınırsızlık kapanmadı: bir sonraki deterministik hata aynı döngüyü kurar.
 
+**Adım 17.5'te ikinci kez yaşandı (2026-09-25).** Şüpheli değişikliği olan ilk analiz
+kaydedilebildi ama geri okunamadı: sabit boyutlu bir dizi varsayılanı, EF'in JSON koleksiyonunu
+doldurmasını engelledi. Outbox handler'ı okumadan önce yayınladığı için satır ~20 kez yeniden
+denendi ve olay her 5 saniyede yeniden yayınlandı. Kök neden `IIM-141` ile kapandı. Tüketiciler
+idempotent olduğu için yalnız bir teslimat oluştu. Tavan hâlâ yok.
+
 - Yapılacak: `RetryCount` için bir tavan (örn. 10) ve tavanı aşan satırı `GetPendingAsync`
   dışına alıp görünür kılmak (DLQ derinliği gibi alarm) — sessizce bırakmak değil.
+
+### 🟡 AI analizi dış sisteme bağımlı: GitHub MCP (Adım 17.5)
+
+Analiz, organizasyonun eşlediği servislerde GitHub'ın barındırdığı MCP sunucusunu
+(`api.githubcopilot.com/mcp/x/repos/readonly`) çağırıyor.
+
+- **Kullanılabilirlik:** GitHub ulaşılamazsa analiz GitHub'sız tamamlanıyor. Bu canlıda
+  doğrulandı: oturum açılamayınca uyarı log'u yazılıyor, sonuç yine geliyor. Her çağrının 15 sn
+  zaman aşımı var.
+- **Rate limit:** analiz başına en fazla 2 liste ve 5 inceleme çağrısı yapılıyor, hepsi
+  organizasyonun kendi token'ıyla. Yüksek hacimde token'ın GitHub kotası tükenebilir, bu durum
+  izlenmiyor.
+- **Prompt injection:** commit mesajları ve diff'ler dışarıdan gelen içerik. Bu yüzden:
+  talimatlar bu içeriği veri sayıyor; model yalnız sha seçebiliyor ve yalnız bu analizde görülen
+  sha'lar kabul ediliyor; URL'leri platform kuruyor; IncidentService ve konsol yalnız
+  `https://github.com` linklerini tutuyor. Yine de bir commit mesajı modelin *gerekçesini*
+  etkileyebilir. Bu kalan bir risk: gerekçe tavsiye niteliğinde, hiçbir şey otomatik
+  yapılmıyor.
+- **Salt-okunurluk:** sunucunun read-only modu canlıda doğrulandı; katalogda yazan hiçbir araç
+  yok. Buna ek olarak istemci yalnız `list_commits` ve `get_commit` çağırıyor. `X-MCP-Tools`
+  başlığı bu yolda kataloğu daraltmadı; hiçbir şey ona dayanmıyor.
+- **Sürüm:** `ModelContextProtocol.Core` 2.2.0. GitHub tarafında araç şekli değişirse keşif
+  log'u bunu gösterir: katalog süreç başına bir kez log'lanıyor ve ayrıştırıcı savunmacı.
 
 ### 🟡 Dead-letter kuyruklarını kimse izlemiyor
 
