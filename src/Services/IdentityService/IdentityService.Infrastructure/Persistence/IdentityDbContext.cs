@@ -15,6 +15,10 @@ public sealed class IdentityDbContext : DbContext
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+
+    public DbSet<PasswordReset> PasswordResets => Set<PasswordReset>();
+
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

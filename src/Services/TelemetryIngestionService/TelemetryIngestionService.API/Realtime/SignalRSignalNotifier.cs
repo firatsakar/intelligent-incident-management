@@ -36,10 +36,10 @@ public sealed class SignalRSignalNotifier : IRealtimeNotifier
     public Task SourceChangedAsync(
         TelemetrySourceDto source,
         CancellationToken cancellationToken = default
-    ) => SendAsync("sourceChanged", source, source.Id, cancellationToken);
+    ) => SendAsync("sourceChanged", source, source.Id, cancellationToken, adminsOnly: true);
 
     public Task SourceDeletedAsync(Guid sourceId, CancellationToken cancellationToken = default) =>
-        SendAsync("sourceDeleted", sourceId, sourceId, cancellationToken);
+        SendAsync("sourceDeleted", sourceId, sourceId, cancellationToken, adminsOnly: true);
 
     public Task IngestionCompletedAsync(
         IngestionTickDto tick,
@@ -56,12 +56,13 @@ public sealed class SignalRSignalNotifier : IRealtimeNotifier
         string message,
         object payload,
         Guid id,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        bool adminsOnly = false
     )
     {
         try
         {
-            await Audience().SendAsync(message, payload, cancellationToken);
+            await Audience(adminsOnly).SendAsync(message, payload, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -79,7 +80,9 @@ public sealed class SignalRSignalNotifier : IRealtimeNotifier
     // at all — never Clients.All, which is what every one of these used to be and is exactly the
     // leak this exists to close. The send then goes nowhere, and the caller swallows failures
     // anyway because a broadcast is the least important thing a command does.
-    private IClientProxy Audience()
+    //
+    // Configuration changes go to the organisation's Admins only: only they may read it at all.
+    private IClientProxy Audience(bool adminsOnly = false)
     {
         var organizationId = _organization.OrganizationId;
 
@@ -90,7 +93,11 @@ public sealed class SignalRSignalNotifier : IRealtimeNotifier
             return NoAudience.Instance;
         }
 
-        return _hub.Clients.Group(OrganizationGroups.For(organizationId.Value));
+        return _hub.Clients.Group(
+            adminsOnly
+                ? OrganizationGroups.AdminsOf(organizationId.Value)
+                : OrganizationGroups.For(organizationId.Value)
+        );
     }
 
     /// <summary>A proxy that sends to nobody, for the case where there is nobody it may send to.</summary>

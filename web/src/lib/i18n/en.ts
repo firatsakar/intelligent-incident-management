@@ -33,6 +33,7 @@ import type {
   SignalKind,
   SignalStatus,
   TelemetrySourceKind,
+  UserRole,
 } from '@/types/api'
 
 /**
@@ -75,6 +76,13 @@ export const en = {
     close: 'Close',
     // One wording for one action: the account menu and the profile card both read this.
     signOut: 'Sign out',
+    copy: 'Copy',
+    copied: 'Copied',
+    // Three ways a request can fail that say nothing about what was typed, each with its own next
+    // step. Shared by every form that talks to the account endpoints.
+    unreachable: 'Could not reach the server. Check your connection and try again.',
+    tooMany: 'Too many attempts. Wait a minute and try again.',
+    serverError: 'The server is not answering right now. Try again in a moment.',
   },
 
 
@@ -105,9 +113,6 @@ export const en = {
 
   account: {
     menu: (name: string) => `Account — ${name}`,
-    unverifiedTitle: 'Unverified session',
-    unverified:
-      'Nothing checked who you are. This name labels the session; the services behind the console answer anyone who can reach them.',
   },
 
   realtime: {
@@ -134,6 +139,7 @@ export const en = {
     sections: 'Settings sections',
     pages: {
       profile: 'Profile',
+      members: 'Members',
       telemetry: 'Telemetry',
       integrations: 'Integrations',
     },
@@ -183,6 +189,58 @@ export const en = {
     serverError: 'Sign-in is not answering right now. Try again in a moment.',
     submit: 'Enter the console',
     submitting: 'Signing in…',
+    forgot: 'Forgot your password? An Admin of your organisation can send you a link to set a new one.',
+  },
+
+  // ---- the account's own screens (Adım 16.5) ---------------------------------------------
+
+  /** The rule is the server's (`PasswordRules`); these say it before and after it is broken. */
+  passwordRules: {
+    hint: 'At least 12 characters. A few unrelated words are easier to remember and harder to guess than one clever word.',
+    tooShort: 'Use at least 12 characters.',
+    tooLong: 'Too long — only the first 72 bytes would count. Use fewer characters.',
+    mismatch: 'The two passwords are not the same.',
+  },
+
+  /** What the invitation and reset pages share. */
+  oneTimeLink: {
+    checking: 'Checking the link',
+    deadTitle: 'This link does not work',
+    // An unknown, expired, replaced and used link are one answer from the server, on purpose, so
+    // this is one sentence that covers all four and says what to do about any of them.
+    dead: 'It may have expired, been replaced by a newer one, or already been used. Ask an Admin of your organisation for a new one.',
+    toSignIn: 'Go to sign in',
+    unavailableTitle: 'The link could not be checked',
+    retry: 'Try again',
+  },
+
+  invite: {
+    title: (organization: string) => `Join ${organization}`,
+    subtitle: 'Choose the name your team will see, and a password.',
+    email: 'Email',
+    role: 'Role',
+    name: 'Your name',
+    nameHint: 'How the rest of your organisation will see you.',
+    nameRequired: 'Enter your name.',
+    password: 'Password',
+    repeat: 'Repeat the password',
+    signedInAs: (name: string) =>
+      `This browser is signed in as ${name}. Creating the account signs you in as the new one instead.`,
+    expires: (when: string) => `This invitation works once, until ${when}.`,
+    submit: 'Create account',
+    submitting: 'Creating account…',
+  },
+
+  reset: {
+    title: 'Choose a new password',
+    subtitle: (name: string, email: string) => `${name} · ${email}`,
+    password: 'New password',
+    repeat: 'Repeat the new password',
+    sessions:
+      'Every session of this account is signed out, and this browser is signed in with the new password.',
+    expires: (when: string) => `This link works once, until ${when}.`,
+    submit: 'Set password',
+    submitting: 'Setting password…',
   },
 
   language: {
@@ -222,11 +280,23 @@ export const en = {
     title: 'Profile',
     identity: {
       title: 'Identity',
-      notAnAccountTitle: 'This is not an account',
-      notAnAccount:
-        'The name above is stored in this browser and nothing verified it. There is no password, no profile on any server, and no permission attached to it — the services behind this console answer anyone who can reach them, whatever name a session carries. To run under a different one, sign out and enter it.',
       ownership:
-        'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. This build has one.',
+        'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. Its Admins decide who is a member and what each member may do.',
+    },
+
+    password: {
+      title: 'Password',
+      description:
+        'Changing it signs out every other session of this account. This one stays signed in.',
+      current: 'Current password',
+      currentRequired: 'Enter your current password.',
+      wrongCurrent: 'That is not your current password.',
+      next: 'New password',
+      repeat: 'Repeat the new password',
+      same: 'Choose a password different from the current one.',
+      submit: 'Change password',
+      submitting: 'Changing…',
+      changed: 'Password changed. Other sessions were signed out.',
     },
   },
 
@@ -1163,8 +1233,6 @@ export const en = {
           'Filters to errors before sending. Filtering belongs at the source; this source also drops anything below its minimum severity on arrival.',
         sdkLabel: 'Straight from an SDK',
         sdkHint: 'Environment variables every OpenTelemetry SDK reads, no collector in between.',
-        copy: 'Copy',
-        copied: 'Copied',
         done: 'Done',
       },
 
@@ -1176,6 +1244,74 @@ export const en = {
       pausedNote: (seconds: number, what: string) =>
         `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
     },
+
+    members: {
+      title: 'Members',
+      description:
+        'Who can sign in to this organisation, and what each of them may do. Accounts are opened by invitation only.',
+      invite: 'Invite',
+      loadError: 'Could not load members',
+      you: 'You',
+      deactivatedBadge: 'Deactivated',
+      roleOf: (name: string) => `Role of ${name}`,
+      actionsFor: (name: string) => `Actions for ${name}`,
+      issueReset: 'Send a password reset link',
+      deactivate: 'Deactivate',
+      activate: 'Activate',
+      // Why a control on the row is inert, said on the row. The server refuses both anyway.
+      selfHint: 'Another Admin changes your role and account. Your password is on your Profile.',
+      lastAdminHint:
+        'The last active Admin. Make someone else an Admin before changing this account.',
+      roleChanged: (name: string, role: string) => `${name} is now ${role}.`,
+      activated: (name: string) => `${name} can sign in again.`,
+      deactivated: (name: string) => `${name} can no longer sign in.`,
+
+      deactivateDialog: {
+        title: (name: string) => `Deactivate ${name}?`,
+        // The fifteen minutes is the access token's lifetime: it cannot be withdrawn, only left to
+        // expire, and saying so is kinder than a promise the platform does not keep.
+        body: 'They can no longer sign in, and their sessions end — a page they already have open stops working within fifteen minutes. What they did stays on the record. You can activate the account again later.',
+        cancel: 'Cancel',
+        confirm: 'Deactivate',
+      },
+
+      pending: {
+        title: 'Pending invitations',
+        description:
+          'Each link works once and expires on its own. Inviting the same address again replaces the earlier link.',
+        empty: 'No invitations are waiting.',
+        expires: (when: string) => `expires ${when}`,
+        revoke: 'Revoke',
+        revokeAria: (email: string) => `Revoke the invitation to ${email}`,
+        revoked: (email: string) => `The invitation to ${email} no longer works.`,
+      },
+
+      inviteDialog: {
+        title: 'Invite a member',
+        description:
+          'They receive an email with a link to choose their name and password. The account belongs to this organisation.',
+        email: 'Email address',
+        emailRequired: 'Enter an email address.',
+        emailInvalid: 'That does not look like an email address.',
+        hasAccount: 'This address already has an account, so it cannot be invited.',
+        role: 'Role',
+        cancel: 'Cancel',
+        submit: 'Send invitation',
+        submitting: 'Sending…',
+      },
+
+      link: {
+        invitationTitle: (email: string) => `Invitation for ${email}`,
+        resetTitle: (name: string) => `Password reset for ${name}`,
+        once: 'This link is shown once. Only its hash is stored, so it cannot be shown again — if it is lost, issue a new one.',
+        label: 'Link',
+        expires: (when: string) => `Works once, until ${when}.`,
+        emailed: (email: string) => `Also emailed to ${email}.`,
+        notEmailed: (email: string) =>
+          `The email to ${email} could not be sent. The link works — pass it on yourself.`,
+        done: 'Done',
+      },
+    },
   },
 
   // ---- the enum vocabulary ---------------------------------------------------------------
@@ -1183,6 +1319,20 @@ export const en = {
   // Display only. The wire value never changes: a filter still sends `InProgress`, and the badge
   // beside it still reads "In progress". One source, so a badge and a filter cannot drift apart.
   labels: {
+    role: byKey<UserRole>({
+      Admin: 'Admin',
+      Engineer: 'Engineer',
+      Viewer: 'Viewer',
+    }),
+
+    // What the role allows, in the words the server enforces it: Administer is Admin only, Operate
+    // is Admin and Engineer, and everything else reads.
+    roleDetail: byKey<UserRole>({
+      Admin: 'Everything, including the organisation’s members, integrations and telemetry sources.',
+      Engineer: 'Works incidents — status and assignment. Does not see the organisation’s settings.',
+      Viewer: 'Reads incidents, signals, evidence and dashboards, and changes nothing.',
+    }),
+
     incidentStatus: byKey<IncidentStatus>({
       Open: 'Open',
       InProgress: 'In progress',

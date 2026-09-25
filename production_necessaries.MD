@@ -77,20 +77,71 @@ Parola soruluyor, IdentityService'te BCrypt ile doğrulanıyor, oturum iki httpO
 SameSite=Strict cookie'de taşınıyor (15 dk access, 14 gün rotasyonlu refresh). `session.ts`
 başındaki "NOTHING IN THIS FILE IS SECURITY" uyarısı, anlattığı şeyle birlikte kaldırıldı.
 
-### 🔴 Kullanıcı yönetimi yok
+### ✅ Organizasyon izolasyonu — envanter ve tekrar koşturulabilir prob (Adım 16.5, `IIM-124`)
 
-Bir organizasyon, seed ile gelen tek bir Admin ile başlıyor. Kullanıcı ekleme, davet, parola
-sıfırlama, rol değiştirme, organizasyon oluşturma için **hiçbir uç yok** — ikinci bir kullanıcı
-ancak veritabanına elle yazılarak var olabilir. Adım 16'nın kapsam dışı bıraktığı iş; bir
-müşteriye verilmeden önce gerekli.
+Fırat'ın kuralı: bütün veri ve bütün ayarlar organizasyon bazlı; bir organizasyonun hiçbir şeyi
+başkasına ulaşmaz. Bu bir kez ölçülüp geçilecek bir şey değil — her değişiklikten sonra yeniden
+sorulacak bir soru. Cevabı iki parça:
 
-- ~~Viewer rolünün ekranları tarayıcıda hiç görülmedi~~ — artık görülebilir: kanarya
-  organizasyonunda parolasız bir test Viewer'ı var (`IIM-121`, `NEXT_SESSION.md`). Kullanıcı
-  yönetimi hâlâ yok.
-- **Karar önerisi (2026-09-25, Fırat'ın "neden register yok" sorusu üzerine):** herkese açık
-  kayıt değil **davetle** kullanıcı ekleme — B2B'de hesabı organizasyonun Admin'i açar; açık
-  kayıt herkesin organizasyon açabilmesi demek ve her incident ücretli bir AI analizi tetikliyor.
-  Yol haritasında Adım 16.5.
+**Envanter** — organizasyon nereden geliyor, nerede süzülüyor:
+
+| Yer | Organizasyon nereden | Nerede süzülüyor |
+|---|---|---|
+| `incidents` | kapsamı açan (HTTP claim / bus) | `HasQueryFilter` |
+| `integrations`, `notification_deliveries` | aynı | `HasQueryFilter` (ikisi de) |
+| `analyses` (Agent) | bus | `HasQueryFilter` |
+| `telemetry_sources`, `source_cursors`, `log_records`, `error_signatures`, `signals`, `detection_rules` | poller: kaynağın satırı; OTLP: ingest anahtarının satırı; HTTP: claim | `HasQueryFilter` (altısı da) |
+| `outbox_messages` (Agent, Identity, Telemetry) | satır yazıldığı transaction'da damgalanıyor | filtresiz, bilerek: dispatcher her mesajı **satırdaki organizasyonla kendi scope'unda** işliyor (`IIM-112`'den beri) |
+| IdentityService: `users`, `refresh_tokens`, `organizations` | — | **filtresiz, bilerek**: giriş e-postayla, organizasyon bilinmeden yapılıyor. Oturum `sub` ve refresh hash'iyle bulunuyor; üye yönetimi uçları (Adım 16.5) organizasyonu **açıkça** karşılaştırıyor |
+| Elasticsearch `incident-analyses` | belge `organizationId` taşıyor | aramada filtre bağlamında `Term organizationId`; model hangi geçmişi aradığını seçemiyor (closure) |
+| Soketler | bağlantının token'ı | `org:{id}` grubu; organizasyon yapılandırması yalnız `org:{id}:admins`'e (`IIM-123`). `Clients.All` yok |
+| Arayüz dili | — | kişisel tercih, tarayıcıda; organizasyonla ilgisi yok. **AI dili (Adım 20.6)** ise bir org ayarı olacak ve yalnız Admin değiştirecek |
+
+Filtreyi aşan her okuma adlandırılmış bir metot ve sayısı dört:
+`GetAllCompletedForReindexAsync` (yalnız `/internal` reindex), `GetEnabledForPollingAsync`,
+`GetForPollingAsync` (poller), `FindByIngestKeyHashForIngestAsync` (OTLP). Beşincisi Adım 16.5'te
+gelecek: davet kabulü (`FindByTokenHashForAcceptAsync`).
+
+**Prob** — `node tools/dev/org-isolation-probe.mjs` (yalnız dev; imza anahtarını user secrets'tan
+okur, yazdırmaz). Gateway'e iki organizasyon olarak konuşur: kanarya (gerçek Admin, Engineer ve
+Viewer test kullanıcıları) ve Acme (yalnız okunur). Kontrolleri:
+
+- her liste yalnızca kendi organizasyonunun satırlarını döndürüyor;
+- öbürünün id'leri okumada ve yazmada **404** (403 değil);
+- yapılandırma Engineer ve Viewer'a 403 (GET dahil), Admin'e 200;
+- soketler yalnızca kendi organizasyonlarını duyuyor ve Admin olmayan soket yapılandırma
+  yayınlarını duymuyor.
+
+Yazma denemeleri tek yönlü: Acme'nin token'ıyla kanaryanın satırlarına. İzolasyon bozuk çıksa
+değişen tek şey kanaryanın test verisi olur. İki taraf da boş olan bir liste "karşılaştırılmadı"
+diye yazılır, geçmiş sayılmaz. **İlk koşu (2026-09-25): 55/55.** Karşılaştırılan satırlar:
+olaylar 100/100, sinyaller 2/86, log kayıtları 23/200, imzalar 2/64, kaynaklar 1/1,
+entegrasyonlar 1/3.
+
+### ✅ ~~Kullanıcı yönetimi yok~~ — **kapandı** (Adım 16.5, `IIM-122`)
+
+Herkese açık kayıt değil, **davet** (Fırat, 2026-09-25): B2B'de hesabı organizasyonun Admin'i
+açar; açık kayıt herkesin organizasyon açabilmesi demek ve her incident ücretli bir AI analizi
+tetikliyor. Admin, Ayarlar → Üyeler'den davet eder (e-posta + Admin'e bir kez gösterilen bağlantı,
+7 gün), rol değiştirir, hesabı kapatır ya da açar ve parola sıfırlama bağlantısı üretir (24 saat).
+Kişi kendi parolasını Profil'den, mevcut parolasıyla değiştirir. Bağlantılar 256 bit ve tek
+kullanımlık; yalnızca SHA-256'ları saklanıyor. Geçersiz, süresi dolmuş, kullanılmış ve geri
+çekilmiş bağlantı **tek ve aynı** 404'ü alıyor. Kimse kendi hesabına dokunamıyor ve **son aktif
+Admin** düşürülemiyor. Organizasyona ait her ayar (üyeler, entegrasyonlar, telemetri kaynakları)
+yalnız Admin'e açık, GET dahil. Kalanlar:
+
+- 🟡 **Kendi kendine parola sıfırlama yok** ("parolamı unuttum"). Bağlantıyı bir Admin üretiyor.
+  Tek Admin'li bir organizasyonda Admin parolasını unutursa, platform operatörünün veritabanına
+  dokunması gerekir.
+- 🟡 **Organizasyon oluşturma yok.** Yeni müşteri ve ilk Admin'i hâlâ seed ile ya da elle
+  açılıyor. Bir platform-operatörü kimliği ya da bir kurulum komutu gerekiyor.
+- 🟡 **Platform e-postası tek bir SMTP** (`Mail:*`; dev'de Mailpit). Gönderim başarısız olursa
+  davet yine oluşur ve Admin'e `emailSent: false` gösterilir; başka kimse haberdar olmaz. Üretimde
+  SPF/DKIM'li bir gönderici gerekir, ve **`Console:BaseUrl` konsolun gerçek adresi olmalı** —
+  yanlışsa e-postadaki bağlantılar `localhost`'u gösterir.
+- 🟡 **Kim kimi davet etti, kim sıfırladı** satırlarda duruyor (`InvitedByUserId`,
+  `IssuedByUserId`), ama görüntüleyen bir denetim ekranı yok (Adım 14).
+- SSO / SCIM / MFA → aşağıdaki "Kimlik doğrulama yalnızca yerel parola".
 
 ### 🟡 Oturum iptali yalnızca refresh tarafında
 
@@ -126,10 +177,12 @@ CORS eklenmedi ve eklenmeyecek: gateway tek origin sağlıyor, tarayıcı yalnı
 konuşuyor. `dist/` artık gateway tarafından servis edilebiliyor (`Spa:Root`) ve uygulama Vite
 olmadan çalışıyor — Adım 15'te ölçüldü.
 
-### 🟡 Rate limiting yalnızca girişte
+### 🟡 Rate limiting yalnızca kimlik uçlarında
 
 Gateway `/api/auth/login`'i adres başına dakikada 10 denemeyle sınırlıyor (429 +
-`Retry-After`). Diğer uçlar sınırsız: `POST /api/incidents` bir AI analizi ve bildirim zinciri
+`Retry-After`). Adım 16.5'ten beri parola belirlenen ya da sınanan her uç — davet önizleme/kabul,
+sıfırlama önizleme/tamamlama, `POST /api/auth/password` — **aynı** sınırlayıcıda (paylaşılan
+kova: dakikada toplam 10). Diğer uçlar sınırsız: `POST /api/incidents` bir AI analizi ve bildirim zinciri
 tetikliyor, entegrasyon test uçları dışarıya istek atıyor. Kimliksiz erişim kapandığı için risk
 artık yalnızca kötü niyetli bir *üye*den geliyor, ama sıfır değil.
 

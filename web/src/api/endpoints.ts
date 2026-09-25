@@ -6,10 +6,16 @@ import type {
   IncidentStats,
   IncidentStatus,
   Integration,
+  Invitation,
+  InvitationIssued,
+  InvitationPreview,
+  IssuedLink,
+  Member,
   NotificationChannelType,
   NotificationDelivery,
   NotificationStats,
   PagedResult,
+  PasswordResetPreview,
   SessionAccount,
   SignalPage,
   SignalStatus,
@@ -17,6 +23,7 @@ import type {
   TelemetrySourceKind,
   TelemetryStats,
   TestResult,
+  UserRole,
 } from '@/types/api'
 
 // One function per endpoint, grouped by the service that owns it. Features call these rather
@@ -148,4 +155,55 @@ export const authApi = {
    * a role change or a deactivation visible before the token would have expired.
    */
   me: () => api.get<SessionAccount>('/api/auth/me'),
+
+  // The two one-time links. Anonymous: whose organisation it is comes from the link's own row,
+  // and an invalid, expired or used link all answer the same 404.
+  invitation: (token: string) =>
+    api.get<InvitationPreview>(`/api/auth/invitations/${encodeURIComponent(token)}`),
+
+  /** Creates the account and signs it in — the cookies arrive with the answer. */
+  acceptInvitation: (token: string, displayName: string, password: string) =>
+    api.post<SessionAccount>(`/api/auth/invitations/${encodeURIComponent(token)}/accept`, {
+      displayName,
+      password,
+    }),
+
+  passwordReset: (token: string) =>
+    api.get<PasswordResetPreview>(`/api/auth/password-resets/${encodeURIComponent(token)}`),
+
+  /** Sets the password, ends every other session of the account, and signs this one in. */
+  completePasswordReset: (token: string, password: string) =>
+    api.post<SessionAccount>(`/api/auth/password-resets/${encodeURIComponent(token)}/complete`, {
+      password,
+    }),
+
+  /** One's own password. Other sessions end; this one is renewed. */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api.post<SessionAccount>('/api/auth/password', { currentPassword, newPassword }),
+}
+
+/**
+ * The organisation's people. Admin only, reads included — everyone else is answered 403, and a
+ * member or invitation of another organisation 404.
+ */
+export const organizationApi = {
+  members: () => api.get<Member[]>('/api/organization/members'),
+
+  changeRole: (id: string, role: UserRole) =>
+    api.patch<Member>(`/api/organization/members/${id}/role`, { role }),
+
+  deactivate: (id: string) => api.post<Member>(`/api/organization/members/${id}/deactivate`),
+
+  activate: (id: string) => api.post<Member>(`/api/organization/members/${id}/activate`),
+
+  /** The link is in this answer and in the email, and nowhere else. */
+  issuePasswordReset: (id: string) =>
+    api.post<IssuedLink>(`/api/organization/members/${id}/password-reset`),
+
+  invitations: () => api.get<Invitation[]>('/api/organization/invitations'),
+
+  invite: (email: string, role: UserRole) =>
+    api.post<InvitationIssued>('/api/organization/invitations', { email, role }),
+
+  revokeInvitation: (id: string) => api.post<void>(`/api/organization/invitations/${id}/revoke`),
 }

@@ -17,10 +17,9 @@
  */
 
 import { authApi } from '@/api/endpoints'
-import type { SessionAccount } from '@/types/api'
+import type { SessionAccount, UserRole } from '@/types/api'
 
-/** The three the platform has. The wire values are the enum names, never translated. */
-export type UserRole = 'Admin' | 'Engineer' | 'Viewer'
+export type { UserRole } from '@/types/api'
 
 export interface SessionUser {
   id: string
@@ -88,6 +87,15 @@ export function canOperate(role: UserRole): boolean {
   return role === 'Admin' || role === 'Engineer'
 }
 
+/**
+ * Whether this person may see and change what belongs to the organisation itself — integrations,
+ * telemetry sources, members. Admins only, reads included; the server answers everyone else 403
+ * on those endpoints, GET included, so this decides which settings pages exist for them at all.
+ */
+export function isAdmin(role: UserRole): boolean {
+  return role === 'Admin'
+}
+
 /** Two letters at most: a three-part name inside a 24px circle is a smudge, not an identity. */
 export function initialsFor(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
@@ -130,6 +138,18 @@ export async function startSession(email: string, password: string): Promise<Ses
   writeStorage(SIGNAL_KEY, Date.now().toString())
 
   return session
+}
+
+/**
+ * A session the server opened some other way than the sign-in form — accepting an invitation,
+ * completing a password reset. The cookies are already set by the answer; this records the address
+ * and tells the other tabs, exactly as signing in does.
+ */
+export function adoptSession(account: SessionAccount): Session {
+  writeStorage(EMAIL_KEY, account.email)
+  writeStorage(SIGNAL_KEY, Date.now().toString())
+
+  return toSession(account)
 }
 
 /**

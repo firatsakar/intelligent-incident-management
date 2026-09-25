@@ -1,4 +1,4 @@
-﻿import { LogOutIcon, ShieldAlertIcon } from 'lucide-react'
+﻿import { LogOutIcon } from 'lucide-react'
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -13,20 +13,19 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { useT } from '@/lib/i18n'
 
 /**
- * Identity in the chrome, and the one honest qualifier on it.
+ * Identity in the chrome.
  *
  * The avatar is the single place in the shell that answers "signed in as whom", so it takes the
  * accent — which in this system means interaction and identity and never means status. At 24px in
  * the corner it states the fact without competing with a screen full of data.
  *
- * The unverified line stays permanently in the menu rather than becoming a banner over every
- * screen. The operator needs to be able to find out what this session is worth; they do not need
- * to be told, all day, on a console they cannot do anything about it from. The login screen is
- * where it is said loudly, once, at the moment it is acted on.
+ * The menu used to carry a line saying nothing had verified the session. Something does now, so
+ * that line became the role: the one fact about the session that decides what the console lets
+ * the reader do.
  */
 export function UserMenu() {
   const { user, organization, signOut } = useAuth()
-  const { account, common } = useT()
+  const { account, common, labels } = useT()
 
   if (!user) return null
 
@@ -52,24 +51,12 @@ export function UserMenu() {
 
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{user.name}</p>
-            {organization && (
-              <p className="text-muted-foreground truncate text-xs">
-                {organization.name}
-              </p>
-            )}
+            <p className="text-muted-foreground truncate text-xs">
+              {organization
+                ? `${organization.name} · ${labels.role[user.role]}`
+                : labels.role[user.role]}
+            </p>
           </div>
-        </div>
-
-        <DropdownMenuSeparator />
-
-        <div className="px-1.5 py-1">
-          <p className="text-caution-foreground flex items-center gap-1.5 text-xs font-medium">
-            <ShieldAlertIcon className="size-3.5 shrink-0" aria-hidden />
-            {account.unverifiedTitle}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-            {account.unverified}
-          </p>
         </div>
 
         <DropdownMenuSeparator />

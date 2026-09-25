@@ -80,6 +80,10 @@ namespace NotificationService.Infrastructure.Migrations
                     b.Property<int>("AttemptCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Channel")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -91,6 +95,10 @@ namespace NotificationService.Infrastructure.Migrations
 
                     b.Property<Guid>("IntegrationId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("IntegrationName")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("LastError")
                         .HasMaxLength(2048)

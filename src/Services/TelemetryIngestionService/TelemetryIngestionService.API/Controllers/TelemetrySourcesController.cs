@@ -16,6 +16,9 @@ namespace TelemetryIngestionService.API.Controllers;
 
 [ApiController]
 [Route("api/telemetry-sources")]
+// The organisation's configuration, reads included: only its Admins see where alerts go and which
+// logs are read (Adım 16.5). On the class so an action added later cannot forget it.
+[Authorize(Policy = PlatformPolicies.Administer)]
 public sealed class TelemetrySourcesController : ControllerBase
 {
     private readonly ISender _sender;
@@ -38,7 +41,6 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Create(
         [FromBody] CreateTelemetrySourceRequest request,
         CancellationToken cancellationToken
@@ -59,7 +61,6 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateTelemetrySourceRequest request,
@@ -78,7 +79,6 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpPatch("{id:guid}/enabled")]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> SetEnabled(
         Guid id,
         [FromBody] SetTelemetrySourceEnabledRequest request,
@@ -91,7 +91,6 @@ public sealed class TelemetrySourcesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         await _sender.Send(new DeleteTelemetrySourceCommand(id), cancellationToken);
@@ -101,14 +100,12 @@ public sealed class TelemetrySourcesController : ControllerBase
 
     // The key is in this response and nowhere else, ever.
     [HttpPost("{id:guid}/rotate-key")]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> RotateKey(Guid id, CancellationToken cancellationToken)
     {
         return Ok(await _sender.Send(new RotateIngestKeyCommand(id), cancellationToken));
     }
 
     [HttpPost("{id:guid}/test")]
-    [Authorize(Policy = PlatformPolicies.Operate)]
     public async Task<IActionResult> Test(Guid id, CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new TestTelemetrySourceCommand(id), cancellationToken);

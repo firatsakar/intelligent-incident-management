@@ -2,6 +2,7 @@
 using IdentityService.Application.Abstractions;
 using IdentityService.Application.Sessions;
 using IdentityService.Infrastructure.Outbox;
+using IdentityService.Infrastructure.Email;
 using IdentityService.Infrastructure.Persistence;
 using IdentityService.Infrastructure.Persistence.Repositories;
 using IdentityService.Infrastructure.Security;
@@ -43,6 +44,15 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IInvitationRepository, InvitationRepository>();
+        services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
+
+        // The platform's own mail — invitations and reset links — and the console address the
+        // links in it point at.
+        services.Configure<MailOptions>(configuration.GetSection(MailOptions.SectionName));
+        services.Configure<ConsoleOptions>(configuration.GetSection(ConsoleOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddSingleton<IConsoleLinks, ConsoleLinks>();
 
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 

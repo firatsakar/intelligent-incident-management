@@ -1,5 +1,6 @@
 using IdentityService.Application.Abstractions;
 using IdentityService.Domain.Aggregates;
+using IdentityService.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace IdentityService.Infrastructure.Persistence.Repositories;
@@ -36,6 +37,29 @@ public sealed class UserRepository : IUserRepository
     public async Task<bool> AnyAsync(CancellationToken cancellationToken = default)
     {
         return await _context.Users.AnyAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> ListByOrganizationAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context
+            .Users.AsNoTracking()
+            .Where(x => x.OrganizationId == organizationId)
+            .OrderBy(x => x.DisplayName)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountActiveAdminsAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return await _context.Users.CountAsync(
+            x => x.OrganizationId == organizationId && x.IsActive && x.Role == UserRole.Admin,
+            cancellationToken
+        );
     }
 
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)

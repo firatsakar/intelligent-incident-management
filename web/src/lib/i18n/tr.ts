@@ -57,6 +57,11 @@ export const tr: Dictionary = {
     selected: 'Seçili',
     close: 'Kapat',
     signOut: 'Oturumu kapat',
+    copy: 'Kopyala',
+    copied: 'Kopyalandı',
+    unreachable: 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+    tooMany: 'Çok fazla deneme yapıldı. Bir dakika bekleyip tekrar deneyin.',
+    serverError: 'Sunucu şu anda cevap vermiyor. Birazdan tekrar deneyin.',
   },
 
 
@@ -85,9 +90,6 @@ export const tr: Dictionary = {
 
   account: {
     menu: (name: string) => `Hesap — ${name}`,
-    unverifiedTitle: 'Doğrulanmamış oturum',
-    unverified:
-      'Kim olduğunuzu hiçbir şey doğrulamadı. Bu ad yalnızca oturumu etiketliyor; konsolun arkasındaki servisler kendilerine ulaşabilen herkese cevap veriyor.',
   },
 
   realtime: {
@@ -113,6 +115,7 @@ export const tr: Dictionary = {
     sections: 'Ayar bölümleri',
     pages: {
       profile: 'Profil',
+      members: 'Üyeler',
       telemetry: 'Telemetri',
       integrations: 'Entegrasyonlar',
     },
@@ -154,6 +157,52 @@ export const tr: Dictionary = {
     serverError: 'Oturum açma şu anda cevap vermiyor. Birazdan tekrar deneyin.',
     submit: 'Konsola gir',
     submitting: 'Giriş yapılıyor…',
+    forgot: 'Parolanızı mı unuttunuz? Organizasyonunuzun bir Yöneticisi size yeni parola belirleme bağlantısı gönderebilir.',
+  },
+
+  passwordRules: {
+    hint: 'En az 12 karakter. Birbiriyle ilgisiz birkaç kelime, tek bir akıllıca kelimeden hem daha kolay hatırlanır hem daha zor tahmin edilir.',
+    tooShort: 'En az 12 karakter kullanın.',
+    tooLong: 'Çok uzun — yalnızca ilk 72 bayt sayılır. Daha az karakter kullanın.',
+    mismatch: 'İki parola aynı değil.',
+  },
+
+  oneTimeLink: {
+    checking: 'Bağlantı kontrol ediliyor',
+    deadTitle: 'Bu bağlantı çalışmıyor',
+    dead: 'Süresi dolmuş, yerine daha yenisi gönderilmiş ya da zaten kullanılmış olabilir. Organizasyonunuzun bir Yöneticisinden yenisini isteyin.',
+    toSignIn: 'Oturum açmaya git',
+    unavailableTitle: 'Bağlantı kontrol edilemedi',
+    retry: 'Tekrar dene',
+  },
+
+  invite: {
+    title: (organization: string) => `${organization} organizasyonuna katılın`,
+    subtitle: 'Ekibinizin göreceği adı ve bir parola seçin.',
+    email: 'E-posta',
+    role: 'Rol',
+    name: 'Adınız',
+    nameHint: 'Organizasyonunuzdaki diğer kişiler sizi bu adla görecek.',
+    nameRequired: 'Adınızı girin.',
+    password: 'Parola',
+    repeat: 'Parolayı tekrar girin',
+    signedInAs: (name: string) =>
+      `Bu tarayıcıda ${name} olarak oturum açık. Hesabı oluşturmak, oturumu yeni hesaba geçirir.`,
+    expires: (when: string) => `Bu davet bir kez ve ${when} tarihine kadar geçerli.`,
+    submit: 'Hesabı oluştur',
+    submitting: 'Hesap oluşturuluyor…',
+  },
+
+  reset: {
+    title: 'Yeni bir parola seçin',
+    subtitle: (name: string, email: string) => `${name} · ${email}`,
+    password: 'Yeni parola',
+    repeat: 'Yeni parolayı tekrar girin',
+    sessions:
+      'Bu hesabın bütün oturumları kapatılır ve bu tarayıcıda yeni parolayla oturum açılır.',
+    expires: (when: string) => `Bu bağlantı bir kez ve ${when} tarihine kadar geçerli.`,
+    submit: 'Parolayı belirle',
+    submitting: 'Parola belirleniyor…',
   },
 
   language: {
@@ -189,11 +238,23 @@ export const tr: Dictionary = {
     title: 'Profil',
     identity: {
       title: 'Kimlik',
-      notAnAccountTitle: 'Bu bir hesap değil',
-      notAnAccount:
-        'Yukarıdaki ad bu tarayıcıda saklanıyor ve hiçbir şey onu doğrulamadı. Parola yok, hiçbir sunucuda profil yok, ona bağlı bir yetki de yok — bu konsolun arkasındaki servisler, oturum hangi adı taşırsa taşısın, kendilerine ulaşabilen herkese cevap veriyor. Başka bir adla çalışmak için oturumu kapatıp o adı girin.',
       ownership:
-        'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait. Bu sürümde tek bir organizasyon var.',
+        'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait. Kimin üye olduğuna ve her üyenin ne yapabileceğine organizasyonun Yöneticileri karar verir.',
+    },
+
+    password: {
+      title: 'Parola',
+      description:
+        'Değiştirmek, bu hesabın diğer bütün oturumlarını kapatır. Bu oturum açık kalır.',
+      current: 'Mevcut parola',
+      currentRequired: 'Mevcut parolanızı girin.',
+      wrongCurrent: 'Bu, mevcut parolanız değil.',
+      next: 'Yeni parola',
+      repeat: 'Yeni parolayı tekrar girin',
+      same: 'Mevcut paroladan farklı bir parola seçin.',
+      submit: 'Parolayı değiştir',
+      submitting: 'Değiştiriliyor…',
+      changed: 'Parola değişti. Diğer oturumlar kapatıldı.',
     },
   },
 
@@ -1015,8 +1076,6 @@ export const tr: Dictionary = {
           'Göndermeden önce hatalara süzer. Süzmenin yeri kaynaktır; bu kaynak da en düşük şiddetin altındakini gelir gelmez atar.',
         sdkLabel: 'Doğrudan bir SDK’dan',
         sdkHint: 'Her OpenTelemetry SDK’sının okuduğu ortam değişkenleri; arada collector yok.',
-        copy: 'Kopyala',
-        copied: 'Kopyalandı',
         done: 'Tamam',
       },
 
@@ -1029,9 +1088,86 @@ export const tr: Dictionary = {
       pausedNote: (seconds: number, what: string) =>
         `— buradan bir şey okunmuyor. Devam ettirilirse ${what} için her ${seconds} saniyede bir sorgulayacak.`,
     },
+
+    members: {
+      title: 'Üyeler',
+      description:
+        'Bu organizasyona kimlerin oturum açabileceği ve her birinin ne yapabileceği. Hesaplar yalnızca davetle açılır.',
+      invite: 'Davet et',
+      loadError: 'Üyeler yüklenemedi',
+      you: 'Siz',
+      deactivatedBadge: 'Kapalı',
+      roleOf: (name: string) => `${name} için rol`,
+      actionsFor: (name: string) => `${name} için işlemler`,
+      issueReset: 'Parola sıfırlama bağlantısı gönder',
+      deactivate: 'Hesabı kapat',
+      activate: 'Hesabı aç',
+      selfHint: 'Rolünüzü ve hesabınızı başka bir Yönetici değiştirir. Parolanız Profil sayfanızda.',
+      lastAdminHint:
+        'Son etkin Yönetici. Bu hesabı değiştirmeden önce başka birini Yönetici yapın.',
+      roleChanged: (name: string, role: string) => `${name} artık ${role}.`,
+      activated: (name: string) => `${name} yeniden oturum açabilir.`,
+      deactivated: (name: string) => `${name} artık oturum açamaz.`,
+
+      deactivateDialog: {
+        title: (name: string) => `${name} hesabı kapatılsın mı?`,
+        body: 'Artık oturum açamaz ve oturumları sona erer — açık duran bir sayfası en geç on beş dakika içinde çalışmayı bırakır. Yaptıkları kayıtta kalır. Hesabı daha sonra yeniden açabilirsiniz.',
+        cancel: 'Vazgeç',
+        confirm: 'Hesabı kapat',
+      },
+
+      pending: {
+        title: 'Bekleyen davetler',
+        description:
+          'Her bağlantı bir kez çalışır ve süresi kendiliğinden dolar. Aynı adresi yeniden davet etmek önceki bağlantının yerini alır.',
+        empty: 'Bekleyen davet yok.',
+        expires: (when: string) => `${when} tarihinde sona eriyor`,
+        revoke: 'İptal et',
+        revokeAria: (email: string) => `${email} adresine gönderilen daveti iptal et`,
+        revoked: (email: string) => `${email} adresine gönderilen davet artık çalışmıyor.`,
+      },
+
+      inviteDialog: {
+        title: 'Üye davet et',
+        description:
+          'Adını ve parolasını seçeceği bir bağlantıyla e-posta alır. Hesap bu organizasyona ait olur.',
+        email: 'E-posta adresi',
+        emailRequired: 'Bir e-posta adresi girin.',
+        emailInvalid: 'Bu bir e-posta adresine benzemiyor.',
+        hasAccount: 'Bu adresin zaten bir hesabı var, bu yüzden davet edilemez.',
+        role: 'Rol',
+        cancel: 'Vazgeç',
+        submit: 'Daveti gönder',
+        submitting: 'Gönderiliyor…',
+      },
+
+      link: {
+        invitationTitle: (email: string) => `${email} için davet`,
+        resetTitle: (name: string) => `${name} için parola sıfırlama`,
+        once: 'Bu bağlantı bir kez gösterilir. Yalnızca özeti (hash) saklanıyor, bu yüzden bir daha gösterilemez — kaybolursa yenisini oluşturun.',
+        label: 'Bağlantı',
+        expires: (when: string) => `Bir kez ve ${when} tarihine kadar çalışır.`,
+        emailed: (email: string) => `Ayrıca ${email} adresine e-postayla gönderildi.`,
+        notEmailed: (email: string) =>
+          `${email} adresine e-posta gönderilemedi. Bağlantı çalışıyor — kendiniz iletin.`,
+        done: 'Tamam',
+      },
+    },
   },
 
   labels: {
+    role: {
+      Admin: 'Yönetici',
+      Engineer: 'Mühendis',
+      Viewer: 'İzleyici',
+    },
+
+    roleDetail: {
+      Admin: 'Her şey; organizasyonun üyeleri, entegrasyonları ve telemetri kaynakları dahil.',
+      Engineer: 'Olayları işler — durum ve atama. Organizasyonun ayarlarını görmez.',
+      Viewer: 'Olayları, sinyalleri, kanıtı ve genel bakışı okur; hiçbir şeyi değiştirmez.',
+    },
+
     incidentStatus: {
       Open: 'Açık',
       InProgress: 'Devam ediyor',

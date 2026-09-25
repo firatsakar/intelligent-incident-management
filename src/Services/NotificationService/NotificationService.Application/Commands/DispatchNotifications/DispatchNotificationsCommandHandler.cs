@@ -127,7 +127,9 @@ public sealed class DispatchNotificationsCommandHandler : IRequestHandler<Dispat
             _organization.Required,
             integration.Id,
             request.IncidentId,
-            request.EventId
+            request.EventId,
+            integration.Name,
+            integration.Channel
         );
 
         try

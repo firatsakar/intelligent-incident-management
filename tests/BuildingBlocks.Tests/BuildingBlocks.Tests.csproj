@@ -23,6 +23,7 @@
     <ProjectReference Include="..\..\src\BuildingBlocks\Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
     <ProjectReference Include="..\..\src\BuildingBlocks\SharedKernel\BuildingBlocks.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

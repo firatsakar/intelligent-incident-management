@@ -1,11 +1,16 @@
 using System.Security.Claims;
 using BuildingBlocks.Web;
 using IdentityService.API.Contracts;
+using IdentityService.Application.Commands.AcceptInvitation;
+using IdentityService.Application.Commands.ChangePassword;
+using IdentityService.Application.Commands.CompletePasswordReset;
 using IdentityService.Application.Commands.RefreshSession;
 using IdentityService.Application.Commands.SignIn;
 using IdentityService.Application.Commands.SignOut;
 using IdentityService.Application.DTOs;
 using IdentityService.Application.Queries.GetCurrentUser;
+using IdentityService.Application.Queries.GetInvitationPreview;
+using IdentityService.Application.Queries.GetPasswordResetPreview;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -132,6 +137,84 @@ public sealed class AuthController : ControllerBase
 
         return Ok(user);
     }
+
+    // ---- one-time links: an invitation and a reset both end in a signed-in session ------------
+
+    /// <summary>What the invitation offers, for the page that asks for a name and a password.</summary>
+    [HttpGet("invitations/{token}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Invitation(string token, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GetInvitationPreviewQuery(token), cancellationToken));
+
+    /// <summary>
+    /// Becomes an account in the invitation's organisation and signs it in. The organisation and the
+    /// role are the invitation's; the body chooses only the name and the password.
+    /// </summary>
+    [HttpPost("invitations/{token}/accept")]
+    [AllowAnonymous]
+    public async Task<IActionResult> AcceptInvitation(
+        string token,
+        [FromBody] AcceptInvitationRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var session = await _sender.Send(
+            new AcceptInvitationCommand(token, request.DisplayName, request.Password),
+            cancellationToken
+        );
+
+        Issue(session);
+
+        return Ok(session.User);
+    }
+
+    [HttpGet("password-resets/{token}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PasswordReset(string token, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GetPasswordResetPreviewQuery(token), cancellationToken));
+
+    /// <summary>Sets the new password, ends every other session, and signs this one in.</summary>
+    [HttpPost("password-resets/{token}/complete")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CompletePasswordReset(
+        string token,
+        [FromBody] CompletePasswordResetRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var session = await _sender.Send(new CompletePasswordResetCommand(token, request.Password), cancellationToken);
+
+        Issue(session);
+
+        return Ok(session.User);
+    }
+
+    /// <summary>One's own password, with the current one. Other sessions end; this one is renewed.</summary>
+    [HttpPost("password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!Guid.TryParse(User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var userId))
+            return Unauthorized();
+
+        var session = await _sender.Send(
+            new ChangePasswordCommand(userId, request.CurrentPassword, request.NewPassword),
+            cancellationToken
+        );
+
+        Issue(session);
+
+        return Ok(session.User);
+    }
+
+    public sealed record AcceptInvitationRequest(string DisplayName, string Password);
+
+    public sealed record CompletePasswordResetRequest(string Password);
+
+    public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
     private static ProblemDetails RefreshFailed() =>
         new()

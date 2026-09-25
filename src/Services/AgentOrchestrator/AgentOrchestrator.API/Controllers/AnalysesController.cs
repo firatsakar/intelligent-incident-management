@@ -38,7 +38,12 @@ public sealed class AnalysesController : ControllerBase
         return Ok(new { analysisId });
     }
 
-    [HttpPost("reindex")]
+    // Absolute, and outside /api on purpose: the gateway routes /api, /hubs and /otlp and nothing
+    // else, so this is reachable only from inside, against the service itself. Until Adım 16.5 it
+    // was /api/analyses/reindex — anonymous and routed, so anyone on the internet could make the
+    // platform rebuild every organisation's index. Not an Admin endpoint either: an organisation's
+    // Admin has no business rebuilding all of them.
+    [HttpPost("/internal/analyses/reindex")]
     [ApiExplorerSettings(IgnoreApi = true)]
     // An operational rebuild of the Elasticsearch index, run by whoever changed a mapping. There
     // is no user behind it and therefore no token it could carry. It reads and rewrites the search

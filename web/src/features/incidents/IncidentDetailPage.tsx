@@ -1,10 +1,8 @@
 ﻿import { useCanOperate } from '@/features/auth/AuthProvider'
-import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftIcon, ArrowRightIcon, HandIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
-import { integrationsApi } from '@/api/endpoints'
 import { InfoHint } from '@/components/InfoHint'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -52,12 +50,6 @@ export function IncidentDetailPage() {
 
   const incident = useIncident(id)
   const deliveries = useDeliveries(id)
-
-  // Delivery rows carry an integration id and nothing else, so the names come from here.
-  const integrations = useQuery({
-    queryKey: ['integrations'],
-    queryFn: integrationsApi.list,
-  })
 
   const canOperate = useCanOperate()
   const updateStatus = useUpdateStatus(id)
@@ -217,10 +209,7 @@ export function IncidentDetailPage() {
         <div className="min-w-0 space-y-6">
           <AiAnalysisPanel incident={data} />
 
-          <DeliveryStrip
-            deliveries={deliveries.data ?? []}
-            integrations={integrations.data ?? []}
-          />
+          <DeliveryStrip deliveries={deliveries.data ?? []} />
         </div>
       </div>
     </div>

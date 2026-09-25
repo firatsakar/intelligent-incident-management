@@ -7,6 +7,11 @@ public sealed record NotificationDeliveryDto
 {
     public required Guid Id { get; init; }
     public required Guid IntegrationId { get; init; }
+
+    // Where it went, readable by every role: the integration list itself is Admin-only.
+    public string? IntegrationName { get; init; }
+    public NotificationChannelType? Channel { get; init; }
+
     public required Guid IncidentId { get; init; }
     public required Guid EventId { get; init; }
     public required DeliveryStatus Status { get; init; }
@@ -21,6 +26,8 @@ public sealed record NotificationDeliveryDto
         {
             Id = delivery.Id,
             IntegrationId = delivery.IntegrationId,
+            IntegrationName = delivery.IntegrationName,
+            Channel = delivery.Channel,
             IncidentId = delivery.IncidentId,
             EventId = delivery.EventId,
             Status = delivery.Status,

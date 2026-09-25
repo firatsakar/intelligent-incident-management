@@ -2,9 +2,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 import { onUnauthorized } from '@/api/client'
+import type { SessionAccount } from '@/types/api'
 
 import {
+  adoptSession,
   canOperate,
+  isAdmin,
   endSession,
   readSession,
   startSession,
@@ -30,6 +33,8 @@ interface AuthValue {
   organization: SessionOrganization | null
   isAuthenticated: boolean
   signIn: (email: string, password: string) => Promise<void>
+  /** Takes over a session the server has already opened — an accepted invitation, a reset. */
+  adopt: (account: SessionAccount) => void
   signOut: () => Promise<void>
 }
 
@@ -43,6 +48,13 @@ export function useCanOperate(): boolean {
   const { user } = useAuth()
 
   return user ? canOperate(user.role) : false
+}
+
+/** Whether the signed-in person is an Admin of their organisation. Same false-while-restoring rule. */
+export function useIsAdmin(): boolean {
+  const { user } = useAuth()
+
+  return user ? isAdmin(user.role) : false
 }
 
 export function useAuth(): AuthValue {
@@ -134,6 +146,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // now than it did — the cache may hold another organisation's rows.
         queryClient.clear()
         setSession(next)
+        setStatus('authenticated')
+      },
+
+      adopt: (account: SessionAccount) => {
+        // The same clearing as signing in, for the same reason: whoever was signed in on this
+        // browser before may belong to a different organisation.
+        queryClient.clear()
+        setSession(adoptSession(account))
         setStatus('authenticated')
       },
 

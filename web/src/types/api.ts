@@ -208,6 +208,10 @@ export interface Integration {
 export interface NotificationDelivery {
   id: string
   integrationId: string
+  /** As it was when the notification went out; null only for a pre-16.5 row whose integration was
+      already deleted. Carried on the row because the integration list is Admin-only. */
+  integrationName: string | null
+  channel: NotificationChannelType | null
   incidentId: string
   eventId: string
   status: DeliveryStatus
@@ -351,6 +355,11 @@ export interface IngestionTick {
   completedAt: string
 }
 
+/** The three roles the platform has. The wire values are the enum names, never translated. */
+export type UserRole = 'Admin' | 'Engineer' | 'Viewer'
+
+export const userRoles: UserRole[] = ['Admin', 'Engineer', 'Viewer']
+
 /**
  * Who the caller is, as `/api/auth` answers it.
  *
@@ -361,7 +370,56 @@ export interface SessionAccount {
   id: string
   email: string
   displayName: string
-  role: 'Admin' | 'Engineer' | 'Viewer'
+  role: UserRole
   organizationId: string
   organizationName: string
+}
+
+// ---- the organisation's people (Adım 16.5) ---------------------------------------------------
+
+export interface Member {
+  id: string
+  email: string
+  displayName: string
+  role: UserRole
+  isActive: boolean
+  createdAt: string
+}
+
+/** A pending invitation. The link itself is never here: only its hash is stored. */
+export interface Invitation {
+  id: string
+  email: string
+  role: UserRole
+  expiresAt: string
+  createdAt: string
+}
+
+/**
+ * A one-time link, in the one response that carries it. `emailSent` is false when the platform's
+ * mail server refused it — the link still works, and handing it over is then up to the Admin.
+ */
+export interface IssuedLink {
+  link: string
+  emailSent: boolean
+  expiresAt: string
+}
+
+export interface InvitationIssued {
+  invitation: Invitation
+  issued: IssuedLink
+}
+
+/** What an invitation offers, shown to the person holding the link before they accept. */
+export interface InvitationPreview {
+  organizationName: string
+  email: string
+  role: UserRole
+  expiresAt: string
+}
+
+export interface PasswordResetPreview {
+  email: string
+  displayName: string
+  expiresAt: string
 }

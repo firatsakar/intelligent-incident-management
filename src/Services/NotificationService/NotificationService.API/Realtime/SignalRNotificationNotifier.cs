@@ -48,12 +48,12 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
     public Task IntegrationChangedAsync(
         IntegrationDto integration,
         CancellationToken cancellationToken = default
-    ) => SendAsync("integrationChanged", integration, integration.Id, cancellationToken);
+    ) => SendAsync("integrationChanged", integration, integration.Id, cancellationToken, adminsOnly: true);
 
     public Task IntegrationDeletedAsync(
         Guid integrationId,
         CancellationToken cancellationToken = default
-    ) => SendAsync("integrationDeleted", integrationId, integrationId, cancellationToken);
+    ) => SendAsync("integrationDeleted", integrationId, integrationId, cancellationToken, adminsOnly: true);
 
     /// <summary>
     /// Same contract as the delivery broadcast above: the write is already committed, so a
@@ -64,12 +64,13 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
         string message,
         object payload,
         Guid id,
-        CancellationToken cancellationToken
+        CancellationToken cancellationToken,
+        bool adminsOnly = false
     )
     {
         try
         {
-            await Audience().SendAsync(message, payload, cancellationToken);
+            await Audience(adminsOnly).SendAsync(message, payload, cancellationToken);
         }
         catch (Exception ex)
         {
@@ -87,7 +88,9 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
     // at all — never Clients.All, which is what every one of these used to be and is exactly the
     // leak this exists to close. The send then goes nowhere, and the caller swallows failures
     // anyway because a broadcast is the least important thing a command does.
-    private IClientProxy Audience()
+    //
+    // Configuration changes go to the organisation's Admins only: only they may read it at all.
+    private IClientProxy Audience(bool adminsOnly = false)
     {
         var organizationId = _organization.OrganizationId;
 
@@ -98,7 +101,11 @@ public sealed class SignalRNotificationNotifier : IRealtimeNotifier
             return NoAudience.Instance;
         }
 
-        return _hub.Clients.Group(OrganizationGroups.For(organizationId.Value));
+        return _hub.Clients.Group(
+            adminsOnly
+                ? OrganizationGroups.AdminsOf(organizationId.Value)
+                : OrganizationGroups.For(organizationId.Value)
+        );
     }
 
     /// <summary>A proxy that sends to nobody, for the case where there is nobody it may send to.</summary>

@@ -7,6 +7,13 @@ namespace BuildingBlocks.Web;
 public static class OrganizationGroups
 {
     public static string For(Guid organizationId) => $"org:{organizationId:N}";
+
+    /// <summary>
+    /// The organisation's Admins alone: the audience for anything about its configuration, which
+    /// only an Admin may see. A second group rather than a filter on the first, because a push
+    /// cannot be filtered after it is sent.
+    /// </summary>
+    public static string AdminsOf(Guid organizationId) => $"org:{organizationId:N}:admins";
 }
 
 /// <summary>
@@ -44,6 +51,12 @@ public abstract class OrganizationHub : Hub
         }
 
         await Groups.AddToGroupAsync(Context.ConnectionId, OrganizationGroups.For(organizationId));
+
+        // Taken from the same token as the organisation, so a connection's role is decided once, at
+        // the handshake. A role changed afterwards takes effect on the next connection — at the
+        // latest when the fifteen-minute access token behind this one is refreshed.
+        if (Context.User?.IsInRole(PlatformRoles.Admin) == true)
+            await Groups.AddToGroupAsync(Context.ConnectionId, OrganizationGroups.AdminsOf(organizationId));
 
         await base.OnConnectedAsync();
     }
