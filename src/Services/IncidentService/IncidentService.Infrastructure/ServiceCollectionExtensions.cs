@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection.Extensions;
+using BuildingBlocks.Outbox;
 using BuildingBlocks.SharedKernel;
 using IncidentService.Application.Abstractions;
+using IncidentService.Infrastructure.Outbox;
 using IncidentService.Infrastructure.Persistence;
 using IncidentService.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -21,10 +23,27 @@ public static class ServiceCollectionExtensions
         // scopes, and the context has to exist there for the bus to fill it in.
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
-        services.AddDbContext<IncidentDbContext>(options =>
-            options.UseNpgsql(connectionString));
+        services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
+
+        // A closed incident and the message that tells telemetry about it commit in the same
+        // transaction (Adım 24). Until then this service published straight after SaveChanges,
+        // which it still does for IncidentDetectedEvent — see PROGRESS.md tech-debt.
+        services.AddDbContext<IncidentDbContext>(
+            (sp, options) =>
+            {
+                options.UseNpgsql(connectionString);
+                options.AddInterceptors(
+                    sp.GetRequiredService<ConvertDomainEventsToOutboxInterceptor>()
+                );
+            }
+        );
 
         services.AddScoped<IIncidentRepository, IncidentRepository>();
+
+        services.AddScoped<IOutboxStore, IncidentOutboxStore>();
+        services.AddScoped<IOutboxMessageHandler, IncidentResolvedOutboxHandler>();
+        services.AddHostedService<OutboxDispatcher>();
+        services.AddHostedService<OutboxCleanupService>();
 
         // Registered unconditionally; the endpoint that uses it checks the environment itself, so
         // the gate lives in one obvious place rather than being split across two files.

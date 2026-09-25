@@ -5,6 +5,7 @@ import type {
   IncidentPriority,
   IncidentStats,
   IncidentStatus,
+  IncidentVerdict,
   Integration,
   Invitation,
   InvitationIssued,
@@ -49,8 +50,9 @@ export const incidentsApi = {
   stats: (params: { from?: string; to?: string } = {}) =>
     api.get<IncidentStats>('/api/incidents/stats', { ...params }),
 
-  updateStatus: (id: string, newStatus: IncidentStatus) =>
-    api.patch<void>(`/api/incidents/${id}/status`, { newStatus }),
+  /** A verdict is required when closing an open incident, and refused on any other change. */
+  updateStatus: (id: string, newStatus: IncidentStatus, verdict?: IncidentVerdict) =>
+    api.patch<void>(`/api/incidents/${id}/status`, { newStatus, verdict }),
 
   assignTeam: (id: string, team: string) =>
     api.patch<void>(`/api/incidents/${id}/team`, { team }),

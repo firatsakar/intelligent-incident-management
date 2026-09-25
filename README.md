@@ -161,6 +161,7 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [x] Root cause analysis (RCA) — Elasticsearch similarity search + Transactional Outbox + agentic tool-calling with suggested remediation steps & evidence-based confidence
 - [x] NotificationService — email/webhook/Jira alerts on incident lifecycle events
 - [x] TelemetryIngestionService — anomaly-based incident detection, Seq pull and OTLP push ingest
+- [x] Feedback loop — closing an incident records whether it was real or a false positive, and the detector scores that error's next burst accordingly
 - [ ] Comment & timeline (audit trail)
 - [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
 - [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only

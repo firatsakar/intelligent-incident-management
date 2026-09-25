@@ -105,6 +105,7 @@ public sealed class IncidentsController : ControllerBase
         {
             IncidentId = id,
             NewStatus = request.NewStatus,
+            Verdict = request.Verdict,
         };
 
         await _sender.Send(command, cancellationToken);

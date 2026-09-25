@@ -10,15 +10,20 @@ import type { Language } from './locale'
 import { plural } from './translate'
 
 /**
- * The eight scoring terms this build has been taught. Not every key the gate can emit —
- * that set is open and `scoreTerm()` falls back to splitting the camel case — but these
- * eight must have words in every language, so they go through `byKey`.
+ * The scoring terms this build has been taught. Not every key the gate can emit — that set is
+ * open and `scoreTerm()` falls back to splitting the camel case — but these must have words in
+ * every language, so they go through `byKey`.
+ *
+ * `precedent` and `falsePositivePrecedent` are no longer emitted: Adım 24 folded them into
+ * `history`. They stay because signals recorded before then carry them in their breakdown, and an
+ * old record should keep reading as what it was.
  */
 type ScoreTerm =
   | 'fatal'
   | 'burstBase'
   | 'overThreshold'
   | 'rateAnomaly'
+  | 'history'
   | 'precedent'
   | 'blastRadius'
   | 'falsePositivePrecedent'
@@ -28,6 +33,7 @@ import type {
   IncidentPriority,
   IncidentSource,
   IncidentStatus,
+  IncidentVerdict,
   LogSeverity,
   NotificationChannelType,
   SignalKind,
@@ -390,6 +396,25 @@ export const en = {
         'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.',
       noticed: 'noticed without being told',
       skewNote: 'source clock is ahead of ours',
+
+      closed: (relative: string) => `closed ${relative}`,
+      statusUpdated: 'Status updated',
+      assignedTo: (team: string) => `Assigned to ${team}`,
+
+      // Asked when an open incident is closed (Adım 24). Each option says what it does to the
+      // detector, so the choice is made knowing its effect.
+      verdictDialog: {
+        title: 'Was this a real problem?',
+        description: (status: string) =>
+          `Asked once, before it is marked ${status}. The answer stays on the incident, and if the detector raised it, it counts towards that error’s track record.`,
+        effect: byKey<IncidentVerdict>({
+          Real: 'Something was actually wrong. The next burst of the same error is a little more likely to open an incident.',
+          FalsePositive:
+            'Nothing needed doing. The next burst of the same error has to be stronger to open an incident.',
+        }),
+        cancel: 'Cancel',
+        confirm: (status: string) => `Mark as ${status}`,
+      },
     },
 
     timeline: {
@@ -510,6 +535,7 @@ export const en = {
       burstBase: 'burst base',
       overThreshold: 'over threshold',
       rateAnomaly: 'rate anomaly',
+      history: 'track record',
       precedent: 'precedent',
       blastRadius: 'blast radius',
       falsePositivePrecedent: 'false-positive history',
@@ -524,6 +550,8 @@ export const en = {
         'How far past the rule’s threshold the burst went, counted in doublings and capped — twice over is meaningfully worse, fifty times over is not.',
       rateAnomaly:
         'This signature’s own rate history says this volume is unusual for it. The strongest corroboration available without a second data source.',
+      history:
+        'What this signature’s past incidents turned out to be when they were closed: the share judged real, discounted while there are few verdicts. Always between −0.25 (every one a false positive) and +0.15 (every one real).',
       precedent: 'This signature has produced a confirmed real incident before.',
       blastRadius: 'Two or more services are raising it, not one.',
       falsePositivePrecedent:
@@ -1338,6 +1366,11 @@ export const en = {
       InProgress: 'In progress',
       Resolved: 'Resolved',
       Closed: 'Closed',
+    }),
+
+    verdict: byKey<IncidentVerdict>({
+      Real: 'Real problem',
+      FalsePositive: 'False positive',
     }),
 
     priority: byKey<IncidentPriority>({

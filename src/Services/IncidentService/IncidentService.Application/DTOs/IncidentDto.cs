@@ -29,6 +29,10 @@ public sealed record IncidentDto
     /// </summary>
     public string? AiAnalysisError { get; init; }
 
+    // The conclusion reached when it was closed, and when. Both null while open.
+    public IncidentVerdict? Verdict { get; init; }
+    public DateTime? ResolvedAt { get; init; }
+
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
@@ -51,6 +55,8 @@ public sealed record IncidentDto
             IsAiAnalyzed = incident.IsAiAnalyzed,
             AiConfidence = incident.AiConfidence,
             AiAnalysisError = incident.AiAnalysisError,
+            Verdict = incident.Verdict,
+            ResolvedAt = incident.ResolvedAt,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
         };

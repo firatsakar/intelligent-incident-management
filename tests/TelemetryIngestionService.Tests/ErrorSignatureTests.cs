@@ -126,7 +126,7 @@ public sealed class ErrorSignatureTests
         }
 
         [Fact]
-        public void DetachIncident_AsRealFeedsThePrecedentBonus()
+        public void DetachIncident_AsRealCountsTowardsTheHistory()
         {
             var signature = Create();
             signature.AttachIncident(Guid.NewGuid(), Noon);
@@ -139,7 +139,7 @@ public sealed class ErrorSignatureTests
         }
 
         [Fact]
-        public void DetachIncident_AsFalsePositiveFeedsThePenalty()
+        public void DetachIncident_AsFalsePositiveCountsAgainstTheHistory()
         {
             var signature = Create();
             signature.AttachIncident(Guid.NewGuid(), Noon);

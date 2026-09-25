@@ -12,6 +12,15 @@ export type IncidentPriority = 'Critical' | 'High' | 'Medium' | 'Low'
 export type IncidentSource = 'Manual' | 'Telemetry' | 'Alert'
 
 export const incidentStatuses: IncidentStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed']
+
+/** Resolved and Closed: the two an incident reaches with a verdict. */
+export const isClosedStatus = (status: IncidentStatus): boolean =>
+  status === 'Resolved' || status === 'Closed'
+
+/** What the people who worked an incident concluded when they closed it (Adım 24). */
+export type IncidentVerdict = 'Real' | 'FalsePositive'
+
+export const incidentVerdicts: IncidentVerdict[] = ['Real', 'FalsePositive']
 export const incidentPriorities: IncidentPriority[] = ['Critical', 'High', 'Medium', 'Low']
 
 export interface Incident {
@@ -35,6 +44,10 @@ export interface Incident {
    * before this field existed they looked identical on screen.
    */
   aiAnalysisError: string | null
+  /** Null while open, and for incidents closed before anyone was asked. */
+  verdict: IncidentVerdict | null
+  /** When it was closed out; cleared if it is reopened. */
+  resolvedAt: string | null
   createdAt: string
   updatedAt: string | null
 }

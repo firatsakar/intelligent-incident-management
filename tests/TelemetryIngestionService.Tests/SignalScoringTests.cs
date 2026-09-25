@@ -118,14 +118,54 @@ public sealed class SignalScoringTests
             Assert.Equal(0.25, result.Breakdown["rateAnomaly"], Precision);
     }
 
-    [Fact]
-    public void Precedent_AddsWhenTheSignatureHasProducedARealIncidentBefore()
+    // The term that makes the system improve with use: the share of this signature's incidents
+    // that were real, discounted while there are few verdicts.
+    [Theory]
+    [InlineData(1, 0, 0.05)]
+    [InlineData(10, 0, 0.125)]
+    [InlineData(9, 1, 0.0917)]
+    [InlineData(5, 5, -0.0417)]
+    [InlineData(0, 1, -0.0833)]
+    [InlineData(0, 5, -0.1786)]
+    public void History_ReadsTheShareOfRealVerdicts(int real, int falsePositive, double expected)
     {
-        // The term that makes the system improve with use.
-        var result = SignalScoring.Score(BareBurst() with { ConfirmedRealCount = 1 });
+        var result = SignalScoring.Score(
+            BareBurst() with { ConfirmedRealCount = real, FalsePositiveCount = falsePositive }
+        );
 
-        Assert.Equal(0.15, result.Breakdown["precedent"], Precision);
-        Assert.Equal(SignalScoring.BurstBase + 0.15, result.Confidence, Precision);
+        Assert.Equal(expected, result.Breakdown["history"], 4);
+        Assert.Equal(SignalScoring.BurstBase + expected, result.Confidence, 4);
+    }
+
+    [Fact]
+    public void History_OneFalseAlarmDoesNotOutweighNineRealOnes()
+    {
+        // What the two flags it replaced got wrong: +0.15 and −0.25 together, −0.10 for ever.
+        var history = SignalScoring.History(confirmedReal: 9, falsePositive: 1);
+
+        Assert.NotNull(history);
+        Assert.True(history > 0);
+    }
+
+    [Fact]
+    public void History_StaysWithinItsBoundsHoweverManyVerdictsAccumulate()
+    {
+        // A record corroborates a burst; it must never be able to promote one on its own.
+        var allReal = SignalScoring.History(confirmedReal: 100_000, falsePositive: 0);
+        var allFalse = SignalScoring.History(confirmedReal: 0, falsePositive: 100_000);
+
+        Assert.InRange(allReal!.Value, 0.149, SignalScoring.HistoryCeiling);
+        Assert.InRange(allFalse!.Value, SignalScoring.HistoryFloor, -0.249);
+    }
+
+    [Fact]
+    public void History_IsAbsentWithoutAVerdict()
+    {
+        // No record is not a neutral record: the breakdown says nothing rather than "0.00".
+        var result = SignalScoring.Score(BareBurst());
+
+        Assert.Null(SignalScoring.History(0, 0));
+        Assert.False(result.Breakdown.ContainsKey("history"));
     }
 
     [Theory]
@@ -142,15 +182,6 @@ public sealed class SignalScoringTests
         );
 
         Assert.Equal(expected, result.Breakdown.ContainsKey("blastRadius"));
-    }
-
-    [Fact]
-    public void FalsePositiveHistory_Subtracts()
-    {
-        var result = SignalScoring.Score(BareBurst() with { FalsePositiveCount = 1 });
-
-        Assert.Equal(-0.25, result.Breakdown["falsePositivePrecedent"], Precision);
-        Assert.Equal(SignalScoring.BurstBase - 0.25, result.Confidence, Precision);
     }
 
     [Fact]
@@ -183,7 +214,7 @@ public sealed class SignalScoringTests
     [Fact]
     public void Confidence_IsClampedToZero()
     {
-        var inputs = BareBurst() with { IsMuted = true, FalsePositiveCount = 2 };
+        var inputs = BareBurst() with { IsMuted = true, FalsePositiveCount = 20 };
 
         var result = SignalScoring.Score(inputs);
 

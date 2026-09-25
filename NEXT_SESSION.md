@@ -6,15 +6,24 @@
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, 18, 19, 19.5, 20, 20.5 ve 20.7 bitti; `develop`
-güncel ve push'lanmış, **462 test yeşil**. Sıra (Fırat, 2026-09-25): ~~16.5~~ → **Adım 24
-(çözülen incident'ı telemetriye geri bildirmek) → Adım 17.5 (MCP)**; kalanlar bunlardan sonra
-yeniden konuşulacak. **24 ve 17.5'e başlamadan önce** ne yapılmak istendiğini Fırat'la açıp
-kapsamı birlikte netleştir — ikisini de henüz tam anlamadığını söyledi.
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, 18, 19, 19.5, 20, 20.5, 20.7 ve **24** bitti;
+`develop` güncel ve push'lanmış, **485 test yeşil**. Sıra (Fırat, 2026-09-25): ~~16.5~~ → ~~24~~ →
+**Adım 17.5 (MCP)**; kalanlar ondan sonra yeniden konuşulacak. **17.5'e başlamadan önce** ne
+yapılmak istendiğini Fırat'la açıp kapsamı birlikte netleştir — tam anlamadığını söyledi (24'te
+de aynısı yapıldı: önce anlatıldı, iki karar soruldu, sonra plan).
 
 ---
 
 ## Nerede kaldık
+
+**Adım 24 — çözülen olay telemetriye geri bildiriliyor** (`IIM-130`). Açık bir olay Çözüldü ya da
+Kapandı yapılırken konsol bir kez **gerçek sorun / yanlış alarm** diye soruyor (API'de `verdict`,
+kararsız kapatma 400). Kapatma IncidentService'in **yeni outbox'ından** `IncidentResolvedEvent`
+olarak çıkıyor; telemetri, olayı açan imzayı serbest bırakıp kararı sayacına yazıyor. Puanlamada iki
+bayrağın yerini tek bir **geçmiş** terimi aldı: `(0.15·p − 0.25·(1−p)) × n/(n+2)`, her zaman
+[−0.25, +0.15]. Canlıda aynı patlama iki imzada farklı sonuçlandı: yanlış alarm denen imza 0.8167 ile
+eşiğin altında kaldı (zayıf sinyal), gerçek denen imza 0.95 ile yeni bir olay açtı. Kanaryada `verdict-probe` adlı bir test servisi ve onun iki
+imzası/olayları kaldı — zararsız.
 
 **Adım 16.5 — davetle kullanıcı yönetimi** (`IIM-122`): açık kayıt yok, bilerek. Admin
 Ayarlar → **Üyeler**'den davet eder (e-posta Mailpit'e gider, `http://localhost:8025`; bağlantı

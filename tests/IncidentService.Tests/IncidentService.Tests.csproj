@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Services\IncidentService\IncidentService.Application\IncidentService.Application.csproj" />
     <ProjectReference Include="..\..\src\Services\IncidentService\IncidentService.Domain\IncidentService.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Services\IncidentService\IncidentService.Infrastructure\IncidentService.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

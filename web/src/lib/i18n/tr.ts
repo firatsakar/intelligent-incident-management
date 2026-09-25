@@ -42,6 +42,8 @@
  *   window                pencere
  *   dashboard             genel bakış
  *   event (log)           kayıt / log kaydı — asla "olay"
+ *   false positive        yanlış alarm (olay kapatılırken verilen karar; eski puan dökümlerindeki
+ *                         "yanlış pozitif geçmişi" etiketi kayıtlı veriyi okuduğu için kaldı)
  *
  * Son iki satır çakışma önlemek için. **"olay" `incident`'a harcandı**, o yüzden Seq event'i ya
  * da log event'i asla "olay" olamaz — bu bir kez `seq.serviceProperty` ipucunda oldu ve düzeltildi.
@@ -339,6 +341,23 @@ export const tr: Dictionary = {
         'Kaynak, bunun biz kaydı açtıktan sonra başladığını bildiriyor; bu ancak iki saatin uyuşmadığı anlamına gelir. Gördüğünüz rakam bir gecikme değil, o uyuşmazlığın büyüklüğü.',
       noticed: 'söylenmeden fark edildi',
       skewNote: 'kaynağın saati bizimkinin ilerisinde',
+
+      closed: (relative: string) => `${relative} kapandı`,
+      statusUpdated: 'Durum güncellendi',
+      assignedTo: (team: string) => `${team} ekibine atandı`,
+
+      verdictDialog: {
+        title: 'Bu gerçek bir sorun muydu?',
+        description: (status: string) =>
+          `${status} olarak işaretlenmeden önce bir kez soruluyor. Cevap olayın üzerinde kalır; olayı dedektör açtıysa, o hatanın geçmişine de sayılır.`,
+        effect: {
+          Real: 'Gerçekten bir şey bozuktu. Aynı hatanın bir sonraki patlamasının olay açma ihtimali biraz artar.',
+          FalsePositive:
+            'Yapılacak bir şey yoktu. Aynı hatanın bir sonraki patlamasının olay açabilmesi için daha güçlü olması gerekir.',
+        },
+        cancel: 'Vazgeç',
+        confirm: (status: string) => `${status} olarak işaretle`,
+      },
     },
 
     timeline: {
@@ -436,6 +455,7 @@ export const tr: Dictionary = {
       burstBase: 'patlama tabanı',
       overThreshold: 'eşik aşımı',
       rateAnomaly: 'hız anomalisi',
+      history: 'geçmiş',
       precedent: 'emsal',
       blastRadius: 'etki alanı',
       falsePositivePrecedent: 'yanlış pozitif geçmişi',
@@ -450,6 +470,8 @@ export const tr: Dictionary = {
         'Patlamanın kuralın eşiğini ne kadar aştığı — katlanarak sayılıyor ve bir tavanı var: iki katı anlamlı şekilde daha kötü, elli katı değil.',
       rateAnomaly:
         'İmzanın kendi hız geçmişi, bu hacmin onun için olağandışı olduğunu söylüyor. İkinci bir veri kaynağı olmadan elde edilebilecek en güçlü destek.',
+      history:
+        'Bu imzanın önceki olayları kapatılırken ne çıktığı: gerçek bulunanların oranı, az karar varken indirimli. Her zaman −0,25 (hepsi yanlış alarm) ile +0,15 (hepsi gerçek) arasında.',
       precedent: 'Bu imza daha önce gerçek olduğu doğrulanmış bir olay üretti.',
       blastRadius: 'Bunu bir servis değil, iki ya da daha fazlası bildiriyor.',
       falsePositivePrecedent:
@@ -1173,6 +1195,11 @@ export const tr: Dictionary = {
       InProgress: 'Devam ediyor',
       Resolved: 'Çözüldü',
       Closed: 'Kapandı',
+    },
+
+    verdict: {
+      Real: 'Gerçek sorun',
+      FalsePositive: 'Yanlış alarm',
     },
 
     priority: {

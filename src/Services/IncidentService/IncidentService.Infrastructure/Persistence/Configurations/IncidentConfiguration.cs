@@ -50,6 +50,10 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(x => x.AiConfidence);
 
+        builder.Property(x => x.Verdict).HasConversion<string>().HasMaxLength(32);
+
+        builder.Property(x => x.ResolvedAt);
+
         builder.Ignore(x => x.DomainEvents);
     }
 }

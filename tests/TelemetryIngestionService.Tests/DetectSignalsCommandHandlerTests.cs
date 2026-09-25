@@ -396,7 +396,9 @@ public sealed class DetectSignalsCommandHandlerTests
 
         await Detect();
 
-        Assert.Equal(0.30, _recorded[0].Confidence, 10);
+        // One false alarm is a third of the history term's floor, not all of it: 0.55 − 0.0833.
+        // Under the two flags it replaced, the same single verdict took the whole −0.25.
+        Assert.Equal(SignalScoring.BurstBase + SignalScoring.History(0, 1)!.Value, _recorded[0].Confidence, 10);
         Assert.Equal(SignalStatus.Recorded, _recorded[0].Status);
     }
 

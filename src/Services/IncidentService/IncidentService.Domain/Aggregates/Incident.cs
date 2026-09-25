@@ -38,6 +38,15 @@ public sealed class Incident : AggregateRoot
     // need as a telemetry promotion: correlating evidence against the wrong moment finds nothing.
     public DateTime? DetectedAt { get; private set; }
 
+    // What the people who worked it concluded: a real problem, or a detection that should not have
+    // fired. Asked once, on the way from open to closed, because that is the moment somebody knows
+    // — and it is what telemetry learns from. Null while open, and for incidents closed before
+    // anyone was asked.
+    public IncidentVerdict? Verdict { get; private set; }
+
+    // When it was closed out. Null while open; cleared when reopened.
+    public DateTime? ResolvedAt { get; private set; }
+
     public static Incident Create(
         Guid organizationId,
         string title,
@@ -52,7 +61,10 @@ public sealed class Incident : AggregateRoot
         DateTime? detectedAt = null
     )
     {
-        var incident = new Incident
+        // No domain event. There was one — IncidentCreatedDomainEvent — and nothing ever listened:
+        // the service published IncidentDetectedEvent itself after saving. Once the outbox arrived
+        // (Adım 24) an event nobody handles would have become a row retried forever, so it went.
+        return new Incident
         {
             Id = id ?? Guid.NewGuid(),
             OrganizationId = organizationId,
@@ -64,17 +76,65 @@ public sealed class Incident : AggregateRoot
             AssignedTeam = assignedTeam,
             DetectedAt = detectedAt,
         };
-
-        incident.AddDomainEvent(
-            new IncidentCreatedDomainEvent { IncidentId = incident.Id, Title = incident.Title }
-        );
-
-        return incident;
     }
 
-    public void UpdateStatus(IncidentStatus newStatus)
+    public static bool IsClosed(IncidentStatus status) =>
+        status is IncidentStatus.Resolved or IncidentStatus.Closed;
+
+    /// <summary>
+    /// Why this change cannot be made, or null when it can. Public so the application layer can
+    /// refuse it as a validation failure before the aggregate is asked to do it.
+    /// </summary>
+    public string? StatusChangeProblem(IncidentStatus newStatus, IncidentVerdict? verdict)
     {
+        var closing = !IsClosed(Status) && IsClosed(newStatus);
+
+        if (closing && verdict is null)
+            return "Closing an incident needs a verdict: was it a real problem or a false positive?";
+
+        // Changing a verdict after the fact would have to un-teach telemetry what it already
+        // learned from it, which nothing does yet. Refused rather than quietly ignored.
+        if (!closing && verdict is not null)
+            return "A verdict is given once, when an open incident is closed.";
+
+        return null;
+    }
+
+    public void UpdateStatus(IncidentStatus newStatus, IncidentVerdict? verdict = null)
+    {
+        if (StatusChangeProblem(newStatus, verdict) is { } problem)
+            throw new InvalidOperationException(problem);
+
+        var wasClosed = IsClosed(Status);
+        var nowClosed = IsClosed(newStatus);
+
         Status = newStatus;
+
+        if (!wasClosed && nowClosed)
+        {
+            var resolvedAt = DateTime.UtcNow;
+
+            Verdict = verdict;
+            ResolvedAt = resolvedAt;
+
+            AddDomainEvent(
+                new IncidentResolvedDomainEvent
+                {
+                    IncidentId = Id,
+                    Status = newStatus,
+                    Verdict = verdict!.Value,
+                    ResolvedAt = resolvedAt,
+                }
+            );
+        }
+        else if (wasClosed && !nowClosed)
+        {
+            // Reopened: whatever was concluded no longer stands. What telemetry learned from it is
+            // not taken back — see IncidentResolvedDomainEvent.
+            Verdict = null;
+            ResolvedAt = null;
+        }
+
         SetUpdatedAt();
     }
 
