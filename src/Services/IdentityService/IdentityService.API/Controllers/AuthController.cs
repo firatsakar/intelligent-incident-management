@@ -1,3 +1,5 @@
+using IdentityService.Application.Queries.GetSetupStatus;
+using IdentityService.Application.Commands.CompleteSetup;
 using System.Security.Claims;
 using BuildingBlocks.Web;
 using IdentityService.API.Contracts;
@@ -209,6 +211,49 @@ public sealed class AuthController : ControllerBase
 
         return Ok(session.User);
     }
+
+    // ---- first-run setup (Adım 25) ---------------------------------------------------------------
+
+    /// <summary>Whether this installation still needs its first Admin. Nothing more.</summary>
+    [HttpGet("setup")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetupStatus(CancellationToken cancellationToken) =>
+        Ok(new { required = await _sender.Send(new GetSetupStatusQuery(), cancellationToken) });
+
+    /// <summary>
+    /// Creates the organisation and its first Admin, with the one-time code from the service's
+    /// log, and signs the Admin in. Runs once; every refusal is the same 404.
+    /// </summary>
+    [HttpPost("setup/complete")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CompleteSetup(
+        [FromBody] CompleteSetupRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var session = await _sender.Send(
+            new CompleteSetupCommand(
+                request.SetupCode,
+                request.OrganizationName,
+                request.DisplayName,
+                request.Email,
+                request.Password
+            ),
+            cancellationToken
+        );
+
+        Issue(session);
+
+        return Ok(session.User);
+    }
+
+    public sealed record CompleteSetupRequest(
+        string SetupCode,
+        string OrganizationName,
+        string DisplayName,
+        string Email,
+        string Password
+    );
 
     public sealed record AcceptInvitationRequest(string DisplayName, string Password);
 
