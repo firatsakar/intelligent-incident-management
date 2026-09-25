@@ -1,4 +1,6 @@
-﻿using IncidentService.Application.Abstractions;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
 using IncidentService.Domain.Exceptions;
 using MediatR;
@@ -29,7 +31,12 @@ public sealed class UpdateIncidentStatusCommandHandler
             await _repository.GetByIdAsync(request.IncidentId, cancellationToken)
             ?? throw new IncidentNotFoundException(request.IncidentId);
 
-        incident.UpdateStatus(request.NewStatus);
+        // The rule belongs to the aggregate; asking it first turns a refusal into a 400 with the
+        // field named, rather than an exception from inside the domain.
+        if (incident.StatusChangeProblem(request.NewStatus, request.Verdict) is { } problem)
+            throw new ValidationException([new ValidationFailure(nameof(request.Verdict), problem)]);
+
+        incident.UpdateStatus(request.NewStatus, request.Verdict);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);

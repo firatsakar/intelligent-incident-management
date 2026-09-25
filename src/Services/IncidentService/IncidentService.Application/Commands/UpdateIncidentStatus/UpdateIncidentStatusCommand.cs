@@ -7,4 +7,7 @@ public sealed record UpdateIncidentStatusCommand : IRequest
 {
     public required Guid IncidentId { get; init; }
     public required IncidentStatus NewStatus { get; init; }
+
+    // Required when the change closes an open incident, refused on any other change.
+    public IncidentVerdict? Verdict { get; init; }
 }

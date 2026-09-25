@@ -165,11 +165,112 @@ public sealed class IncidentTests
     {
         var incident = Create();
 
-        incident.UpdateStatus(IncidentStatus.Resolved);
+        incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
         incident.AssignTeam("payments");
 
         Assert.Equal(IncidentStatus.Resolved, incident.Status);
         Assert.Equal("payments", incident.AssignedTeam);
         Assert.NotNull(incident.UpdatedAt);
+    }
+
+    // The verdict is what telemetry learns from, so when it is asked, and that it is asked only
+    // once, is the rule this whole step rests on.
+    public sealed class Closing
+    {
+        private static IReadOnlyList<IncidentResolvedDomainEvent> Resolved(Incident incident) =>
+            incident.DomainEvents.OfType<IncidentResolvedDomainEvent>().ToList();
+
+        [Theory]
+        [InlineData(IncidentStatus.Resolved)]
+        [InlineData(IncidentStatus.Closed)]
+        public void AnOpenIncidentCannotBeClosedWithoutAVerdict(IncidentStatus closed)
+        {
+            var incident = Create();
+
+            Assert.NotNull(incident.StatusChangeProblem(closed, verdict: null));
+            Assert.Throws<InvalidOperationException>(() => incident.UpdateStatus(closed));
+            Assert.Equal(IncidentStatus.Open, incident.Status);
+        }
+
+        [Theory]
+        [InlineData(IncidentStatus.Resolved, IncidentVerdict.Real)]
+        [InlineData(IncidentStatus.Closed, IncidentVerdict.FalsePositive)]
+        public void ClosingRecordsTheVerdictAndAnnouncesItOnce(
+            IncidentStatus closed,
+            IncidentVerdict verdict
+        )
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.InProgress);
+
+            incident.UpdateStatus(closed, verdict);
+
+            Assert.Equal(verdict, incident.Verdict);
+            Assert.NotNull(incident.ResolvedAt);
+
+            var resolved = Assert.Single(Resolved(incident));
+
+            Assert.Equal(incident.Id, resolved.IncidentId);
+            Assert.Equal(closed, resolved.Status);
+            Assert.Equal(verdict, resolved.Verdict);
+            Assert.Equal(incident.ResolvedAt, resolved.ResolvedAt);
+        }
+
+        [Fact]
+        public void ResolvedToClosedKeepsTheVerdictAndSaysNothingNew()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.FalsePositive);
+            var resolvedAt = incident.ResolvedAt;
+
+            incident.UpdateStatus(IncidentStatus.Closed);
+
+            Assert.Equal(IncidentStatus.Closed, incident.Status);
+            Assert.Equal(IncidentVerdict.FalsePositive, incident.Verdict);
+            Assert.Equal(resolvedAt, incident.ResolvedAt);
+            Assert.Single(Resolved(incident));
+        }
+
+        [Fact]
+        public void AVerdictCannotBeChangedOnceGiven()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
+
+            Assert.NotNull(incident.StatusChangeProblem(IncidentStatus.Closed, IncidentVerdict.FalsePositive));
+            Assert.Throws<InvalidOperationException>(
+                () => incident.UpdateStatus(IncidentStatus.Closed, IncidentVerdict.FalsePositive)
+            );
+            Assert.Equal(IncidentVerdict.Real, incident.Verdict);
+        }
+
+        [Fact]
+        public void AVerdictIsRefusedWhenNothingIsBeingClosed()
+        {
+            var incident = Create();
+
+            Assert.Throws<InvalidOperationException>(
+                () => incident.UpdateStatus(IncidentStatus.InProgress, IncidentVerdict.Real)
+            );
+            Assert.Null(incident.Verdict);
+        }
+
+        [Fact]
+        public void ReopeningClearsTheConclusionAndClosingAgainAsksAgain()
+        {
+            var incident = Create();
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.FalsePositive);
+
+            incident.UpdateStatus(IncidentStatus.Open);
+
+            Assert.Null(incident.Verdict);
+            Assert.Null(incident.ResolvedAt);
+            Assert.NotNull(incident.StatusChangeProblem(IncidentStatus.Resolved, verdict: null));
+
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
+
+            Assert.Equal(IncidentVerdict.Real, incident.Verdict);
+            Assert.Equal(2, Resolved(incident).Count);
+        }
     }
 }

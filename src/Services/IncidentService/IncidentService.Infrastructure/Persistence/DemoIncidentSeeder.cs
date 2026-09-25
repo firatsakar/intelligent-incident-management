@@ -140,8 +140,16 @@ public sealed class DemoIncidentSeeder
         // Statuses spread across the lifecycle, weighted towards resolved for older days.
         var status = StatusFor(random, createdAt);
 
+        // Closed ones carry a verdict, mostly real: a demo whose history is all false alarms
+        // would teach the reader the detector is useless, and one with none would hide the state.
+        var verdict = random.Next(0, 100) < 85 ? IncidentVerdict.Real : IncidentVerdict.FalsePositive;
+
         if (status != IncidentStatus.Open)
-            incident.UpdateStatus(status);
+            incident.UpdateStatus(status, Incident.IsClosed(status) ? verdict : null);
+
+        // Demo rows tell nobody anything: a seeded closure is not a conclusion telemetry should
+        // learn from, and the creation event has never had a listener.
+        incident.ClearDomainEvents();
 
         _context.Incidents.Add(incident);
 
@@ -153,6 +161,16 @@ public sealed class DemoIncidentSeeder
 
         if (incident.UpdatedAt.HasValue)
             entry.Property(x => x.UpdatedAt).CurrentValue = createdAt.AddMinutes(random.Next(2, 90));
+
+        // Backdated with the rest, so time-to-resolve reads as hours rather than as "just now".
+        // Closing was the last thing that happened to it, so it is also the last update.
+        if (incident.ResolvedAt.HasValue)
+        {
+            var resolvedAt = createdAt.AddMinutes(random.Next(20, 600));
+
+            entry.Property(x => x.ResolvedAt).CurrentValue = resolvedAt;
+            entry.Property(x => x.UpdatedAt).CurrentValue = resolvedAt;
+        }
     }
 
     private static IncidentStatus StatusFor(Random random, DateTime createdAt)
