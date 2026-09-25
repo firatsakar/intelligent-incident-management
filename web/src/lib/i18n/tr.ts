@@ -1159,6 +1159,11 @@ export const tr: Dictionary = {
         serviceRequired: 'Her repo’nun bir servis adı olmalı; geri kalanlar için *.',
         repositoryInvalid: 'Her repo’yu sahip/repo biçiminde yazın — örneğin acme/shop.',
         serviceTwice: 'Bir servis yalnız bir repo’ya eşlenebilir.',
+        test: 'Test et',
+        testing: 'Test ediliyor…',
+        testResults: 'Test sonuçları',
+        testOk: (changes: number) => `okundu; son 7 günde ${changes} değişiklik`,
+        testFailed: (reason: string) => `okunamadı: ${reason}`,
       },
     },
 

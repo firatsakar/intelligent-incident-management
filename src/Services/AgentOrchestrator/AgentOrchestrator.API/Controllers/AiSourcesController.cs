@@ -1,5 +1,6 @@
 using AgentOrchestrator.Application.Commands.DeleteGitHubConnection;
 using AgentOrchestrator.Application.Commands.SaveGitHubConnection;
+using AgentOrchestrator.Application.Commands.TestGitHubConnection;
 using AgentOrchestrator.Application.DTOs;
 using AgentOrchestrator.Application.Queries.GetGitHubConnection;
 using BuildingBlocks.Web;
@@ -40,6 +41,14 @@ public sealed class AiSourcesController : ControllerBase
                 cancellationToken
             )
         );
+
+    /// <summary>
+    /// Reads each mapped repository once with the stored token and says, per repository, whether
+    /// it worked — GitHub's own reason when it did not. Reads only.
+    /// </summary>
+    [HttpPost("github/test")]
+    public async Task<IActionResult> TestGitHub(CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new TestGitHubConnectionCommand(), cancellationToken));
 
     [HttpDelete("github")]
     public async Task<IActionResult> DeleteGitHub(CancellationToken cancellationToken)

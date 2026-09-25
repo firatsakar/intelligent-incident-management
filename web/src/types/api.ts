@@ -399,6 +399,17 @@ export interface RepositoryMapping {
   branch: string | null
 }
 
+/** One repository's result from the Test button. `error` is GitHub's own reason when it failed. */
+export interface RepositoryCheck {
+  service: string
+  repository: string
+  branch: string | null
+  ok: boolean
+  /** Commits in the last seven days — proof the repository was read, not merely reached. */
+  recentChanges: number | null
+  error: string | null
+}
+
 /** The organisation's GitHub connection. The token is never here; `hasToken` says one is saved. */
 export interface GitHubConnection {
   isConfigured: boolean

@@ -1323,6 +1323,12 @@ export const en = {
         serviceRequired: 'Every repository needs a service name, or * for the rest.',
         repositoryInvalid: 'Write each repository as owner/repository — for example acme/shop.',
         serviceTwice: 'Each service can be mapped to one repository only.',
+        test: 'Test',
+        testing: 'Testing…',
+        testResults: 'Test results',
+        testOk: (changes: number) =>
+          changes === 1 ? 'read; 1 change in the last 7 days' : `read; ${changes} changes in the last 7 days`,
+        testFailed: (reason: string) => `could not be read: ${reason}`,
       },
     },
 

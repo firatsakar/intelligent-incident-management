@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { PlusIcon, ShieldCheckIcon, TrashIcon } from 'lucide-react'
+import { AlertTriangleIcon, CircleCheckIcon, PlusIcon, ShieldCheckIcon, TrashIcon } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -28,7 +28,7 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { useT } from '@/lib/i18n'
-import type { GitHubConnection, RepositoryMapping } from '@/types/api'
+import type { GitHubConnection, RepositoryCheck, RepositoryMapping } from '@/types/api'
 
 import { GitHubMark } from './BrandIcons'
 
@@ -114,6 +114,7 @@ function GitHubCard({
   )
   const [problem, setProblem] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
+  const [checks, setChecks] = useState<RepositoryCheck[] | null>(null)
 
   // A save or a removal elsewhere — another tab, another Admin — replaces what the form started
   // from. The token field is never filled from it: there is nothing to fill it with.
@@ -131,6 +132,13 @@ function GitHubCard({
       toast.success(t.saved)
     },
     onError: (error: Error) => setProblem(describe(error)),
+  })
+
+  // Tests what is saved, not what is typed: the token in the field has not reached the server.
+  const test = useMutation({
+    mutationFn: aiSourcesApi.testGitHub,
+    onSuccess: (result) => setChecks(result.repositories),
+    onError: (error: Error) => toast.error(error.message),
   })
 
   const remove = useMutation({
@@ -309,12 +317,39 @@ function GitHubCard({
               {problem}
             </p>
           )}
+
+          {checks && (
+            <ul className="space-y-1.5" aria-label={t.testResults} role="status">
+              {checks.map((check) => (
+                <li key={check.service} className="flex items-start gap-2 text-xs">
+                  {check.ok ? (
+                    <CircleCheckIcon className="text-nominal-foreground mt-px size-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <AlertTriangleIcon className="text-alarm-ink mt-px size-3.5 shrink-0" aria-hidden />
+                  )}
+                  <span className="min-w-0 break-words">
+                    <span className="font-medium">{check.repository}</span>
+                    {check.branch && <span className="text-muted-foreground"> @ {check.branch}</span>}
+                    <span className="text-muted-foreground"> · {check.service} — </span>
+                    {check.ok ? t.testOk(check.recentChanges ?? 0) : t.testFailed(check.error ?? '')}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
 
         <CardFooter className="flex flex-wrap justify-between gap-2">
-          <Button type="submit" disabled={save.isPending}>
-            {save.isPending ? t.saving : t.save}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? t.saving : t.save}
+            </Button>
+            {connection.isConfigured && (
+              <Button type="button" variant="outline" disabled={test.isPending} onClick={() => test.mutate()}>
+                {test.isPending ? t.testing : t.test}
+              </Button>
+            )}
+          </div>
 
           {connection.isConfigured && (
             <Button type="button" variant="ghost" onClick={() => setRemoving(true)}>

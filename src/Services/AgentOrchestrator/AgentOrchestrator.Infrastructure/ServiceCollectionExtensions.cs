@@ -1,4 +1,5 @@
-﻿using AgentOrchestrator.Application.Abstractions;
+﻿using AgentOrchestrator.Infrastructure.Mcp;
+using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Infrastructure.Ai;
 using AgentOrchestrator.Infrastructure.Outbox;
 using AgentOrchestrator.Infrastructure.Persistence;
@@ -27,6 +28,11 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIncidentAnalysisRepository, IncidentAnalysisRepository>();
         services.AddScoped<IGitHubConnectionRepository, GitHubConnectionRepository>();
+
+        // The organisation's GitHub, read over GitHub's MCP server with the organisation's token.
+        services.Configure<GitHubMcpOptions>(configuration.GetSection(GitHubMcpOptions.SectionName));
+        services.AddHttpClient(GitHubMcpChangeSourceFactory.HttpClientName);
+        services.AddSingleton<IRepositoryChangeSourceFactory, GitHubMcpChangeSourceFactory>();
 
         services.Configure<AiAnalyzerOptions>(
             configuration.GetSection(AiAnalyzerOptions.SectionName)

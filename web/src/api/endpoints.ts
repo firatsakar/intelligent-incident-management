@@ -18,6 +18,7 @@ import type {
   NotificationStats,
   PagedResult,
   PasswordResetPreview,
+  RepositoryCheck,
   RepositoryMapping,
   SessionAccount,
   SignalPage,
@@ -197,6 +198,10 @@ export const aiSourcesApi = {
     api.put<GitHubConnection>('/api/ai-sources/github', input),
 
   removeGitHub: () => api.delete<void>('/api/ai-sources/github'),
+
+  /** Reads each mapped repository once with the saved token. Reads only. */
+  testGitHub: () =>
+    api.post<{ repositories: RepositoryCheck[] }>('/api/ai-sources/github/test'),
 }
 
 /**
