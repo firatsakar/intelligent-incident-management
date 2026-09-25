@@ -23,6 +23,9 @@ export default defineConfig({
     proxy: {
       '/api': { target: gateway, changeOrigin: true },
       '/hubs': { target: gateway, changeOrigin: true, ws: true },
+      // Where the telemetry settings screen tells a collector to send, so it has to answer on the
+      // console's own origin in development as it does behind the gateway in production.
+      '/otlp': { target: gateway, changeOrigin: true },
     },
   },
 })

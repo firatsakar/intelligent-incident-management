@@ -31,6 +31,7 @@ export type ConfigFieldId =
   | 'seq.filter'
   | 'seq.serviceProperty'
   | 'seq.initialLookback'
+  | 'otlp.minimumSeverity'
 
 export interface ConfigField {
   key: string
@@ -91,4 +92,7 @@ export const telemetrySourceFields: Record<TelemetrySourceKind, ConfigField[]> =
     // source is already sitting on.
     { key: 'InitialLookbackMinutes', id: 'seq.initialLookback', placeholder: '15' },
   ],
+  // The one setting a pushed source has of its own; everything else is on the sender's side. The
+  // server accepts Warning or Error and reads blank as Error.
+  Otlp: [{ key: 'MinimumSeverity', id: 'otlp.minimumSeverity', placeholder: 'Error' }],
 }

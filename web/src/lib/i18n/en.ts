@@ -605,6 +605,10 @@ export const en = {
       rereading: 'Re-reading…',
 
       clockSkew: 'clock skew',
+      // A burst is stored as a few sample rows, the newest carrying the rest of the count.
+      folded: (count: number) => `×${count}`,
+      foldedTitle: (count: number) =>
+        `This row stands for ${count} ${plural('en', count, { one: 'event', other: 'events' })} of one burst. The rest of the burst was counted onto it rather than stored.`,
       ingestionLag: 'Ingestion lag — from the source’s timestamp to ours',
       /** The column has no visible heading, so the affix is the whole of what it says. */
       lag: (duration: string) => `+${duration}`,
@@ -981,6 +985,7 @@ export const en = {
         'seq.filter': 'Filter',
         'seq.serviceProperty': 'Service property',
         'seq.initialLookback': 'Initial lookback (minutes)',
+        'otlp.minimumSeverity': 'Minimum severity',
       }),
 
       hints: {
@@ -991,6 +996,8 @@ export const en = {
         'seq.serviceProperty': 'Which event property names the service a log line came from.',
         'seq.initialLookback':
           'How far back the first poll reads. Later polls resume from where the last one stopped.',
+        'otlp.minimumSeverity':
+          'Warning or Error. Left blank, only errors and fatals are kept; anything lower is dropped on arrival.',
       } as Partial<Record<ConfigFieldId, string>>,
     },
 
@@ -1079,17 +1086,17 @@ export const en = {
         `All ${total} sources are paused. Nothing is being read, so nothing will be detected.`,
 
       comingSoonNote:
-        'Neither is built yet. The intent is deliberately not a connector per vendor: one standard wire format, and everything else handled by the shipper you already run.',
+        'Not built yet. For logs, OTLP above is the general answer: one standard wire format, and everything else handled by the shipper you already run.',
 
       addAnother: (name: string) => `Add another ${name} source`,
       connectOne: (name: string) => `Connect ${name}`,
 
       summary: byKey<TelemetrySourceKind>({
         Seq: 'Pulls from a Seq instance’s query API on a schedule.',
+        Otlp: 'Your collector or SDK pushes logs in OpenTelemetry’s wire format — whatever log store you run.',
       }),
 
       planned: byKeyOf<PlannedSourceId, { name: string; summary: string }>({
-        otlp: { name: 'OTLP log ingest', summary: 'Your collector pushes; no connector per vendor.' },
         alerts: {
           name: 'Alert webhook ingest',
           summary: 'Alerts from your monitoring, not logs.',
@@ -1113,6 +1120,9 @@ export const en = {
 
       deleteBody: (kind: string) =>
         `This ${kind} source and the credentials stored with it are removed, and detection stops reading from it immediately. Logs and signatures already ingested are kept — they are the evidence behind incidents already opened. A source connected here again starts from its initial lookback window rather than from where this one stopped.`,
+      // A pushed source is not read, so deleting it does not stop reading: it stops accepting.
+      deleteBodyPushed: (kind: string) =>
+        `This ${kind} source is removed and its key stops working immediately — anything still sending with it gets 401. Logs and signatures already received are kept; they are the evidence behind incidents already opened.`,
       deleteConfirm: 'Delete source',
 
       editTitle: (kind: string) => `Edit ${kind} source`,
@@ -1122,6 +1132,41 @@ export const en = {
       pollLabel: 'Poll interval (seconds)',
       pollInvalid: (minimum: number) =>
         `Enter a whole number of seconds, ${minimum} or more. Polling faster than that hammers the source for no benefit.`,
+
+      // A pushed source has no schedule; what it does is receive, and keep what clears its floor.
+      pushedSchedule: (minimum: string) => `Receives pushed logs and keeps ${minimum} and above.`,
+      pushedPausedNote:
+        '— pushes are refused with 403 until it is resumed, and a sender does not retry a 403.',
+      endpointLabel: 'Endpoint',
+      keyLabel: 'Key',
+      rotateKey: 'New key',
+      rotatingKey: 'Issuing…',
+      rotated: 'New key issued. The old one stopped working just now.',
+      lastReceived: (when: string) => `The last batch arrived ${when}.`,
+      // Follows the "Nothing received" label, so it says what to do rather than repeating it.
+      nothingReceived: 'Point a collector or an SDK at the endpoint, with this source’s key.',
+      receivedOkLabel: 'Receiving',
+      receivedFailLabel: 'Nothing received',
+
+      // Shown once, straight after the key is issued. Everything a person needs to point a sender
+      // at this source is on this one screen, because the key cannot be shown a second time.
+      keyPanel: {
+        title: (name: string) => `Send logs to ${name}`,
+        once: 'This key is shown once. Only its hash is stored, so it cannot be shown again — if it is lost, issue a new one.',
+        keyLabel: 'Ingest key',
+        endpointLabel: 'OTLP/HTTP endpoint',
+        endpointHint:
+          'Protobuf or JSON, gzip welcome. Exporters append /v1/logs to this address themselves.',
+        headerHint: (header: string) => `Send the key in the ${header} header.`,
+        collectorLabel: 'OpenTelemetry Collector',
+        collectorHint:
+          'Filters to errors before sending. Filtering belongs at the source; this source also drops anything below its minimum severity on arrival.',
+        sdkLabel: 'Straight from an SDK',
+        sdkHint: 'Environment variables every OpenTelemetry SDK reads, no collector in between.',
+        copy: 'Copy',
+        copied: 'Copied',
+        done: 'Done',
+      },
 
       // A source with no filter still reads something specific, and the pair of blank form
       // controls that produced it does not say what.
@@ -1201,6 +1246,7 @@ export const en = {
 
     telemetryKind: byKey<TelemetrySourceKind>({
       Seq: 'Seq',
+      Otlp: 'OTLP',
     }),
   },
 

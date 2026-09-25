@@ -18,9 +18,7 @@ import type { MarkComponent } from './SettingsCatalogue'
  * Record the compiler forces to be total. Adding a kind breaks this file until someone writes the
  * tile, and no tile can appear for a kind the poller cannot resolve a connector for.
  *
- * Today that union has exactly one member, so this screen is one tile rather than a grid. The
- * mechanism still earns its place: it is what makes the second connector a compile error here
- * instead of a screen nobody remembered to update.
+ * It did its job when OTLP arrived: adding the kind broke this file until the tile existed.
  */
 
 export interface SourceCatalogueEntry {
@@ -36,20 +34,22 @@ const entries: Record<TelemetrySourceKind, SourceCatalogueEntry> = {
     // somebody's brand, and a wrong logo is a worse claim than an honest generic one.
     mark: DatabaseIcon,
   },
+  Otlp: {
+    kind: 'Otlp',
+    // The mark it had while planned, so the tile a customer was told about is the one that appears.
+    mark: RadioTowerIcon,
+  },
 }
 
 export const connectable: SourceCatalogueEntry[] = telemetrySourceKinds.map((kind) => entries[kind])
 
 /**
- * The two planned general solutions, listed for the same reason the integrations catalogue lists
- * Slack and PagerDuty: a customer whose log store is not Seq should be able to see that the answer
- * is a standard wire format rather than a queue of vendor connectors. Inert, because a control that
- * errors is worse than an absent one.
+ * What is planned but not built, listed for the same reason the integrations catalogue lists Slack
+ * and PagerDuty. Inert, because a control that errors is worse than an absent one.
  */
-// Unlike the integrations catalogue, these two names are descriptive rather than trademarks, so
-// they live in the dictionary with their summaries.
+// Unlike the integrations catalogue, the name is descriptive rather than a trademark, so it lives
+// in the dictionary with its summary.
 export const planned: { id: PlannedSourceId; mark: MarkComponent }[] = [
-  { id: 'otlp', mark: RadioTowerIcon },
   { id: 'alerts', mark: WebhookIcon },
 ]
 
