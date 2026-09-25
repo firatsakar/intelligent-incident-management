@@ -7,9 +7,10 @@
 ## Tek cümlelik durum
 
 Adım 1–13, **13.5**, 15, 16, **17**, 18, 19, 19.5, 20, 20.5 ve 20.7 bitti; `develop` güncel ve
-push'lanmış, **410 test yeşil**. Sıradaki iş için önerilen iki aday: öncelik listesinin 8. maddesi
-(17.5 MCP / 21 CI/CD / 22 Kubernetes) ya da Fırat'ın sorusuyla açılan **Adım 16.5 — davetle
-kullanıcı yönetimi**. Seçim Fırat'ın.
+push'lanmış, **410 test yeşil**. Sıra (Fırat, 2026-09-25): **Adım 16.5 (davetle kullanıcı
+yönetimi) → Adım 24 (çözülen incident'ı telemetriye geri bildirmek) → Adım 17.5 (MCP)**; kalanlar
+bunlardan sonra yeniden konuşulacak. **24 ve 17.5'e başlamadan önce** ne yapılmak istendiğini
+Fırat'la açıp kapsamı birlikte netleştir — ikisini de henüz tam anlamadığını söyledi.
 
 ---
 

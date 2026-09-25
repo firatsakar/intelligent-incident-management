@@ -18,7 +18,7 @@
 - **Son tamamlanan:** Adım 16 — JWT auth, roller ve organizasyon bazlı sahiplik (`IIM-94`, 2026-09-24) — 13 parça, beşinci servis, 10 entity + Elasticsearch + 3 hub org'a bağlandı, **341 test**
 - **Son tamamlanan:** Adım 17 — OpenTelemetry distributed tracing (`IIM-109`, 2026-09-25) — 5 parça; OTLP push'undan bildirime **tek trace** Seq'te görüldü. Yolda bir Adım 16 regresyonu kapandı: outbox dispatcher'ı org kapsamı set etmiyordu, Adım 16'dan beri hiçbir analiz ES'e indekslenmemişti
 - **Son tamamlanan:** Adım 13.5 — OTLP log ingest (`IIM-115`, 2026-09-25) — 5 parça; 300 olaylık fırtına 10 satır, toplamı 300; gerçek .NET OTel SDK'sıyla protobuf; **410 test**
-- **Sıradaki:** öncelik listesinin 8. maddesi (17.5 MCP / 21 CI/CD / 22 Kubernetes) — ve Fırat'ın 2026-09-25 sorusuyla gündeme gelen **kullanıcı yönetimi** (davetle; aşağıda, Adım 16.5)
+- **Sıradaki:** Adım 16.5 → 24 → 17.5 (Fırat, 2026-09-25); 24 ve 17.5'ten önce kapsam konuşması
 
 ### Öncelik sırası (2026-09-21'de kararlaştırıldı)
 
@@ -49,9 +49,21 @@ Yol haritası **adım numarası sırasına göre değil**, aşağıdaki sıraya 
    dev'de yok ve JWT doğrulamıyor. **Hub grupları Adım 16'nın içinde** — Adım 20 yayın
    yüzeyini genişletti ve org kapsamlaması soket üzerinden uygulanamıyor
    (`production_necessaries.MD` §2).
-7. **Adım 13.5 + 17 birlikte** — ikisi de OpenTelemetry bağımlılığını paylaşıyor.
-8. Sonra: 17.5 (MCP), 21 (CI/CD), 22 (Kubernetes). Adım 20'nin kalanı (MTTR, model performansı)
-   "Adım 20 kalıntısı" maddesinde.
+7. ~~**Adım 13.5 + 17 birlikte**~~ **Yapıldı** — Adım 17 (`IIM-109`), Adım 13.5 (`IIM-115`), 2026-09-25.
+   Gerekçedeki "aynı bağımlılık" yarı doğruydu: ikisi aynı *tel formatını* paylaşıyor, aynı paketi
+   değil. Tek kabul koşusunun ikisini birden kanıtlaması ise tam olarak işe yaradı.
+
+**Yeni sıra (Fırat, 2026-09-25)** — "gördüğüm en önemli üç parça bunlar":
+
+8. **Adım 16.5 — davetle kullanıcı yönetimi.**
+9. **Adım 24 — çözülen incident'ı telemetriye geri bildirmek.**
+10. **Adım 17.5 — MCP entegrasyonu.**
+11. Kalanlar (21, 22, 23, 20.6, 13.6, Adım 20 kalıntısı, 14) bu üçü bitince **yeniden konuşulacak**;
+    eski 8. maddenin 21 → 22 sırası da o konuşmaya dahil.
+
+**24 ve 17.5 için kural:** koda ve plana başlamadan önce ne yapılmak istendiği Fırat'la açılıp
+konuşulacak — kendi ifadesiyle "tam anlayamadım ne yapılmak istendiğini". Yol haritasındaki
+maddeler kapsamı değil gerekçeyi taşıyor; o konuşmanın çıktısı plan olur.
 
 **Önceliği düşürüldü:** Adım 14 (Comment & Timeline) — evidence API'si ve delivery geçmişi
 audit hikâyesinin çoğunu zaten veriyor.
