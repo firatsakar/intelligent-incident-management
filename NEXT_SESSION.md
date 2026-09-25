@@ -6,15 +6,25 @@
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **17**, 18, 19, 19.5, 20, 20.5 ve 20.7 bitti; `develop` güncel ve
-push'lanmış, **410 test yeşil**. Sıra (Fırat, 2026-09-25): **Adım 16.5 (davetle kullanıcı
-yönetimi) → Adım 24 (çözülen incident'ı telemetriye geri bildirmek) → Adım 17.5 (MCP)**; kalanlar
-bunlardan sonra yeniden konuşulacak. **24 ve 17.5'e başlamadan önce** ne yapılmak istendiğini
-Fırat'la açıp kapsamı birlikte netleştir — ikisini de henüz tam anlamadığını söyledi.
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, 18, 19, 19.5, 20, 20.5 ve 20.7 bitti; `develop`
+güncel ve push'lanmış, **462 test yeşil**. Sıra (Fırat, 2026-09-25): ~~16.5~~ → **Adım 24
+(çözülen incident'ı telemetriye geri bildirmek) → Adım 17.5 (MCP)**; kalanlar bunlardan sonra
+yeniden konuşulacak. **24 ve 17.5'e başlamadan önce** ne yapılmak istendiğini Fırat'la açıp
+kapsamı birlikte netleştir — ikisini de henüz tam anlamadığını söyledi.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 16.5 — davetle kullanıcı yönetimi** (`IIM-122`): açık kayıt yok, bilerek. Admin
+Ayarlar → **Üyeler**'den davet eder (e-posta Mailpit'e gider, `http://localhost:8025`; bağlantı
+Admin'e bir kez de gösterilir), rol değiştirir, hesabı kapatır/açar, sıfırlama bağlantısı üretir.
+Herkese açık `/invite/:token` ve `/reset/:token` ekranları oturumu açar. Kişi kendi parolasını
+Profil'den değiştirir. **Organizasyona ait her ayar yalnız Admin'e** (üyeler, entegrasyonlar,
+telemetri kaynakları; GET dahil) — Adım 20.6'daki AI dili de öyle olacak. Engineer olay işler,
+Viewer okur. Konsolda roller TR'de Yönetici / Mühendis / İzleyici.
+**Açık kalan tek şey:** kabul ve sıfırlama formunu gerçek bir parolayla tarayıcıda Fırat'ın bir kez
+denemesi (API seviyesinde doğrulandı; ben parola alanı doldurmuyorum).
 
 **Adım 17 — OpenTelemetry tracing** (`IIM-109`): altı süreç de span'lerini log'larla aynı Seq'e
 (`:8081`) yazıyor. HTTP, SQL, RabbitMQ (istemcinin kendi span'leri), outbox (trace satırda
@@ -38,11 +48,14 @@ etmiyordu → Adım 16'dan beri hiçbir AI analizi ES'e indekslenmemişti ve her
 ## Test kimlikleri — Fırat'ı beklemeden tarayıcıda test etmek için (`IIM-121`)
 
 Kanarya organizasyonunda (`11111111-1111-1111-1111-111111111111`, IdentityService'te
-"Canary (test)") iki kullanıcı var. **Parolayla girilemez** — hash bilerek geçersiz, login 401 döner.
+"Canary (test)") üç test kullanıcısı var. **Parolayla girilemez** — hash bilerek geçersiz, login
+401 döner. (Kanaryada bir de 16.5 koşularından kalan iki **kapalı** "Invited Viewer" var;
+dokunma, zararsız.)
 
 | Kullanıcı | Id | Rol |
 |---|---|---|
 | `claude.admin@canary.test` | `c1a0de00-0000-4000-8000-00000000ad01` | Admin |
+| `claude.engineer@canary.test` | `c1a0de00-0000-4000-8000-00000000e603` | Engineer |
 | `claude.viewer@canary.test` | `c1a0de00-0000-4000-8000-00000000ee02` | Viewer |
 
 **Oturum açma:** imza anahtarıyla (`dotnet user-secrets list --project src/Services/IdentityService/IdentityService.API` →
@@ -131,7 +144,12 @@ Bunlar tartışılıp karara bağlandı; değiştirmeden önce gerekçeyi oku.
   `…ForIngestAsync`); unique index'ler org'a göre (**tek istisna** ingest anahtarının hash'i — kimin
   olduğu bilinmeden aranıyor); hub yayını asla `Clients.All`.
 - **Token asla response gövdesinde değil** (ingest anahtarı bir token değil; bir kez gösterilir).
-- **Açık kayıt ekranı yok, bilerek** — öneri davetle kullanıcı yönetimi (Adım 16.5).
+- **Açık kayıt ekranı yok, bilerek** — hesaplar davetle açılır (Adım 16.5). Organizasyona ait
+  her ayar yalnız Admin'e, GET dahil (`PlatformPolicies.Administer`); yeni bir org ayarı eklenirse
+  izolasyon probuna da eklenir.
+- **Tek kullanımlık bağlantılar** (davet, sıfırlama) ingest anahtarıyla aynı desen: 256 bit, yalnız
+  SHA-256 saklanır, düz hâli yalnızca üreten yanıtta ve e-postada; geçersiz / süresi dolmuş /
+  kullanılmış tek ve aynı 404.
 
 ---
 

@@ -163,6 +163,7 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [x] TelemetryIngestionService — anomaly-based incident detection, Seq pull and OTLP push ingest
 - [ ] Comment & timeline (audit trail)
 - [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
+- [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
 - [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
 - [ ] **MCP integration** — let the agent consume external systems (Grafana, Kubernetes, GitHub, PagerDuty) as tools, for cross-system root cause analysis
 - [ ] Unit & integration tests

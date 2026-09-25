@@ -118,20 +118,30 @@ diye yazılır, geçmiş sayılmaz. **İlk koşu (2026-09-25): 55/55.** Karşıl
 olaylar 100/100, sinyaller 2/86, log kayıtları 23/200, imzalar 2/64, kaynaklar 1/1,
 entegrasyonlar 1/3.
 
-### 🔴 Kullanıcı yönetimi yok
+### ✅ ~~Kullanıcı yönetimi yok~~ — **kapandı** (Adım 16.5, `IIM-122`)
 
-Bir organizasyon, seed ile gelen tek bir Admin ile başlıyor. Kullanıcı ekleme, davet, parola
-sıfırlama, rol değiştirme, organizasyon oluşturma için **hiçbir uç yok** — ikinci bir kullanıcı
-ancak veritabanına elle yazılarak var olabilir. Adım 16'nın kapsam dışı bıraktığı iş; bir
-müşteriye verilmeden önce gerekli.
+Herkese açık kayıt değil, **davet** (Fırat, 2026-09-25): B2B'de hesabı organizasyonun Admin'i
+açar; açık kayıt herkesin organizasyon açabilmesi demek ve her incident ücretli bir AI analizi
+tetikliyor. Admin, Ayarlar → Üyeler'den davet eder (e-posta + Admin'e bir kez gösterilen bağlantı,
+7 gün), rol değiştirir, hesabı kapatır ya da açar ve parola sıfırlama bağlantısı üretir (24 saat).
+Kişi kendi parolasını Profil'den, mevcut parolasıyla değiştirir. Bağlantılar 256 bit ve tek
+kullanımlık; yalnızca SHA-256'ları saklanıyor. Geçersiz, süresi dolmuş, kullanılmış ve geri
+çekilmiş bağlantı **tek ve aynı** 404'ü alıyor. Kimse kendi hesabına dokunamıyor ve **son aktif
+Admin** düşürülemiyor. Organizasyona ait her ayar (üyeler, entegrasyonlar, telemetri kaynakları)
+yalnız Admin'e açık, GET dahil. Kalanlar:
 
-- ~~Viewer rolünün ekranları tarayıcıda hiç görülmedi~~ — artık görülebilir: kanarya
-  organizasyonunda parolasız bir test Viewer'ı var (`IIM-121`, `NEXT_SESSION.md`). Kullanıcı
-  yönetimi hâlâ yok.
-- **Karar önerisi (2026-09-25, Fırat'ın "neden register yok" sorusu üzerine):** herkese açık
-  kayıt değil **davetle** kullanıcı ekleme — B2B'de hesabı organizasyonun Admin'i açar; açık
-  kayıt herkesin organizasyon açabilmesi demek ve her incident ücretli bir AI analizi tetikliyor.
-  Yol haritasında Adım 16.5.
+- 🟡 **Kendi kendine parola sıfırlama yok** ("parolamı unuttum"). Bağlantıyı bir Admin üretiyor.
+  Tek Admin'li bir organizasyonda Admin parolasını unutursa, platform operatörünün veritabanına
+  dokunması gerekir.
+- 🟡 **Organizasyon oluşturma yok.** Yeni müşteri ve ilk Admin'i hâlâ seed ile ya da elle
+  açılıyor. Bir platform-operatörü kimliği ya da bir kurulum komutu gerekiyor.
+- 🟡 **Platform e-postası tek bir SMTP** (`Mail:*`; dev'de Mailpit). Gönderim başarısız olursa
+  davet yine oluşur ve Admin'e `emailSent: false` gösterilir; başka kimse haberdar olmaz. Üretimde
+  SPF/DKIM'li bir gönderici gerekir, ve **`Console:BaseUrl` konsolun gerçek adresi olmalı** —
+  yanlışsa e-postadaki bağlantılar `localhost`'u gösterir.
+- 🟡 **Kim kimi davet etti, kim sıfırladı** satırlarda duruyor (`InvitedByUserId`,
+  `IssuedByUserId`), ama görüntüleyen bir denetim ekranı yok (Adım 14).
+- SSO / SCIM / MFA → aşağıdaki "Kimlik doğrulama yalnızca yerel parola".
 
 ### 🟡 Oturum iptali yalnızca refresh tarafında
 
@@ -167,10 +177,12 @@ CORS eklenmedi ve eklenmeyecek: gateway tek origin sağlıyor, tarayıcı yalnı
 konuşuyor. `dist/` artık gateway tarafından servis edilebiliyor (`Spa:Root`) ve uygulama Vite
 olmadan çalışıyor — Adım 15'te ölçüldü.
 
-### 🟡 Rate limiting yalnızca girişte
+### 🟡 Rate limiting yalnızca kimlik uçlarında
 
 Gateway `/api/auth/login`'i adres başına dakikada 10 denemeyle sınırlıyor (429 +
-`Retry-After`). Diğer uçlar sınırsız: `POST /api/incidents` bir AI analizi ve bildirim zinciri
+`Retry-After`). Adım 16.5'ten beri parola belirlenen ya da sınanan her uç — davet önizleme/kabul,
+sıfırlama önizleme/tamamlama, `POST /api/auth/password` — **aynı** sınırlayıcıda (paylaşılan
+kova: dakikada toplam 10). Diğer uçlar sınırsız: `POST /api/incidents` bir AI analizi ve bildirim zinciri
 tetikliyor, entegrasyon test uçları dışarıya istek atıyor. Kimliksiz erişim kapandığı için risk
 artık yalnızca kötü niyetli bir *üye*den geliyor, ama sıfır değil.
 
