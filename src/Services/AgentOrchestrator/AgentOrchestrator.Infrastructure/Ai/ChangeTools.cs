@@ -144,6 +144,14 @@ internal sealed class ChangeTools
             if (detail is null)
                 return $"GitHub has no commit {listed.ShortSha} in this repository.";
 
+            _logger.LogInformation(
+                "AI inspected {Sha} in {Repository}: {Files} file(s), {WithDiff} with a diff.",
+                listed.ShortSha,
+                _repository.FullName,
+                detail.Files.Count,
+                detail.Files.Count(file => file.Patch is not null)
+            );
+
             return JsonSerializer.Serialize(
                 new
                 {

@@ -7,8 +7,8 @@ public sealed class GitHubMcpOptions
 
     /// <summary>
     /// GitHub's hosted server, narrowed on the path to the repository toolset in read-only mode:
-    /// the server itself then offers no tool that writes. The client narrows it further to the two
-    /// tools it calls (see <see cref="GitHubMcpChangeSourceFactory"/>).
+    /// the server itself then offers no tool that writes (confirmed live). The client calls only
+    /// two of the tools it does offer (see <see cref="GitHubMcpChangeSourceFactory"/>).
     /// </summary>
     public string Endpoint { get; set; } = "https://api.githubcopilot.com/mcp/x/repos/readonly";
 

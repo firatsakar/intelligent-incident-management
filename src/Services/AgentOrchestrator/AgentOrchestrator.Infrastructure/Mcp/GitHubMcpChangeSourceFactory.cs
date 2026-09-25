@@ -15,9 +15,18 @@ namespace AgentOrchestrator.Infrastructure.Mcp;
 /// source (Grafana, Kubernetes) plugs into the same client rather than into a second REST wrapper.
 /// </summary>
 /// <remarks>
-/// Read-only three times over: the endpoint path selects the server's read-only mode, the headers
-/// narrow the catalogue to the two tools used, and <see cref="IRepositoryChangeSource"/> has no
-/// member that could call anything else.
+/// <para>
+/// Read-only twice over: the endpoint path selects the server's read-only mode — confirmed live,
+/// the catalogue it offers has no tool that writes — and <see cref="IRepositoryChangeSource"/> has
+/// no member that could call anything but <c>list_commits</c> and <c>get_commit</c>. The model
+/// never sees the MCP catalogue at all; it sees the two tools <c>ChangeTools</c> wraps.
+/// </para>
+/// <para>
+/// Discovery (Adım 17.5 Parça 3, against the live server with a real token): the
+/// <c>X-MCP-Tools</c> header did not narrow the catalogue on the <c>/x/repos/readonly</c> path —
+/// the whole read-only repository toolset was listed. It is still sent, as intent; nothing relies
+/// on it.
+/// </para>
 /// </remarks>
 public sealed class GitHubMcpChangeSourceFactory : IRepositoryChangeSourceFactory
 {
@@ -62,6 +71,7 @@ public sealed class GitHubMcpChangeSourceFactory : IRepositoryChangeSourceFactor
                     // instrumentation or its logging, and the token is never put in a message.
                     ["Authorization"] = $"Bearer {token}",
                     ["X-MCP-Readonly"] = "true",
+                    // Intent only: the server ignored it on this path (see remarks).
                     ["X-MCP-Tools"] = $"{ListCommits},{GetCommit}",
                 },
             },
@@ -145,6 +155,9 @@ internal sealed class GitHubMcpChangeSource : IRepositoryChangeSource
             ["since"] = since.ToUniversalTime().ToString("O"),
             ["until"] = until.ToUniversalTime().ToString("O"),
             ["perPage"] = Math.Clamp(max, 1, 100),
+            // What the list is read for and nothing else: no committer, no parents, no URLs the
+            // platform would not use anyway (it builds its own).
+            ["fields"] = new[] { "sha", "commit", "author" },
         };
 
         // Null is the default branch, which GitHub picks when sha is absent.
@@ -174,6 +187,9 @@ internal sealed class GitHubMcpChangeSource : IRepositoryChangeSource
             ["owner"] = repository.Owner,
             ["repo"] = repository.Repository,
             ["sha"] = sha,
+            // The server's default is "stats": file names and line counts, no diff — which would
+            // leave the analysis guessing what a change did. The diff is trimmed on our side.
+            ["detail"] = "full_patch",
         };
 
         var text = await CallAsync(GitHubMcpChangeSourceFactory.GetCommit, arguments, cancellationToken);
