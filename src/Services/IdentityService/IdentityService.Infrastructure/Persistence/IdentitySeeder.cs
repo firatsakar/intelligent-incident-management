@@ -1,3 +1,4 @@
+using IdentityService.Application.Setup;
 using BuildingBlocks.SharedKernel;
 using IdentityService.Application.Abstractions;
 using IdentityService.Domain.Aggregates;
@@ -33,16 +34,19 @@ public sealed class IdentitySeeder : IHostedService
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
+    private readonly SetupCode _setup;
     private readonly ILogger<IdentitySeeder> _logger;
 
     public IdentitySeeder(
         IServiceScopeFactory scopeFactory,
         IConfiguration configuration,
+        SetupCode setup,
         ILogger<IdentitySeeder> logger
     )
     {
         _scopeFactory = scopeFactory;
         _configuration = configuration;
+        _setup = setup;
         _logger = logger;
     }
 
@@ -64,9 +68,15 @@ public sealed class IdentitySeeder : IHostedService
 
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
+                // No seed: the installation is set up from the console (Adım 25). The code is the
+                // proof that whoever does it can read this server's logs — and this line is the
+                // only place it ever appears.
+                var code = _setup.Issue();
+
                 _logger.LogWarning(
-                    "No users exist and no seed administrator is configured, so nobody can sign in. "
-                        + "Set {Section}:Email and {Section}:Password (user secrets in development) and restart.",
+                    "First-run setup: no organisation exists yet. Open the console — it asks for this one-time setup code: {SetupCode}. "
+                        + "A restart issues a new code. To set up without the console instead, set {Section}:Email and {Section}:Password.",
+                    code,
                     SeedConfigurationSection,
                     SeedConfigurationSection
                 );

@@ -136,8 +136,15 @@ yalnız Admin'e açık, GET dahil. Kalanlar:
 - 🟡 **Kendi kendine parola sıfırlama yok** ("parolamı unuttum"). Bağlantıyı bir Admin üretiyor.
   Tek Admin'li bir organizasyonda Admin parolasını unutursa, platform operatörünün veritabanına
   dokunması gerekir.
-- 🟡 **Organizasyon oluşturma yok.** Yeni müşteri ve ilk Admin'i hâlâ seed ile ya da elle
-  açılıyor. Bir platform-operatörü kimliği ya da bir kurulum komutu gerekiyor.
+- ✅ **Organizasyon oluşturma — Adım 25'te kararla kapandı.** Ürün açık kaynak; **kurulum başına
+  tek organizasyon**. Boş kurulumda IdentityService log'a tek kullanımlık bir kurulum kodu yazar,
+  konsolun `/setup` ekranı onunla organizasyonu ve ilk Admin'i açar (kod bellekte, yeniden
+  başlatmada yenilenir, kullanıcı oluşunca hiçbir şey ekranı yeniden açmaz); otomasyon için
+  `Identity:Seed:*` duruyor. Organizasyon adı Ayarlar → Organizasyon'dan değişir. Çok kiracılı
+  bir SaaS'a dönülürse platform-operatörü kimliği yine gerekir; altyapıdaki organizasyon ayrımı
+  bunun için korunuyor. **Dikkat:** kod log'la birlikte Seq'e de gider — log'ları okuyabilen herkes
+  boş bir kurulumu sahiplenebilir. Seq (ve her log toplayıcı) kurulum bitene kadar dışarıya kapalı
+  olmalı.
 - 🟡 **Platform e-postası tek bir SMTP** (`Mail:*`; dev'de Mailpit). Gönderim başarısız olursa
   davet yine oluşur ve Admin'e `emailSent: false` gösterilir; başka kimse haberdar olmaz. Üretimde
   SPF/DKIM'li bir gönderici gerekir, ve **`Console:BaseUrl` konsolun gerçek adresi olmalı** —
@@ -400,6 +407,24 @@ hatalarında sessiz kalır.
 
 Compose yalnızca altyapıyı (Postgres, RabbitMQ, ES, Seq, Mailpit) ayağa kaldırıyor. Dört .NET
 servisi geliştirme makinesinde `dotnet run` ile çalışıyor. **Dağıtılabilir bir artefakt yok.**
+Ürün açık kaynak olacağı için (Fırat, 2026-09-25) CI/CD ve Kubernetes adımları çıkarıldı; bu
+maddeyi **Adım 26 — tek komutla kurulum** kapatacak.
+
+### 🟡 Ölçekleme: SignalR backplane ve session affinity (Adım 22'den taşındı)
+
+Bir hub servisi ikinci replikaya çıktığı an iki şey gerekecek. Bugün gerekmiyor; şimdi eklemek
+olmayan bir problem için gerçek bir Redis bağımlılığı almak olurdu. Kendi kurulumunu ölçeklemek
+isteyen için:
+
+1. **SignalR backplane:** WebSocket bağlantısı tek instance'a bağlı. POST'u işleyen replika,
+   başka replikadaki client'a ulaşamaz. `Microsoft.AspNetCore.SignalR.StackExchangeRedis`, bağlantının
+   hangi sunucuda olduğunu bilmeye gerek bırakmadan bunu çözüyor; gruplar da backplane üzerinden
+   yayılıyor.
+2. **Session affinity:** SignalR el sıkışması iki istekten oluşuyor (`/negotiate` + bağlantı).
+   İkisi farklı replikaya düşerse bağlantı kurulamaz. Çözüm YARP'ın cookie tabanlı affinity'si ya
+   da client'ta `skipNegotiation: true` + WebSockets.
+
+Ayrı bir realtime servisi bu ikisini çözmez; o da ölçeklenir, o da backplane ve affinity ister.
 
 ### 🔴 Migration stratejisi tanımsız
 

@@ -1,3 +1,4 @@
+using IdentityService.Application.Commands.RenameOrganization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using BuildingBlocks.Web;
@@ -30,6 +31,11 @@ public sealed class OrganizationController : ControllerBase
     {
         _sender = sender;
     }
+
+    /// <summary>Renames the caller's organisation. There is no id to aim at another one.</summary>
+    [HttpPatch]
+    public async Task<IActionResult> Rename([FromBody] RenameRequest request, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new RenameOrganizationCommand(request.Name), cancellationToken));
 
     [HttpGet("members")]
     public async Task<IActionResult> Members(CancellationToken cancellationToken) =>
@@ -79,6 +85,8 @@ public sealed class OrganizationController : ControllerBase
             : throw new InvalidOperationException("An authenticated caller without a subject claim.");
 
     public sealed record ChangeRoleRequest(UserRole Role);
+
+    public sealed record RenameRequest(string Name);
 
     public sealed record InviteRequest(string Email, UserRole Role);
 }

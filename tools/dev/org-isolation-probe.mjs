@@ -332,6 +332,8 @@ async function roles() {
       ['GET', '/api/organization/members'],
       ['GET', '/api/organization/invitations'],
       ['POST', '/api/organization/invitations', { email: 'nobody@canary.test', role: 'Viewer' }],
+      // Its name too (Adım 25).
+      ['PATCH', '/api/organization', { name: 'renamed by a non-admin' }],
       ['POST', `/api/organization/members/${canary.users.Viewer}/password-reset`],
     ]) {
       const response = await call(method, path, token[`canary${role}`], body)

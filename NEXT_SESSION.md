@@ -1,20 +1,33 @@
 # Sonraki Session — Devir Notu
 
-> **2026-09-25 tarihli anlık görüntü.** Kalıcı doğruluk kaynakları `PROGRESS.md` (nerede
+> **2026-09-26 tarihli anlık görüntü.** Kalıcı doğruluk kaynakları `PROGRESS.md` (nerede
 > olduğumuz) ve `production_necessaries.MD` (neyin eksik olduğu). Bu dosya sadece hızlı
 > başlangıç içindir; ikisiyle çeliştiğinde **onlar geçerlidir**.
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7 ve **24**
-bitti; `develop` güncel ve push'lanmış, **519 test yeşil**. Fırat'ın sırası (16.5 → 24 → 17.5)
-tamamlandı; **kalan adımlar (21, 22, 23, 20.6, 13.6, Adım 20 kalıntısı, 14) Fırat'la yeniden
-konuşulacak** — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7, **24** ve
+**25** bitti; `develop` güncel ve push'lanmış, **531 test yeşil**. Ürün **açık kaynak** olacak: 21
+(CI/CD) ve 22 (Kubernetes) yol haritasından çıktı. **Sıradaki: Adım 26 — tek komutla kurulum**
+(`IIM-150`; Dockerfile'lar + tüm platform için docker compose) — **ayrıntılı planı Fırat'la konuşmadan
+başlama.** Ardından kalanlar (23, 20.6, 13.6, Adım 20 kalıntısı, 14, outbox retry tavanı 🔴) yine
+Fırat'la konuşulacak — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
 önce ne işe yaradığını anlat, kararları sor, sonra plan.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 25 — ilk kurulum ekranı ve organizasyon adı** (`IIM-145`). Varsayılan hesap/parola **yok**.
+Boş veritabanında (ve `Identity:Seed:*` boşken) IdentityService log'a tek bir Warning satırıyla
+**tek kullanımlık kurulum kodu** yazar (`XXXX-XXXX-XXXX`, bellekte, yeniden başlatmada yenilenir).
+Konsol girişte `GET /api/auth/setup` sorar, gerekiyorsa `/setup`'a yönlenir: kod + organizasyon adı +
+ilk Admin → oturum açılır. Yanlış kod / kurulmuş sistem / ikinci deneme hepsi aynı 404; tamamlama
+ucu gateway'de rate-limit'li. **Kurulum başına tek organizasyon**; ad Ayarlar → **Organizasyon**'dan
+değişir (eski Üyeler sekmesi; `/settings/members` oraya yönlenir). README'de "First-run setup".
+**Kabul artığı (zararsız, silmek Fırat'a sorulur):** identity Postgres'inde (`:5437`) boş
+kurulumla açılmış `identity_setup_acceptance` veritabanı ve RabbitMQ'da bağsız
+`iim_setup_acceptance` exchange'i.
 
 **Adım 17.5 — AI analizi GitHub'a bakıyor (MCP)** (`IIM-137`). Ayarlar → **Entegrasyonlar**
 artık tek sayfa, üç grup: Gözlemlenebilirlik (telemetri) · **Analiz (GitHub)** · Bildirimler —

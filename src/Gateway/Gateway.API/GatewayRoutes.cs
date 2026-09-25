@@ -64,6 +64,9 @@ internal static class GatewayRoutes
         ("auth-invitations", "/api/auth/invitations/{**rest}", IdentityCluster, SignInRateLimiterPolicy),
         ("auth-password-resets", "/api/auth/password-resets/{**rest}", IdentityCluster, SignInRateLimiterPolicy),
         ("auth-password", "/api/auth/password", IdentityCluster, SignInRateLimiterPolicy),
+        // Only completing the setup is limited: its status is asked by every visit to the sign-in
+        // screen, and sharing the sign-in bucket would spend a person's attempts on page loads.
+        ("auth-setup", "/api/auth/setup/complete", IdentityCluster, SignInRateLimiterPolicy),
         ("auth", "/api/auth/{**rest}", IdentityCluster, null),
         // The organisation's members — IdentityService, which is where accounts live.
         ("organization", "/api/organization/{**rest}", IdentityCluster, null),

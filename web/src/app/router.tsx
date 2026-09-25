@@ -5,6 +5,7 @@ import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
+import { SetupPage } from '@/features/auth/SetupPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DeliveriesPage } from '@/features/deliveries/DeliveriesPage'
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage'
@@ -14,7 +15,7 @@ import { SignalsPage } from '@/features/signals/SignalsPage'
 import { FunnelPage } from '@/features/telemetry/FunnelPage'
 import { ServicesPage } from '@/features/telemetry/ServicesPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
-import { MembersPage } from '@/features/settings/MembersPage'
+import { OrganizationPage } from '@/features/settings/OrganizationPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
 import { SettingsLayout } from '@/features/settings/SettingsLayout'
 
@@ -25,6 +26,8 @@ export const router = createBrowserRouter([
   // yet, or has a different one, and the link is the only credential the page needs.
   { path: '/invite/:token', element: <AcceptInvitePage /> },
   { path: '/reset/:token', element: <ResetPasswordPage /> },
+  // A fresh installation's first screen (Adım 25): the organisation and its first Admin.
+  { path: '/setup', element: <SetupPage /> },
   {
     // A pathless layout route. The guard wraps every application URL without appearing in any of
     // them, so no link, no bookmark and no shared filtered URL moves.
@@ -56,7 +59,9 @@ export const router = createBrowserRouter([
             children: [
               { index: true, element: <Navigate to="/settings/profile" replace /> },
               { path: 'profile', element: <ProfilePage /> },
-              { path: 'members', element: <MembersPage /> },
+              { path: 'organization', element: <OrganizationPage /> },
+              // Members became a section of the Organization tab (Adım 25).
+              { path: 'members', element: <Navigate to="/settings/organization" replace /> },
               { path: 'integrations', element: <IntegrationsPage /> },
               // Telemetry and the AI sources were tabs of their own until they became groups of
               // the Integrations page. Their addresses keep resolving — to the group, not the top.
