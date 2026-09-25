@@ -58,7 +58,8 @@ public sealed class IncidentAnalysis : AggregateRoot
                 result.SuggestedCategory,
                 result.SuggestedPriority,
                 result.Reasoning,
-                result.Confidence
+                result.Confidence,
+                result.RelatedChanges
             )
         );
 

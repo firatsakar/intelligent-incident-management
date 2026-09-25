@@ -56,6 +56,15 @@ public sealed class IncidentAnalysisCompletedOutboxHandler : IOutboxMessageHandl
             SuggestedPriority = domainEvent.SuggestedPriority,
             Reasoning = domainEvent.Reasoning,
             Confidence = domainEvent.Confidence,
+            RelatedChanges = (domainEvent.RelatedChanges ?? [])
+                .Select(change => new AnalysisRelatedChange(
+                    change.Sha,
+                    change.Title,
+                    change.Author,
+                    change.CommittedAt,
+                    change.Url
+                ))
+                .ToList(),
         };
 
         await _eventBus.PublishAsync(integrationEvent, cancellationToken);

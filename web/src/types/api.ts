@@ -44,12 +44,25 @@ export interface Incident {
    * before this field existed they looked identical on screen.
    */
   aiAnalysisError: string | null
+  /**
+   * Commits the analysis named as likely causes (Adım 17.5). Every field — the URL included — was
+   * written by the platform from what GitHub returned, never by the model.
+   */
+  aiRelatedChanges: AiRelatedChange[]
   /** Null while open, and for incidents closed before anyone was asked. */
   verdict: IncidentVerdict | null
   /** When it was closed out; cleared if it is reopened. */
   resolvedAt: string | null
   createdAt: string
   updatedAt: string | null
+}
+
+export interface AiRelatedChange {
+  sha: string
+  title: string
+  author: string | null
+  committedAt: string
+  url: string
 }
 
 export interface PagedResult<T> {

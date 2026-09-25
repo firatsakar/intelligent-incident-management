@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.SharedKernel;
+﻿using IncidentService.Domain.ValueObjects;
+using BuildingBlocks.SharedKernel;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Events;
 
@@ -32,6 +33,12 @@ public sealed class Incident : AggregateRoot
     // Non-null means the analysis ran and failed. Distinct from IsAiAnalyzed being false, which
     // means it has not run yet — one of those resolves itself and the other does not.
     public string? AiAnalysisError { get; private set; }
+
+    // Commits the analysis named as likely causes (Adım 17.5). Replaced by each analysis; empty
+    // when it read no code or found nothing that explained the incident.
+    private List<AiRelatedChange> _aiRelatedChanges = [];
+
+    public IReadOnlyList<AiRelatedChange> AiRelatedChanges => _aiRelatedChanges;
 
     // When the problem started, as distinct from CreatedAt, which is when the record was filed.
     // An engineer opening an incident at 14:35 for something that began at 14:20 has the same
@@ -151,10 +158,12 @@ public sealed class Incident : AggregateRoot
         IncidentPriority suggestedPriority,
         string suggestedCategory,
         string reasoning,
-        double? confidence
+        double? confidence,
+        IReadOnlyList<AiRelatedChange> relatedChanges
     )
     {
         Priority = suggestedPriority;
+        _aiRelatedChanges = relatedChanges.Where(change => AiRelatedChange.IsSafeUrl(change.Url)).Take(5).ToList();
         AiSuggestedCategory = suggestedCategory;
         AiReasoning = reasoning;
         AiConfidence = confidence;

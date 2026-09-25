@@ -447,6 +447,12 @@ export const tr: Dictionary = {
         'Analiz buna bir sayı koymadı. Bu emin olmamakla aynı şey değil — sayısallaştırmayı reddetti, yani çizilecek bir şey yok.',
 
       reasoning: 'Gerekçe',
+
+      suspectedChanges: 'Şüpheli değişiklikler',
+      suspectedChangesHintLabel: 'Şüpheli değişiklikler nereden geliyor',
+      suspectedChangesHint:
+        'Sorun başlamadan önceki 48 saatte bu servisin repo’suna gelen ve analizin okuyup sorunu açıkladığını düşündüğü commit’ler. GitHub’ı yalnızca okur, hiçbir şey yazmaz ve kendisine gösterilmemiş bir şeyi anmaz.',
+      openChange: (sha: string, title: string) => `${sha} commit’ini GitHub’da aç: ${title}`,
     },
   },
 

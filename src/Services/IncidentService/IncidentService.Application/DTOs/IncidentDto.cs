@@ -1,4 +1,5 @@
-﻿using IncidentService.Domain.Aggregates;
+﻿using IncidentService.Domain.ValueObjects;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 
 namespace IncidentService.Application.DTOs;
@@ -29,6 +30,9 @@ public sealed record IncidentDto
     /// </summary>
     public string? AiAnalysisError { get; init; }
 
+    // Commits the analysis named as likely causes, with links the platform built (Adım 17.5).
+    public IReadOnlyList<AiRelatedChange> AiRelatedChanges { get; init; } = [];
+
     // The conclusion reached when it was closed, and when. Both null while open.
     public IncidentVerdict? Verdict { get; init; }
     public DateTime? ResolvedAt { get; init; }
@@ -55,6 +59,7 @@ public sealed record IncidentDto
             IsAiAnalyzed = incident.IsAiAnalyzed,
             AiConfidence = incident.AiConfidence,
             AiAnalysisError = incident.AiAnalysisError,
+            AiRelatedChanges = incident.AiRelatedChanges,
             Verdict = incident.Verdict,
             ResolvedAt = incident.ResolvedAt,
             CreatedAt = incident.CreatedAt,

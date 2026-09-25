@@ -516,6 +516,13 @@ export const en = {
         'The analysis did not put a number on it. That is not the same as being unsure — it declined to quantify, so there is nothing to draw.',
 
       reasoning: 'Reasoning',
+
+      // Adım 17.5: commits the analysis read in the service's repository and named as causes.
+      suspectedChanges: 'Suspected changes',
+      suspectedChangesHintLabel: 'Where suspected changes come from',
+      suspectedChangesHint:
+        'Commits to this service’s repository in the 48 hours before the problem started that the analysis read and believes explain it. It only reads GitHub, never writes to it, and names nothing it was not shown.',
+      openChange: (sha: string, title: string) => `Open commit ${sha} on GitHub: ${title}`,
     },
   },
 

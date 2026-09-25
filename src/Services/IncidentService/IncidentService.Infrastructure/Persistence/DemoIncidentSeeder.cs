@@ -125,7 +125,8 @@ public sealed class DemoIncidentSeeder
                 priority,
                 scenario.Category,
                 scenario.Reasoning,
-                Math.Round(0.55 + random.NextDouble() * 0.44, 2)
+                Math.Round(0.55 + random.NextDouble() * 0.44, 2),
+                relatedChanges: []
             );
         }
         else if (roll < 78)
