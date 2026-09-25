@@ -35,6 +35,8 @@ artifacts/
 # =========================
 *.log
 logs/
+# The OTLP proto package is named "logs" (opentelemetry/proto/logs/v1). Source, not output.
+!src/Services/TelemetryIngestionService/TelemetryIngestionService.Infrastructure/Otlp/Protos/**/logs/
 
 # =========================
 # Test Results
