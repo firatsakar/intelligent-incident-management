@@ -62,7 +62,7 @@ public sealed class AiAnalysisFailureTests
         var incident = AnIncident();
         incident.RecordAiAnalysisFailure("rate limit exceeded");
 
-        incident.ApplyAiAnalysis(IncidentPriority.High, "Application", "because", 0.9);
+        incident.ApplyAiAnalysis(IncidentPriority.High, "Application", "because", 0.9, []);
 
         Assert.Null(incident.AiAnalysisError);
         Assert.True(incident.IsAiAnalyzed);

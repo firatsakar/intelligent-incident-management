@@ -146,7 +146,6 @@ export const en = {
     pages: {
       profile: 'Profile',
       members: 'Members',
-      telemetry: 'Telemetry',
       integrations: 'Integrations',
     },
   },
@@ -515,6 +514,13 @@ export const en = {
         'The analysis did not put a number on it. That is not the same as being unsure — it declined to quantify, so there is nothing to draw.',
 
       reasoning: 'Reasoning',
+
+      // Adım 17.5: commits the analysis read in the service's repository and named as causes.
+      suspectedChanges: 'Suspected changes',
+      suspectedChangesHintLabel: 'Where suspected changes come from',
+      suspectedChangesHint:
+        'Commits to this service’s repository in the 48 hours before the problem started that the analysis read and believes explain it. It only reads GitHub, never writes to it, and names nothing it was not shown.',
+      openChange: (sha: string, title: string) => `Open commit ${sha} on GitHub: ${title}`,
     },
   },
 
@@ -1100,9 +1106,6 @@ export const en = {
     },
 
     integrations: {
-      title: 'Integrations',
-      intro:
-        'A notification goes out when an analysis completes. One channel can hold several integrations — two Email entries with different filters is a normal setup.',
       loadError: 'Could not load integrations.',
 
       // Nothing connected and everything paused are different configurations with the same
@@ -1169,9 +1172,6 @@ export const en = {
     },
 
     telemetry: {
-      title: 'Telemetry',
-      intro:
-        'Detection never watches this platform itself — nothing reaches it that you have not connected here.',
       loadError: 'Could not load sources.',
 
       // The most consequential configuration gap in the product: with no source being read,
@@ -1271,6 +1271,90 @@ export const en = {
       defaultFilter: 'errors and fatals',
       pausedNote: (seconds: number, what: string) =>
         `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
+    },
+
+    // What the analysis may read besides the incident (Adım 17.5). The page asks an Admin for a
+    // credential to their code, so it says what the credential is and is not used for, in place.
+    // Everything the organisation connects the platform to, grouped by what the connection is for,
+    // in the order data moves through them (Fırat, 2026-09-25).
+    hub: {
+      intro:
+        'Everything this organisation connects the platform to, in the order data moves: where errors are read from, what the analysis may consult, and who is told.',
+      jumpTo: 'Groups on this page',
+      groups: {
+        observability: {
+          title: 'Observability',
+          // Not a description of the group. Operators assume an observability product monitors
+          // its own services; this one does not, and nothing else in the product corrects that.
+          description:
+            'Where errors are read from. Detection never watches this platform itself — nothing reaches it that you have not connected here.',
+        },
+        analysis: {
+          title: 'Analysis',
+          description:
+            'Outside systems the analysis may read while it works out a cause. Read-only, and only for this organisation’s incidents.',
+        },
+        notifications: {
+          title: 'Notifications',
+          // The second sentence is the only thing that explains the "Add another Email" button —
+          // without it the tile grid reads as one integration per channel.
+          description:
+            'Who is told when an analysis completes. One channel can hold several integrations — two Email entries with different filters is a normal setup.',
+        },
+      },
+    },
+
+    aiSources: {
+      loadError: 'Could not load the GitHub connection.',
+
+      github: {
+        name: 'GitHub',
+        description:
+          'When an incident’s service is mapped to a repository, the analysis looks at what changed there in the 48 hours before the problem started, and names a change it believes caused it.',
+        status: {
+          notConnected: 'Not connected',
+          connected: 'Connected',
+          paused: 'Paused',
+        },
+        token: 'Access token',
+        tokenPlaceholder: 'github_pat_…',
+        tokenKept: 'Saved — leave blank to keep it',
+        tokenHint:
+          'A fine-grained personal access token with read-only access to Contents and Metadata on these repositories. It is never shown again after saving.',
+        repositories: 'Repositories',
+        repositoriesHint:
+          'Which repository holds each service’s code, by the service name your telemetry reports. Use * for every service not listed. An incident whose service has no repository is analysed without GitHub.',
+        servicePlaceholder: 'service name, or *',
+        serviceLabel: (row: number) => `Service ${row}`,
+        repositoryPlaceholder: 'owner/repository',
+        repositoryLabel: (row: number) => `Repository ${row}`,
+        branchPlaceholder: 'branch (default if blank)',
+        branchLabel: (row: number) => `Branch ${row}`,
+        removeRow: (row: number) => `Remove repository ${row}`,
+        addRow: 'Add repository',
+        enabled: 'Let the analysis read GitHub',
+        readOnly:
+          'Read-only. The analysis lists recent commits and reads what they changed; it never writes to GitHub — no issues, comments or pull requests. The token is sent to GitHub and nowhere else, and is never written to logs or traces.',
+        save: 'Save',
+        saving: 'Saving…',
+        saved: 'GitHub connection saved.',
+        disconnect: 'Disconnect',
+        disconnectTitle: 'Disconnect GitHub?',
+        disconnectBody:
+          'The token and the repository list are deleted. Analyses already written keep what they found; new ones will not read GitHub.',
+        cancel: 'Cancel',
+        removed: 'GitHub disconnected.',
+        tokenRequired: 'Paste a token to connect.',
+        serviceRequired: 'Every repository needs a service name, or * for the rest.',
+        repositoryInvalid: 'Write each repository as owner/repository — for example acme/shop.',
+        serviceTwice: 'Each service can be mapped to one repository only.',
+        test: 'Test',
+        testing: 'Testing…',
+        testResults: 'Test results',
+        testOk: (changes: number) =>
+          changes === 1 ? 'read; 1 change in the last 7 days' : `read; ${changes} changes in the last 7 days`,
+        testFailed: (reason: string) => `could not be read: ${reason}`,
+      },
     },
 
     members: {

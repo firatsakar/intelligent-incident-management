@@ -135,6 +135,11 @@ namespace IncidentService.Infrastructure.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
+                    b.Property<string>("_aiRelatedChanges")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("ai_related_changes");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrganizationId", "CreatedAt");

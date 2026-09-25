@@ -118,7 +118,6 @@ export const tr: Dictionary = {
     pages: {
       profile: 'Profil',
       members: 'Üyeler',
-      telemetry: 'Telemetri',
       integrations: 'Entegrasyonlar',
     },
   },
@@ -446,6 +445,12 @@ export const tr: Dictionary = {
         'Analiz buna bir sayı koymadı. Bu emin olmamakla aynı şey değil — sayısallaştırmayı reddetti, yani çizilecek bir şey yok.',
 
       reasoning: 'Gerekçe',
+
+      suspectedChanges: 'Şüpheli değişiklikler',
+      suspectedChangesHintLabel: 'Şüpheli değişiklikler nereden geliyor',
+      suspectedChangesHint:
+        'Sorun başlamadan önceki 48 saatte bu servisin repo’suna gelen ve analizin okuyup sorunu açıkladığını düşündüğü commit’ler. GitHub’ı yalnızca okur, hiçbir şey yazmaz ve kendisine gösterilmemiş bir şeyi anmaz.',
+      openChange: (sha: string, title: string) => `${sha} commit’ini GitHub’da aç: ${title}`,
     },
   },
 
@@ -953,9 +958,6 @@ export const tr: Dictionary = {
     },
 
     integrations: {
-      title: 'Entegrasyonlar',
-      intro:
-        'Bir analiz tamamlandığında bildirim çıkar. Bir kanal birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
       loadError: 'Entegrasyonlar yüklenemedi.',
 
       silenceNone: 'Hiçbir şey bağlı değil. Bir analiz tamamlandığında kimseye haber verilmez.',
@@ -1016,9 +1018,6 @@ export const tr: Dictionary = {
     },
 
     telemetry: {
-      title: 'Telemetri',
-      intro:
-        'Tespit, bu platformun kendisini izlemez — buradan bağlamadığınız hiçbir şey ona ulaşmaz.',
       loadError: 'Kaynaklar yüklenemedi.',
 
       blindnessNone: 'Hiçbir kaynak bağlı değil. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilemeyecek.',
@@ -1109,6 +1108,81 @@ export const tr: Dictionary = {
       defaultFilter: 'hata ve ölümcül kayıtlar',
       pausedNote: (seconds: number, what: string) =>
         `— buradan bir şey okunmuyor. Devam ettirilirse ${what} için her ${seconds} saniyede bir sorgulayacak.`,
+    },
+
+    hub: {
+      intro:
+        'Bu organizasyonun platformu bağladığı her şey, verinin aktığı sırayla: hataların nereden okunduğu, analizin neye bakabildiği ve kime haber verildiği.',
+      jumpTo: 'Bu sayfadaki gruplar',
+      groups: {
+        observability: {
+          title: 'Gözlemlenebilirlik',
+          description:
+            'Hataların okunduğu yer. Tespit, bu platformun kendisini izlemez — buradan bağlamadığınız hiçbir şey ona ulaşmaz.',
+        },
+        analysis: {
+          title: 'Analiz',
+          description:
+            'Analizin bir nedeni ararken okuyabileceği dış sistemler. Yalnız okuma; yalnız bu organizasyonun olayları için.',
+        },
+        notifications: {
+          title: 'Bildirimler',
+          description:
+            'Bir analiz tamamlandığında kime haber verildiği. Bir kanal birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
+        },
+      },
+    },
+
+    aiSources: {
+      loadError: 'GitHub bağlantısı yüklenemedi.',
+
+      github: {
+        name: 'GitHub',
+        description:
+          'Bir olayın servisi bir repo’ya eşlenmişse analiz, sorun başlamadan önceki 48 saatte orada neyin değiştiğine bakar ve sorunu açıkladığını düşündüğü değişikliği adıyla anar.',
+        status: {
+          notConnected: 'Bağlı değil',
+          connected: 'Bağlı',
+          paused: 'Duraklatıldı',
+        },
+        token: 'Erişim token’ı',
+        tokenPlaceholder: 'github_pat_…',
+        tokenKept: 'Kayıtlı — korumak için boş bırakın',
+        tokenHint:
+          'Bu repo’larda Contents ve Metadata için yalnız okuma izni olan, ayrıntılı (fine-grained) bir kişisel erişim token’ı. Kaydettikten sonra bir daha gösterilmez.',
+        repositories: 'Repo’lar',
+        repositoriesHint:
+          'Her servisin kodunun hangi repo’da olduğu — servis adı telemetrinizin bildirdiği adla. Listede olmayan bütün servisler için * kullanın. Servisinin repo’su olmayan bir olay GitHub’sız analiz edilir.',
+        servicePlaceholder: 'servis adı ya da *',
+        serviceLabel: (row: number) => `Servis ${row}`,
+        repositoryPlaceholder: 'sahip/repo',
+        repositoryLabel: (row: number) => `Repo ${row}`,
+        branchPlaceholder: 'branch (boşsa varsayılan)',
+        branchLabel: (row: number) => `Branch ${row}`,
+        removeRow: (row: number) => `${row}. repo’yu kaldır`,
+        addRow: 'Repo ekle',
+        enabled: 'Analiz GitHub’ı okuyabilsin',
+        readOnly:
+          'Yalnız okuma. Analiz son commit’leri listeler ve neyi değiştirdiklerini okur; GitHub’a hiçbir şey yazmaz — issue, yorum ya da pull request yok. Token yalnız GitHub’a gönderilir ve log’lara ya da trace’lere hiç yazılmaz.',
+        save: 'Kaydet',
+        saving: 'Kaydediliyor…',
+        saved: 'GitHub bağlantısı kaydedildi.',
+        disconnect: 'Bağlantıyı kaldır',
+        disconnectTitle: 'GitHub bağlantısı kaldırılsın mı?',
+        disconnectBody:
+          'Token ve repo listesi silinir. Önceden yazılmış analizler bulduklarını korur; yenileri GitHub’ı okumaz.',
+        cancel: 'Vazgeç',
+        removed: 'GitHub bağlantısı kaldırıldı.',
+        tokenRequired: 'Bağlanmak için bir token yapıştırın.',
+        serviceRequired: 'Her repo’nun bir servis adı olmalı; geri kalanlar için *.',
+        repositoryInvalid: 'Her repo’yu sahip/repo biçiminde yazın — örneğin acme/shop.',
+        serviceTwice: 'Bir servis yalnız bir repo’ya eşlenebilir.',
+        test: 'Test et',
+        testing: 'Test ediliyor…',
+        testResults: 'Test sonuçları',
+        testOk: (changes: number) => `okundu; son 7 günde ${changes} değişiklik`,
+        testFailed: (reason: string) => `okunamadı: ${reason}`,
+      },
     },
 
     members: {

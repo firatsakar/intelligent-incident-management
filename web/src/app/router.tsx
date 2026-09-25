@@ -17,7 +17,6 @@ import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
 import { MembersPage } from '@/features/settings/MembersPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
 import { SettingsLayout } from '@/features/settings/SettingsLayout'
-import { TelemetrySourcesPage } from '@/features/settings/TelemetrySourcesPage'
 
 export const router = createBrowserRouter([
   // Outside the shell: no rail, no header, nothing to navigate to from here.
@@ -58,8 +57,17 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/settings/profile" replace /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'members', element: <MembersPage /> },
-              { path: 'telemetry', element: <TelemetrySourcesPage /> },
               { path: 'integrations', element: <IntegrationsPage /> },
+              // Telemetry and the AI sources were tabs of their own until they became groups of
+              // the Integrations page. Their addresses keep resolving — to the group, not the top.
+              {
+                path: 'telemetry',
+                element: <Navigate to={{ pathname: '/settings/integrations', hash: '#observability' }} replace />,
+              },
+              {
+                path: 'ai-sources',
+                element: <Navigate to={{ pathname: '/settings/integrations', hash: '#analysis' }} replace />,
+              },
             ],
           },
           // Telemetry moved under Settings. A bookmark or a shared link is the only record some
@@ -68,7 +76,7 @@ export const router = createBrowserRouter([
           // the settings chrome with no tab selected; `replace` so Back does not bounce off it.
           {
             path: 'settings/telemetry-sources',
-            element: <Navigate to="/settings/telemetry" replace />,
+            element: <Navigate to={{ pathname: '/settings/integrations', hash: '#observability' }} replace />,
           },
         ],
       },

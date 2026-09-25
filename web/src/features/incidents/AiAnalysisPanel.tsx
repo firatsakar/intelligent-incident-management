@@ -1,3 +1,5 @@
+import { GitCommitHorizontalIcon } from 'lucide-react'
+
 import { InfoHint } from '@/components/InfoHint'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -8,9 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { confidenceBand, formatConfidence } from '@/lib/format'
+import { confidenceBand, formatConfidence, formatDateTime, formatRelative } from '@/lib/format'
 import { useT } from '@/lib/i18n'
-import type { Incident } from '@/types/api'
+import type { AiRelatedChange, Incident } from '@/types/api'
 
 /**
  * What the analysis concluded, and how sure it was.
@@ -135,7 +137,55 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
             </p>
           </div>
         )}
+
+        {incident.aiRelatedChanges?.length > 0 && <RelatedChanges changes={incident.aiRelatedChanges} />}
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * The commits the analysis read in the service's repository and named as likely causes (Adım
+ * 17.5). Links go to GitHub and nowhere else: the server kept only https://github.com URLs, and
+ * this checks again rather than trusting a string into an href.
+ */
+function RelatedChanges({ changes }: { changes: AiRelatedChange[] }) {
+  const t = useT().incidents.analysis
+
+  const safe = changes.filter((change) => change.url.startsWith('https://github.com/'))
+
+  if (safe.length === 0) return null
+
+  return (
+    <div>
+      <p className="text-muted-foreground mb-1.5 flex items-center gap-1.5 text-sm">
+        {t.suspectedChanges}
+        <InfoHint label={t.suspectedChangesHintLabel}>{t.suspectedChangesHint}</InfoHint>
+      </p>
+
+      <ul className="space-y-1.5">
+        {safe.map((change) => (
+          <li key={change.sha} className="flex items-start gap-2 text-sm">
+            <GitCommitHorizontalIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden />
+            <div className="min-w-0">
+              <a
+                href={change.url}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-primary hover:underline focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-[3px]"
+                aria-label={t.openChange(change.sha.slice(0, 7), change.title)}
+              >
+                <span className="font-mono text-xs">{change.sha.slice(0, 7)}</span>{' '}
+                <span className="break-words">{change.title}</span>
+              </a>
+              <p className="text-muted-foreground text-xs">
+                <span title={formatDateTime(change.committedAt)}>{formatRelative(change.committedAt)}</span>
+                {change.author && <> · {change.author}</>}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

@@ -33,6 +33,7 @@ public sealed class IncidentAnalysisConfiguration : IEntityTypeConfiguration<Inc
             {
                 resultBuilder.ToJson("result");
                 resultBuilder.OwnsOne(r => r.Metadata);
+                resultBuilder.OwnsMany(r => r.RelatedChanges);
             }
         );
 

@@ -166,7 +166,8 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
 - [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
 - [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
-- [ ] **MCP integration** — let the agent consume external systems (Grafana, Kubernetes, GitHub, PagerDuty) as tools, for cross-system root cause analysis
+- [x] **MCP integration, GitHub first** — the analysis reads the failing service's recent commits over GitHub's MCP server (read-only, the organisation's own token) and names a suspected change, linked on the incident
+- [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
 - [ ] Unit & integration tests
 - [ ] React frontend & analytics dashboard (MTTR, trends, model performance)
 - [ ] CI/CD & Kubernetes deployment

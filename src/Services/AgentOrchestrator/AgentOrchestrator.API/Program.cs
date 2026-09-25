@@ -1,4 +1,7 @@
-﻿using BuildingBlocks.Web;
+﻿using BuildingBlocks.Application.Behaviors;
+using FluentValidation;
+using MediatR;
+using BuildingBlocks.Web;
 using System.Text.Json.Serialization;
 using AgentOrchestrator.API.BackgroundServices;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
@@ -16,6 +19,14 @@ builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.Se
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(AnalyzeIncidentCommand).Assembly)
 );
+
+// The settings endpoints (Adım 17.5) are the first here to take input from a form, so this is
+// the first time the service needs the validation pipeline and the problem-details mapping the
+// others have had since Adım 13.
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+builder.Services.AddValidatorsFromAssembly(typeof(AnalyzeIncidentCommand).Assembly);
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddRabbitMqEventBus(builder.Configuration);
@@ -55,6 +66,7 @@ if (app.Environment.IsDevelopment())
 // No UseHttpsRedirection. TLS terminates at the gateway; a service behind it redirecting
 // to https is redirecting a request that already arrived over a private hop, and in
 // development it redirects a plain-HTTP call to a port nothing is listening on.
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseOrganizationContext();

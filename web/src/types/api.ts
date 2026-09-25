@@ -44,12 +44,25 @@ export interface Incident {
    * before this field existed they looked identical on screen.
    */
   aiAnalysisError: string | null
+  /**
+   * Commits the analysis named as likely causes (Adım 17.5). Every field — the URL included — was
+   * written by the platform from what GitHub returned, never by the model.
+   */
+  aiRelatedChanges: AiRelatedChange[]
   /** Null while open, and for incidents closed before anyone was asked. */
   verdict: IncidentVerdict | null
   /** When it was closed out; cleared if it is reopened. */
   resolvedAt: string | null
   createdAt: string
   updatedAt: string | null
+}
+
+export interface AiRelatedChange {
+  sha: string
+  title: string
+  author: string | null
+  committedAt: string
+  url: string
 }
 
 export interface PagedResult<T> {
@@ -386,6 +399,37 @@ export interface SessionAccount {
   role: UserRole
   organizationId: string
   organizationName: string
+}
+
+// ---- what the analysis may read (Adım 17.5) --------------------------------------------------
+
+/** Where one service's code lives. `service` is the telemetry's service name, or `*` for the rest. */
+export interface RepositoryMapping {
+  service: string
+  owner: string
+  repository: string
+  /** Null for the repository's default branch. */
+  branch: string | null
+}
+
+/** One repository's result from the Test button. `error` is GitHub's own reason when it failed. */
+export interface RepositoryCheck {
+  service: string
+  repository: string
+  branch: string | null
+  ok: boolean
+  /** Commits in the last seven days — proof the repository was read, not merely reached. */
+  recentChanges: number | null
+  error: string | null
+}
+
+/** The organisation's GitHub connection. The token is never here; `hasToken` says one is saved. */
+export interface GitHubConnection {
+  isConfigured: boolean
+  hasToken: boolean
+  isEnabled: boolean
+  repositories: RepositoryMapping[]
+  updatedAt: string | null
 }
 
 // ---- the organisation's people (Adım 16.5) ---------------------------------------------------

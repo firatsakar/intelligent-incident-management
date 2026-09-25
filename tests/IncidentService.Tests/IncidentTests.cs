@@ -1,4 +1,5 @@
-﻿using IncidentService.Domain.Aggregates;
+﻿using IncidentService.Domain.ValueObjects;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Events;
 
@@ -83,7 +84,8 @@ public sealed class IncidentTests
                 IncidentPriority.Critical,
                 "Application",
                 "Repeated timeouts against the payment gateway.",
-                confidence: 0.82
+                confidence: 0.82,
+                relatedChanges: []
             );
 
             Assert.Equal(IncidentPriority.Critical, incident.Priority);
@@ -107,11 +109,42 @@ public sealed class IncidentTests
                 IncidentPriority.High,
                 "Application",
                 "Because.",
-                confidence: null
+                confidence: null,
+                relatedChanges: []
             );
 
             Assert.Null(incident.AiConfidence);
             Assert.True(incident.IsAiAnalyzed);
+        }
+
+        [Fact]
+        public void KeepsOnlyGitHubLinksAmongTheRelatedChanges()
+        {
+            // The agent builds these links itself; this is the second check, at the edge of the
+            // service that hands them to a browser.
+            var incident = Create();
+            var at = new DateTime(2026, 9, 25, 14, 5, 0, DateTimeKind.Utc);
+
+            incident.ApplyAiAnalysis(
+                IncidentPriority.High,
+                "Application",
+                "Because of a1b2c3d.",
+                confidence: 0.9,
+                relatedChanges:
+                [
+                    new AiRelatedChange("a1b2c3d4", "Lower timeout", "ayse", at, "https://github.com/acme/shop/commit/a1b2c3d4"),
+                    new AiRelatedChange("deadbeef", "Phish", null, at, "https://evil.example/commit/deadbeef"),
+                    new AiRelatedChange("cafebabe", "Script", null, at, "javascript:alert(1)"),
+                ]
+            );
+
+            var kept = Assert.Single(incident.AiRelatedChanges);
+            Assert.Equal("a1b2c3d4", kept.Sha);
+
+            // A later analysis replaces them, including with none.
+            incident.ApplyAiAnalysis(IncidentPriority.High, "Application", "Again.", 0.5, []);
+
+            Assert.Empty(incident.AiRelatedChanges);
         }
 
         [Fact]
@@ -121,7 +154,7 @@ public sealed class IncidentTests
             // be indistinguishable from applying it once.
             var incident = Create();
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
             var afterFirst = (
                 incident.Priority,
                 incident.AiSuggestedCategory,
@@ -129,7 +162,7 @@ public sealed class IncidentTests
                 incident.AiConfidence
             );
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
 
             Assert.Equal(
                 afterFirst,
@@ -152,7 +185,7 @@ public sealed class IncidentTests
             incident.AssignTeam("payments");
             incident.UpdateStatus(IncidentStatus.InProgress);
 
-            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82);
+            incident.ApplyAiAnalysis(IncidentPriority.Critical, "Application", "Because.", 0.82, []);
 
             Assert.Equal(IncidentStatus.InProgress, incident.Status);
             Assert.Equal("payments", incident.AssignedTeam);

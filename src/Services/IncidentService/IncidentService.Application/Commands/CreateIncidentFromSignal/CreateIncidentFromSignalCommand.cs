@@ -12,4 +12,7 @@ public sealed record CreateIncidentFromSignalCommand : IRequest
     public required string Description { get; init; }
     public required string Severity { get; init; }
     public required DateTime DetectedAt { get; init; }
+
+    // Not stored on the incident: it is passed on to the analysis, which reads the service's code.
+    public string? Service { get; init; }
 }

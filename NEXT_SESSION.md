@@ -6,15 +6,26 @@
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, 18, 19, 19.5, 20, 20.5, 20.7 ve **24** bitti;
-`develop` güncel ve push'lanmış, **485 test yeşil**. Sıra (Fırat, 2026-09-25): ~~16.5~~ → ~~24~~ →
-**Adım 17.5 (MCP)**; kalanlar ondan sonra yeniden konuşulacak. **17.5'e başlamadan önce** ne
-yapılmak istendiğini Fırat'la açıp kapsamı birlikte netleştir — tam anlamadığını söyledi (24'te
-de aynısı yapıldı: önce anlatıldı, iki karar soruldu, sonra plan).
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7 ve **24**
+bitti; `develop` güncel ve push'lanmış, **519 test yeşil**. Fırat'ın sırası (16.5 → 24 → 17.5)
+tamamlandı; **kalan adımlar (21, 22, 23, 20.6, 13.6, Adım 20 kalıntısı, 14) Fırat'la yeniden
+konuşulacak** — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
+önce ne işe yaradığını anlat, kararları sor, sonra plan.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 17.5 — AI analizi GitHub'a bakıyor (MCP)** (`IIM-137`). Ayarlar → **Entegrasyonlar**
+artık tek sayfa, üç grup: Gözlemlenebilirlik (telemetri) · **Analiz (GitHub)** · Bildirimler —
+Fırat ayrı sekmeleri istemedi, yeni bir bağlantı bu gruplardan birine girer. Admin salt-okunur
+bir token ve servis → repo[@branch] eşlemesi girer (`*` = geri kalan). Telemetriden açılan olayın
+servisi eşliyse ajan `list_recent_changes` / `inspect_change` alır (repo ve pencere closure'da),
+açıklayan commit'i gerekçesinde anar ve olayda **Şüpheli değişiklikler** olarak linklenir.
+GitHub'ın barındırdığı MCP sunucusu, `/mcp/x/repos/readonly`, `ModelContextProtocol.Core` 2.2.0.
+**Kanaryada:** Fırat Admin olarak üye (`firat@canary.test`, parolası yalnız onda); GitHub bağlantısı
+onun PAT'iyle (süreli — bitince Test kırmızı olur), `checkout-service → …@demo/regression-payment-timeout`
+ve `*` → master. `demo/regression-payment-timeout` branch'i kabul koşusunun verisi, silme.
 
 **Adım 24 — çözülen olay telemetriye geri bildiriliyor** (`IIM-130`). Açık bir olay Çözüldü ya da
 Kapandı yapılırken konsol bir kez **gerçek sorun / yanlış alarm** diye soruyor (API'de `verdict`,

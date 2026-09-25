@@ -22,6 +22,42 @@ namespace AgentOrchestrator.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("AgentOrchestrator.Domain.Aggregates.GitHubConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("_repositories")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("repositories");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("github_connections", (string)null);
+                });
+
             modelBuilder.Entity("AgentOrchestrator.Domain.Aggregates.IncidentAnalysis", b =>
                 {
                     b.Property<Guid>("Id")
@@ -163,7 +199,37 @@ namespace AgentOrchestrator.Infrastructure.Migrations
                                         .HasForeignKey("AnalysisResultIncidentAnalysisId");
                                 });
 
+                            b1.OwnsMany("AgentOrchestrator.Domain.ValueObjects.RelatedChange", "RelatedChanges", b2 =>
+                                {
+                                    b2.Property<Guid>("AnalysisResultIncidentAnalysisId");
+
+                                    b2.Property<int>("__synthesizedOrdinal")
+                                        .ValueGeneratedOnAdd();
+
+                                    b2.Property<string>("Author");
+
+                                    b2.Property<DateTime>("CommittedAt");
+
+                                    b2.Property<string>("Sha")
+                                        .IsRequired();
+
+                                    b2.Property<string>("Title")
+                                        .IsRequired();
+
+                                    b2.Property<string>("Url")
+                                        .IsRequired();
+
+                                    b2.HasKey("AnalysisResultIncidentAnalysisId", "__synthesizedOrdinal");
+
+                                    b2.ToTable("incident_analyses");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("AnalysisResultIncidentAnalysisId");
+                                });
+
                             b1.Navigation("Metadata");
+
+                            b1.Navigation("RelatedChanges");
                         });
 
                     b.Navigation("Result");

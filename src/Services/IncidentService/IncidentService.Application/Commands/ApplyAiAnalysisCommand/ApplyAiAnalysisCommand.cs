@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using IncidentService.Domain.ValueObjects;
+using MediatR;
 
 namespace IncidentService.Application.Commands.ApplyAiAnalysis;
 
@@ -9,4 +10,5 @@ public sealed record ApplyAiAnalysisCommand : IRequest
     public required string SuggestedCategory { get; init; }
     public required string Reasoning { get; init; }
     public double? Confidence { get; init; }
+    public IReadOnlyList<AiRelatedChange> RelatedChanges { get; init; } = [];
 }

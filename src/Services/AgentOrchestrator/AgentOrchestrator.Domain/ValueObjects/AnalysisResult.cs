@@ -9,5 +9,14 @@ public sealed record AnalysisResult : ValueObject
     public required string Reasoning { get; init; }
     public IReadOnlyList<string> SuggestedSteps { get; init; } = [];
     public double? Confidence { get; init; }
+
+    // Commits the analysis named as likely causes (Adım 17.5). Empty when it read no code or found
+    // nothing that explained the incident — which is most of the time, and not a failure.
+    //
+    // A List, not `[]`: this is an owned collection inside the result's JSON column, and EF fills
+    // it by adding to the instance the initializer made. `[]` for an IReadOnlyList is a fixed-size
+    // array, so the first result with a change in it could be written but never read back — the
+    // outbox dispatch that reads it failed and re-published the analysis every five seconds.
+    public IReadOnlyList<RelatedChange> RelatedChanges { get; init; } = new List<RelatedChange>();
     public AnalysisMetadata? Metadata { get; init; }
 }
