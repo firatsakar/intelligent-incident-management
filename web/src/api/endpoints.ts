@@ -182,6 +182,21 @@ export const authApi = {
       password,
     }),
 
+  /** Whether this installation still needs its first Admin (Adım 25). Nothing more. */
+  setupStatus: () => api.get<{ required: boolean }>('/api/auth/setup'),
+
+  /**
+   * Creates the organisation and its first Admin with the one-time code from the identity
+   * service's log, and signs the Admin in. Every refusal is the same 404.
+   */
+  completeSetup: (input: {
+    setupCode: string
+    organizationName: string
+    displayName: string
+    email: string
+    password: string
+  }) => api.post<SessionAccount>('/api/auth/setup/complete', input),
+
   /** One's own password. Other sessions end; this one is renewed. */
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<SessionAccount>('/api/auth/password', { currentPassword, newPassword }),

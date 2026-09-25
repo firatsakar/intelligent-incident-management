@@ -1,4 +1,5 @@
-﻿import { ListChecksIcon, RouteIcon, ScaleIcon } from 'lucide-react'
+﻿import { useQuery } from '@tanstack/react-query'
+import { ListChecksIcon, RouteIcon, ScaleIcon } from 'lucide-react'
 import { useRef, useState, type CSSProperties, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 
@@ -10,6 +11,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError } from '@/api/client'
+import { authApi } from '@/api/endpoints'
 import { useT, type Dictionary } from '@/lib/i18n'
 
 import { useAuth } from './AuthProvider'
@@ -67,6 +69,15 @@ export function LoginPage() {
   // Where the guard turned them away from, with its query string intact.
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
+  // A fresh installation has nobody to sign in as (Adım 25). Never retried: if the answer does
+  // not come, the sign-in form is still the right screen to show.
+  const setup = useQuery({
+    queryKey: ['setup-status'],
+    queryFn: authApi.setupStatus,
+    retry: false,
+    staleTime: 60_000,
+  })
+
   // Nothing until the session has been asked about, so this form does not appear for a frame in
   // front of somebody who turns out to be signed in.
   if (status === 'restoring') return null
@@ -74,6 +85,8 @@ export function LoginPage() {
   // One redirect for two cases — a session that was already there, and the one just created — so
   // signing in has a single exit and cannot race a second navigate.
   if (isAuthenticated) return <Navigate to={from} replace />
+
+  if (setup.data?.required) return <Navigate to="/setup" replace />
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()

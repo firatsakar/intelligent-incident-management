@@ -5,6 +5,7 @@ import { AcceptInvitePage } from '@/features/auth/AcceptInvitePage'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage'
+import { SetupPage } from '@/features/auth/SetupPage'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { DeliveriesPage } from '@/features/deliveries/DeliveriesPage'
 import { IncidentDetailPage } from '@/features/incidents/IncidentDetailPage'
@@ -25,6 +26,8 @@ export const router = createBrowserRouter([
   // yet, or has a different one, and the link is the only credential the page needs.
   { path: '/invite/:token', element: <AcceptInvitePage /> },
   { path: '/reset/:token', element: <ResetPasswordPage /> },
+  // A fresh installation's first screen (Adım 25): the organisation and its first Admin.
+  { path: '/setup', element: <SetupPage /> },
   {
     // A pathless layout route. The guard wraps every application URL without appearing in any of
     // them, so no link, no bookmark and no shared filtered URL moves.

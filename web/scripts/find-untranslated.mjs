@@ -48,6 +48,8 @@ const allowedStrings = new Set([
   'OPS',
   // The OTLP source's MinimumSeverity placeholder: a value the server parses, Warning or Error.
   'Error',
+  // The shape of the first-run setup code (Adım 25), the same in every language.
+  'XXXX-XXXX-XXXX',
   // Trademarks on the "coming soon" rows.
   'Slack',
   'Microsoft Teams',

@@ -161,6 +161,31 @@ export const tr: Dictionary = {
     forgot: 'Parolanızı mı unuttunuz? Organizasyonunuzun bir Yöneticisi size yeni parola belirleme bağlantısı gönderebilir.',
   },
 
+  setup: {
+    title: 'Bu kurulumu hazırlayın',
+    subtitle: 'Burada henüz kimse oturum açmadı. Organizasyonu ve ilk Yöneticisini — sizi — oluşturun.',
+    code: 'Kurulum kodu',
+    codeHint:
+      'Kimlik servisi başlarken log’una bir kez yazdı; “First-run setup” ile başlayan satırda. Yalnız bu sunucuyu çalıştıran okuyabilir — kanıtladığı da bu.',
+    codeRequired: 'Log’daki kurulum kodunu girin.',
+    organization: 'Organizasyon adı',
+    organizationHint: 'Ekibiniz ya da şirketiniz. Bir Yönetici sonradan Ayarlar → Organizasyon’dan değiştirebilir.',
+    organizationRequired: 'Organizasyona bir ad verin.',
+    name: 'Adınız',
+    nameRequired: 'Adınızı girin.',
+    email: 'E-posta adresi',
+    emailInvalid: 'Bu bir e-posta adresine benzemiyor.',
+    password: 'Parola',
+    repeat: 'Parolayı tekrar girin',
+    submit: 'Organizasyonu oluştur',
+    submitting: 'Kuruluyor…',
+    rejected:
+      'Bu kod kurulumu açmıyor. Servis yeniden başladıysa log’daki yeni kodu kullanın; kurulum zaten yapıldıysa oturum açın.',
+    doneTitle: 'Bu kurulum zaten hazır',
+    done: 'Hesabınızla oturum açın. Yeni kişiler bir Yöneticinin davetiyle katılır.',
+    toSignIn: 'Oturum açmaya git',
+  },
+
   passwordRules: {
     hint: 'En az 12 karakter. Birbiriyle ilgisiz birkaç kelime, tek bir akıllıca kelimeden hem daha kolay hatırlanır hem daha zor tahmin edilir.',
     tooShort: 'En az 12 karakter kullanın.',

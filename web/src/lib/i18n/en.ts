@@ -199,6 +199,32 @@ export const en = {
 
   // ---- the account's own screens (Adım 16.5) ---------------------------------------------
 
+  // A fresh installation's first screen (Adım 25).
+  setup: {
+    title: 'Set up this installation',
+    subtitle: 'Nobody has signed in here yet. Create the organisation and its first Admin — you.',
+    code: 'Setup code',
+    codeHint:
+      'Printed once in the identity service’s log when it started, on a line beginning “First-run setup”. Only someone who runs this server can read it — that is what it proves.',
+    codeRequired: 'Enter the setup code from the log.',
+    organization: 'Organization name',
+    organizationHint: 'Your team or company. An Admin can change it later under Settings → Organization.',
+    organizationRequired: 'Give the organisation a name.',
+    name: 'Your name',
+    nameRequired: 'Enter your name.',
+    email: 'Email address',
+    emailInvalid: 'That does not look like an email address.',
+    password: 'Password',
+    repeat: 'Repeat the password',
+    submit: 'Create the organisation',
+    submitting: 'Setting up…',
+    rejected:
+      'That code does not open the setup. If the service restarted, use the new code from its log; if the setup is already done, sign in.',
+    doneTitle: 'This installation is already set up',
+    done: 'Sign in with your account. New people join by invitation from an Admin.',
+    toSignIn: 'Go to sign in',
+  },
+
   /** The rule is the server's (`PasswordRules`); these say it before and after it is broken. */
   passwordRules: {
     hint: 'At least 12 characters. A few unrelated words are easier to remember and harder to guess than one clever word.',
