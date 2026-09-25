@@ -19,6 +19,8 @@ public sealed class NotificationDeliveryConfiguration
         builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
 
         builder.Property(x => x.IntegrationId).IsRequired();
+        builder.Property(x => x.IntegrationName).HasMaxLength(128);
+        builder.Property(x => x.Channel).HasConversion<string>().HasMaxLength(50);
 
         builder.Property(x => x.IncidentId).IsRequired();
 

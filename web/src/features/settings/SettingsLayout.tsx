@@ -1,6 +1,8 @@
 import { DatabaseIcon, PlugIcon, UserRoundIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
+
+import { useIsAdmin } from '@/features/auth/AuthProvider'
 
 import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -27,6 +29,8 @@ interface SettingsPage {
    *  languages — the compiler checks the key, not a comment. */
   id: keyof Dictionary['settingsNav']['pages']
   icon: LucideIcon
+  /** The organisation's configuration, which only its Admins may see (Adım 16.5). */
+  adminOnly?: boolean
 }
 
 // Profile first: it is the one page about the reader rather than about the platform's plumbing,
@@ -34,12 +38,22 @@ interface SettingsPage {
 // Then the two halves of the pipeline in the order data moves through them — read, then routed.
 const pages: SettingsPage[] = [
   { to: '/settings/profile', id: 'profile', icon: UserRoundIcon },
-  { to: '/settings/telemetry', id: 'telemetry', icon: DatabaseIcon },
-  { to: '/settings/integrations', id: 'integrations', icon: PlugIcon },
+  { to: '/settings/telemetry', id: 'telemetry', icon: DatabaseIcon, adminOnly: true },
+  { to: '/settings/integrations', id: 'integrations', icon: PlugIcon, adminOnly: true },
 ]
 
 export function SettingsLayout() {
   const { settingsNav } = useT()
+  const admin = useIsAdmin()
+  const { pathname } = useLocation()
+
+  const visible = pages.filter((page) => admin || !page.adminOnly)
+
+  // A non-admin who arrives at an admin page by address — a bookmark, a link someone pasted —
+  // lands on their own profile rather than on a page whose every request would answer 403.
+  const blocked = pages.find((page) => page.adminOnly && !admin && pathname.startsWith(page.to))
+
+  if (blocked) return <Navigate to="/settings/profile" replace />
 
   return (
     <div className="space-y-6">
@@ -53,7 +67,7 @@ export function SettingsLayout() {
             the row itself scrolls. */}
         <nav aria-label={settingsNav.sections} className="overflow-x-auto">
           <ul className="border-border flex min-w-max gap-1 border-b">
-            {pages.map((page) => (
+            {visible.map((page) => (
               <li key={page.to}>
                 <NavLink
                   to={page.to}

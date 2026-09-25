@@ -20,6 +20,20 @@ public sealed class NotificationDelivery : AggregateRoot
     public Guid OrganizationId { get; private set; }
 
     public Guid IntegrationId { get; private set; }
+
+    /// <summary>
+    /// What the integration was called, and which channel it was, when this went through it.
+    /// </summary>
+    /// <remarks>
+    /// Copied onto the row (Adım 16.5) so the delivery history reads on its own. Integrations are
+    /// the organisation's configuration and only its Admins may read them now; the incident screen
+    /// every role opens still has to say where a notification went. Null for rows written before
+    /// the column existed whose integration was already deleted by then.
+    /// </remarks>
+    public string? IntegrationName { get; private set; }
+
+    public NotificationChannelType? Channel { get; private set; }
+
     public Guid IncidentId { get; private set; }
 
     // The integration event's Id, kept for tracing a delivery back to the message that caused it.
@@ -34,7 +48,9 @@ public sealed class NotificationDelivery : AggregateRoot
         Guid organizationId,
         Guid integrationId,
         Guid incidentId,
-        Guid eventId
+        Guid eventId,
+        string? integrationName = null,
+        NotificationChannelType? channel = null
     )
     {
         return new NotificationDelivery
@@ -42,6 +58,8 @@ public sealed class NotificationDelivery : AggregateRoot
             Id = Guid.NewGuid(),
             OrganizationId = organizationId,
             IntegrationId = integrationId,
+            IntegrationName = integrationName,
+            Channel = channel,
             IncidentId = incidentId,
             EventId = eventId,
             Status = DeliveryStatus.Pending,

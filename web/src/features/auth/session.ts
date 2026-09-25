@@ -88,6 +88,15 @@ export function canOperate(role: UserRole): boolean {
   return role === 'Admin' || role === 'Engineer'
 }
 
+/**
+ * Whether this person may see and change what belongs to the organisation itself — integrations,
+ * telemetry sources, members. Admins only, reads included; the server answers everyone else 403
+ * on those endpoints, GET included, so this decides which settings pages exist for them at all.
+ */
+export function isAdmin(role: UserRole): boolean {
+  return role === 'Admin'
+}
+
 /** Two letters at most: a three-part name inside a 24px circle is a smudge, not an identity. */
 export function initialsFor(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)

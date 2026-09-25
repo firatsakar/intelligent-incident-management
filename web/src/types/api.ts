@@ -208,6 +208,10 @@ export interface Integration {
 export interface NotificationDelivery {
   id: string
   integrationId: string
+  /** As it was when the notification went out; null only for a pre-16.5 row whose integration was
+      already deleted. Carried on the row because the integration list is Admin-only. */
+  integrationName: string | null
+  channel: NotificationChannelType | null
   incidentId: string
   eventId: string
   status: DeliveryStatus

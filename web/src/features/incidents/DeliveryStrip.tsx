@@ -3,27 +3,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { deliveryClass, formatDateTime, formatDuration } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import type { Integration, NotificationDelivery } from '@/types/api'
+import type { NotificationDelivery } from '@/types/api'
 
 /**
  * Who was told, through what, and why it failed. The last link in the chain and the one that is
  * invisible everywhere else — a delivery row is the only record that a notification happened.
  *
- * The rows carry an integration id and nothing else, so both the name and the channel are looked up
- * here. The channel is worth the lookup: two integrations on one channel is the intended setup, so
- * "Dev email (Mailpit)" alone does not tell an operator whether the email path works.
+ * Each row carries the integration's name and channel as they were when it went out (Adım 16.5):
+ * the integration list is the organisation's configuration and only its Admins may read it, while
+ * this panel is on a screen every role opens. The channel is shown because two integrations on one
+ * channel is the intended setup, so "Dev email (Mailpit)" alone does not say whether the email path
+ * works.
  */
-export function DeliveryStrip({
-  deliveries,
-  integrations,
-}: {
-  deliveries: NotificationDelivery[]
-  integrations: Integration[]
-}) {
+export function DeliveryStrip({ deliveries }: { deliveries: NotificationDelivery[] }) {
   const t = useT().incidents.notifications
-
-  const lookup = (integrationId: string) =>
-    integrations.find((integration) => integration.id === integrationId)
 
   const failed = deliveries.filter((delivery) => delivery.status === 'Failed').length
   const sent = deliveries.filter((delivery) => delivery.status === 'Sent').length
@@ -47,11 +40,7 @@ export function DeliveryStrip({
         ) : (
           <ul className="divide-border -my-2 divide-y">
             {deliveries.map((delivery) => (
-              <DeliveryRow
-                key={delivery.id}
-                delivery={delivery}
-                integration={lookup(delivery.integrationId)}
-              />
+              <DeliveryRow key={delivery.id} delivery={delivery} />
             ))}
           </ul>
         )}
@@ -60,19 +49,13 @@ export function DeliveryStrip({
   )
 }
 
-function DeliveryRow({
-  delivery,
-  integration,
-}: {
-  delivery: NotificationDelivery
-  integration: Integration | undefined
-}) {
+function DeliveryRow({ delivery }: { delivery: NotificationDelivery }) {
   const { incidents, labels } = useT()
   const t = incidents.notifications
 
   // An integration deleted after the fact leaves its deliveries behind, which is correct: the
   // notification did happen, and the row is the only proof of it.
-  const name = integration?.name ?? t.deletedIntegration
+  const name = delivery.integrationName ?? t.deletedIntegration
 
   return (
     <li className="py-2.5">
@@ -85,9 +68,9 @@ function DeliveryRow({
           {name}
         </span>
 
-        {integration && (
+        {delivery.channel && (
           <span className="text-dim-foreground shrink-0 text-xs">
-            {labels.channel[integration.channel]}
+            {labels.channel[delivery.channel]}
           </span>
         )}
       </div>

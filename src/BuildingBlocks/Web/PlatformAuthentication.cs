@@ -33,6 +33,12 @@ public static class PlatformClaims
 /// them and the browser will not send them from anyone else's page. That last part is also the
 /// CSRF answer — a cookie that never travels cross-site cannot be used from one.
 /// </remarks>
+/// <summary>The role names a token carries, as the IdentityService writes them.</summary>
+public static class PlatformRoles
+{
+    public const string Admin = "Admin";
+}
+
 public static class PlatformCookies
 {
     public const string AccessToken = "iim.access";
@@ -74,16 +80,23 @@ public sealed class PlatformJwtOptions
 /// What a role may do, named by the capability rather than by the role.
 /// </summary>
 /// <remarks>
-/// One policy today, because one distinction exists today: whether a person may change anything.
-/// Viewers read every screen and write nothing. Engineers and administrators work the incidents
-/// and configure where alerts go and which logs are read. What separates an administrator —
-/// the organisation's own settings and members — has no endpoint yet, and a policy guarding
-/// nothing would only be a name for a future decision.
+/// Two distinctions (Adım 16.5, Fırat's rule): whether a person may work the incidents, and
+/// whether they may see and change what belongs to the organisation itself. Viewers read the
+/// operational screens and write nothing. Engineers also work the incidents. Only an Admin sees or
+/// changes the organisation's configuration — where alerts go, which logs are read, who the
+/// members are — reads included, because the configuration is the organisation's, not the
+/// incident's.
 /// </remarks>
 public static class PlatformPolicies
 {
-    /// <summary>Change something: an incident, an integration, a telemetry source.</summary>
+    /// <summary>Work an incident: change its status, assign it. Admins and Engineers.</summary>
     public const string Operate = "operate";
+
+    /// <summary>
+    /// See or change the organisation's own configuration: integrations, telemetry sources,
+    /// members. Admins only, GET included.
+    /// </summary>
+    public const string Administer = "administer";
 }
 
 public static class PlatformAuthentication
@@ -171,6 +184,10 @@ public static class PlatformAuthentication
             .AddPolicy(
                 PlatformPolicies.Operate,
                 policy => policy.RequireAuthenticatedUser().RequireRole("Admin", "Engineer")
+            )
+            .AddPolicy(
+                PlatformPolicies.Administer,
+                policy => policy.RequireAuthenticatedUser().RequireRole(PlatformRoles.Admin)
             );
 
         // TryAdd, because infrastructure registers it too — a hosted service's scope has no HTTP

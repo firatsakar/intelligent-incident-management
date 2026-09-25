@@ -5,6 +5,7 @@ import { onUnauthorized } from '@/api/client'
 
 import {
   canOperate,
+  isAdmin,
   endSession,
   readSession,
   startSession,
@@ -43,6 +44,13 @@ export function useCanOperate(): boolean {
   const { user } = useAuth()
 
   return user ? canOperate(user.role) : false
+}
+
+/** Whether the signed-in person is an Admin of their organisation. Same false-while-restoring rule. */
+export function useIsAdmin(): boolean {
+  const { user } = useAuth()
+
+  return user ? isAdmin(user.role) : false
 }
 
 export function useAuth(): AuthValue {
