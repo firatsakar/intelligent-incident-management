@@ -43,6 +43,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        services.AddScoped<IInvitationRepository, InvitationRepository>();
+        services.AddScoped<IPasswordResetRepository, PasswordResetRepository>();
 
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 

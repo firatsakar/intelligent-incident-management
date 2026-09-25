@@ -15,6 +15,18 @@ public interface IUserRepository
 
     Task<bool> AnyAsync(CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Everyone in one organisation. The table has no query filter — sign-in happens before an
+    /// organisation is known — so the organisation is named here, by the caller that has one.
+    /// </summary>
+    Task<IReadOnlyList<User>> ListByOrganizationAsync(
+        Guid organizationId,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>Active Admins of one organisation: the count the last-Admin guard reads.</summary>
+    Task<int> CountActiveAdminsAsync(Guid organizationId, CancellationToken cancellationToken = default);
+
     Task AddAsync(User user, CancellationToken cancellationToken = default);
 
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
