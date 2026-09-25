@@ -1,6 +1,7 @@
 ﻿import { api } from './client'
 import type {
   EvidenceWindow,
+  GitHubConnection,
   Incident,
   IncidentPriority,
   IncidentStats,
@@ -17,6 +18,7 @@ import type {
   NotificationStats,
   PagedResult,
   PasswordResetPreview,
+  RepositoryMapping,
   SessionAccount,
   SignalPage,
   SignalStatus,
@@ -182,6 +184,19 @@ export const authApi = {
   /** One's own password. Other sessions end; this one is renewed. */
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<SessionAccount>('/api/auth/password', { currentPassword, newPassword }),
+}
+
+/**
+ * The outside systems an analysis may read (Adım 17.5). Admin only, reads included.
+ */
+export const aiSourcesApi = {
+  github: () => api.get<GitHubConnection>('/api/ai-sources/github'),
+
+  /** A blank or absent token keeps the saved one. */
+  saveGitHub: (input: { token?: string; isEnabled: boolean; repositories: RepositoryMapping[] }) =>
+    api.put<GitHubConnection>('/api/ai-sources/github', input),
+
+  removeGitHub: () => api.delete<void>('/api/ai-sources/github'),
 }
 
 /**

@@ -1,4 +1,4 @@
-import { DatabaseIcon, PlugIcon, UserRoundIcon, UsersIcon } from 'lucide-react'
+import { DatabaseIcon, PlugIcon, SparklesIcon, UserRoundIcon, UsersIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 
@@ -35,12 +35,13 @@ interface SettingsPage {
 
 // Profile first: it is the one page about the reader rather than about the platform's plumbing,
 // and it is the one that is reached by wanting "my settings" rather than by wanting a connector.
-// Members next — people before plumbing. Then the two halves of the pipeline in the order data
-// moves through them — read, then routed.
+// Members next — people before plumbing. Then the pipeline in the order data moves through it —
+// read, analysed, routed.
 const pages: SettingsPage[] = [
   { to: '/settings/profile', id: 'profile', icon: UserRoundIcon },
   { to: '/settings/members', id: 'members', icon: UsersIcon, adminOnly: true },
   { to: '/settings/telemetry', id: 'telemetry', icon: DatabaseIcon, adminOnly: true },
+  { to: '/settings/ai-sources', id: 'aiSources', icon: SparklesIcon, adminOnly: true },
   { to: '/settings/integrations', id: 'integrations', icon: PlugIcon, adminOnly: true },
 ]
 

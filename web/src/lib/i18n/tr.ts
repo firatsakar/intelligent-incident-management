@@ -119,6 +119,7 @@ export const tr: Dictionary = {
       profile: 'Profil',
       members: 'Üyeler',
       telemetry: 'Telemetri',
+      aiSources: 'AI kaynakları',
       integrations: 'Entegrasyonlar',
     },
   },
@@ -1109,6 +1110,56 @@ export const tr: Dictionary = {
       defaultFilter: 'hata ve ölümcül kayıtlar',
       pausedNote: (seconds: number, what: string) =>
         `— buradan bir şey okunmuyor. Devam ettirilirse ${what} için her ${seconds} saniyede bir sorgulayacak.`,
+    },
+
+    aiSources: {
+      title: 'AI kaynakları',
+      description:
+        'Analizin bir nedeni ararken okuyabileceği dış sistemler. Yalnız okuma; yalnız bu organizasyonun olayları için.',
+      loadError: 'AI kaynakları yüklenemedi',
+
+      github: {
+        name: 'GitHub',
+        description:
+          'Bir olayın servisi bir repo’ya eşlenmişse analiz, sorun başlamadan önceki 48 saatte orada neyin değiştiğine bakar ve sorunu açıkladığını düşündüğü değişikliği adıyla anar.',
+        status: {
+          notConnected: 'Bağlı değil',
+          connected: 'Bağlı',
+          paused: 'Duraklatıldı',
+        },
+        token: 'Erişim token’ı',
+        tokenPlaceholder: 'github_pat_…',
+        tokenKept: 'Kayıtlı — korumak için boş bırakın',
+        tokenHint:
+          'Bu repo’larda Contents ve Metadata için yalnız okuma izni olan, ayrıntılı (fine-grained) bir kişisel erişim token’ı. Kaydettikten sonra bir daha gösterilmez.',
+        repositories: 'Repo’lar',
+        repositoriesHint:
+          'Her servisin kodunun hangi repo’da olduğu — servis adı telemetrinizin bildirdiği adla. Listede olmayan bütün servisler için * kullanın. Servisinin repo’su olmayan bir olay GitHub’sız analiz edilir.',
+        servicePlaceholder: 'servis adı ya da *',
+        serviceLabel: (row: number) => `Servis ${row}`,
+        repositoryPlaceholder: 'sahip/repo',
+        repositoryLabel: (row: number) => `Repo ${row}`,
+        branchPlaceholder: 'branch (boşsa varsayılan)',
+        branchLabel: (row: number) => `Branch ${row}`,
+        removeRow: (row: number) => `${row}. repo’yu kaldır`,
+        addRow: 'Repo ekle',
+        enabled: 'Analiz GitHub’ı okuyabilsin',
+        readOnly:
+          'Yalnız okuma. Analiz son commit’leri listeler ve neyi değiştirdiklerini okur; GitHub’a hiçbir şey yazmaz — issue, yorum ya da pull request yok. Token yalnız GitHub’a gönderilir ve log’lara ya da trace’lere hiç yazılmaz.',
+        save: 'Kaydet',
+        saving: 'Kaydediliyor…',
+        saved: 'GitHub bağlantısı kaydedildi.',
+        disconnect: 'Bağlantıyı kaldır',
+        disconnectTitle: 'GitHub bağlantısı kaldırılsın mı?',
+        disconnectBody:
+          'Token ve repo listesi silinir. Önceden yazılmış analizler bulduklarını korur; yenileri GitHub’ı okumaz.',
+        cancel: 'Vazgeç',
+        removed: 'GitHub bağlantısı kaldırıldı.',
+        tokenRequired: 'Bağlanmak için bir token yapıştırın.',
+        serviceRequired: 'Her repo’nun bir servis adı olmalı; geri kalanlar için *.',
+        repositoryInvalid: 'Her repo’yu sahip/repo biçiminde yazın — örneğin acme/shop.',
+        serviceTwice: 'Bir servis yalnız bir repo’ya eşlenebilir.',
+      },
     },
 
     members: {

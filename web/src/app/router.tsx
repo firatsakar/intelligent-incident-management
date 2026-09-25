@@ -13,6 +13,7 @@ import { EvidencePage } from '@/features/evidence/EvidencePage'
 import { SignalsPage } from '@/features/signals/SignalsPage'
 import { FunnelPage } from '@/features/telemetry/FunnelPage'
 import { ServicesPage } from '@/features/telemetry/ServicesPage'
+import { AiSourcesPage } from '@/features/settings/AiSourcesPage'
 import { IntegrationsPage } from '@/features/settings/IntegrationsPage'
 import { MembersPage } from '@/features/settings/MembersPage'
 import { ProfilePage } from '@/features/settings/ProfilePage'
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
               { path: 'profile', element: <ProfilePage /> },
               { path: 'members', element: <MembersPage /> },
               { path: 'telemetry', element: <TelemetrySourcesPage /> },
+              { path: 'ai-sources', element: <AiSourcesPage /> },
               { path: 'integrations', element: <IntegrationsPage /> },
             ],
           },

@@ -147,6 +147,7 @@ export const en = {
       profile: 'Profile',
       members: 'Members',
       telemetry: 'Telemetry',
+      aiSources: 'AI sources',
       integrations: 'Integrations',
     },
   },
@@ -1271,6 +1272,58 @@ export const en = {
       defaultFilter: 'errors and fatals',
       pausedNote: (seconds: number, what: string) =>
         `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
+    },
+
+    // What the analysis may read besides the incident (Adım 17.5). The page asks an Admin for a
+    // credential to their code, so it says what the credential is and is not used for, in place.
+    aiSources: {
+      title: 'AI sources',
+      description:
+        'Outside systems the analysis may read while it works out a cause. Read-only, and only for this organisation’s incidents.',
+      loadError: 'Could not load AI sources',
+
+      github: {
+        name: 'GitHub',
+        description:
+          'When an incident’s service is mapped to a repository, the analysis looks at what changed there in the 48 hours before the problem started, and names a change it believes caused it.',
+        status: {
+          notConnected: 'Not connected',
+          connected: 'Connected',
+          paused: 'Paused',
+        },
+        token: 'Access token',
+        tokenPlaceholder: 'github_pat_…',
+        tokenKept: 'Saved — leave blank to keep it',
+        tokenHint:
+          'A fine-grained personal access token with read-only access to Contents and Metadata on these repositories. It is never shown again after saving.',
+        repositories: 'Repositories',
+        repositoriesHint:
+          'Which repository holds each service’s code, by the service name your telemetry reports. Use * for every service not listed. An incident whose service has no repository is analysed without GitHub.',
+        servicePlaceholder: 'service name, or *',
+        serviceLabel: (row: number) => `Service ${row}`,
+        repositoryPlaceholder: 'owner/repository',
+        repositoryLabel: (row: number) => `Repository ${row}`,
+        branchPlaceholder: 'branch (default if blank)',
+        branchLabel: (row: number) => `Branch ${row}`,
+        removeRow: (row: number) => `Remove repository ${row}`,
+        addRow: 'Add repository',
+        enabled: 'Let the analysis read GitHub',
+        readOnly:
+          'Read-only. The analysis lists recent commits and reads what they changed; it never writes to GitHub — no issues, comments or pull requests. The token is sent to GitHub and nowhere else, and is never written to logs or traces.',
+        save: 'Save',
+        saving: 'Saving…',
+        saved: 'GitHub connection saved.',
+        disconnect: 'Disconnect',
+        disconnectTitle: 'Disconnect GitHub?',
+        disconnectBody:
+          'The token and the repository list are deleted. Analyses already written keep what they found; new ones will not read GitHub.',
+        cancel: 'Cancel',
+        removed: 'GitHub disconnected.',
+        tokenRequired: 'Paste a token to connect.',
+        serviceRequired: 'Every repository needs a service name, or * for the rest.',
+        repositoryInvalid: 'Write each repository as owner/repository — for example acme/shop.',
+        serviceTwice: 'Each service can be mapped to one repository only.',
+      },
     },
 
     members: {

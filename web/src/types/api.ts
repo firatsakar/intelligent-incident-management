@@ -388,6 +388,26 @@ export interface SessionAccount {
   organizationName: string
 }
 
+// ---- what the analysis may read (Adım 17.5) --------------------------------------------------
+
+/** Where one service's code lives. `service` is the telemetry's service name, or `*` for the rest. */
+export interface RepositoryMapping {
+  service: string
+  owner: string
+  repository: string
+  /** Null for the repository's default branch. */
+  branch: string | null
+}
+
+/** The organisation's GitHub connection. The token is never here; `hasToken` says one is saved. */
+export interface GitHubConnection {
+  isConfigured: boolean
+  hasToken: boolean
+  isEnabled: boolean
+  repositories: RepositoryMapping[]
+  updatedAt: string | null
+}
+
 // ---- the organisation's people (Adım 16.5) ---------------------------------------------------
 
 export interface Member {
