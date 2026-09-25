@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.SharedKernel;
+﻿using BuildingBlocks.Outbox;
+using BuildingBlocks.SharedKernel;
 using IncidentService.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,9 +25,14 @@ public sealed class IncidentDbContext : DbContext
 
     public DbSet<Incident> Incidents => Set<Incident>();
 
+    // Not filtered by organisation: the dispatcher reads every organisation's pending rows and
+    // sets each one's scope from the row itself.
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(IncidentDbContext).Assembly);
+        modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());
 
         // An incident id from another organisation now resolves to nothing, which the query
         // handler already turns into a 404. That is the right answer rather than a 403: a

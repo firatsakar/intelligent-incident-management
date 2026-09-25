@@ -61,7 +61,10 @@ public sealed class Incident : AggregateRoot
         DateTime? detectedAt = null
     )
     {
-        var incident = new Incident
+        // No domain event. There was one — IncidentCreatedDomainEvent — and nothing ever listened:
+        // the service published IncidentDetectedEvent itself after saving. Once the outbox arrived
+        // (Adım 24) an event nobody handles would have become a row retried forever, so it went.
+        return new Incident
         {
             Id = id ?? Guid.NewGuid(),
             OrganizationId = organizationId,
@@ -73,12 +76,6 @@ public sealed class Incident : AggregateRoot
             AssignedTeam = assignedTeam,
             DetectedAt = detectedAt,
         };
-
-        incident.AddDomainEvent(
-            new IncidentCreatedDomainEvent { IncidentId = incident.Id, Title = incident.Title }
-        );
-
-        return incident;
     }
 
     public static bool IsClosed(IncidentStatus status) =>

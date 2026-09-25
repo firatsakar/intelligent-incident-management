@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\IncidentService.Application\IncidentService.Application.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
   </ItemGroup>
 
 </Project>

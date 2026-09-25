@@ -23,17 +23,16 @@ public sealed class IncidentTests
         );
 
     [Fact]
-    public void Create_OpensTheIncidentAndAnnouncesIt()
+    public void Create_OpensTheIncidentAndRaisesNothing()
     {
         var incident = Create();
 
         Assert.Equal(IncidentStatus.Open, incident.Status);
         Assert.False(incident.IsAiAnalyzed);
 
-        var created = Assert.Single(incident.DomainEvents.OfType<IncidentCreatedDomainEvent>());
-
-        Assert.Equal(incident.Id, created.IncidentId);
-        Assert.Equal(incident.Title, created.Title);
+        // Everything an aggregate raises goes to the outbox, and an event no handler claims is a
+        // row retried forever. Creation is announced by the handler, as IncidentDetectedEvent.
+        Assert.Empty(incident.DomainEvents);
     }
 
     [Fact]
