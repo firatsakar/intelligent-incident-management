@@ -25,13 +25,19 @@ import {
 } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { incidentStatuses, type Incident, type IncidentStatus } from '@/types/api'
+import {
+  incidentStatuses,
+  isClosedStatus,
+  type Incident,
+  type IncidentStatus,
+} from '@/types/api'
 
 import { AiAnalysisPanel } from './AiAnalysisPanel'
 import { DeliveryStrip } from './DeliveryStrip'
 import { IncidentTimeline } from './IncidentTimeline'
 import { ScoreBreakdownPanel } from './ScoreBreakdownPanel'
 import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './queries'
+import { VerdictDialog } from './VerdictDialog'
 
 /**
  * One incident, read as a sequence rather than as a record.
@@ -56,6 +62,9 @@ export function IncidentDetailPage() {
   const assignTeam = useAssignTeam(id)
 
   const [team, setTeam] = useState('')
+
+  // Set when an open incident is being closed: the change waits for its verdict.
+  const [closingAs, setClosingAs] = useState<IncidentStatus | null>(null)
 
   if (incident.isPending) {
     return (
@@ -100,6 +109,13 @@ export function IncidentDetailPage() {
                 {labels.priority[data.priority]}
               </Badge>
               <Badge variant="secondary">{labels.incidentStatus[data.status]}</Badge>
+              {/* The verdict sits next to the status it came with. A false positive is outlined
+                  rather than tinted: it is a finding about the detector, not an alarm. */}
+              {data.verdict && (
+                <Badge variant={data.verdict === 'FalsePositive' ? 'outline' : 'secondary'}>
+                  {labels.verdict[data.verdict]}
+                </Badge>
+              )}
               <Badge variant="secondary">{labels.incidentSource[data.source]}</Badge>
 
               {data.assignedTeam && (
@@ -112,6 +128,12 @@ export function IncidentDetailPage() {
               <span className="text-dim-foreground tabular-nums">
                 {t.started(formatRelative(data.detectedAt ?? data.createdAt))}
               </span>
+
+              {data.resolvedAt && (
+                <span className="text-dim-foreground tabular-nums" title={formatDateTime(data.resolvedAt)}>
+                  {t.closed(formatRelative(data.resolvedAt))}
+                </span>
+              )}
             </div>
           </div>
 
@@ -125,7 +147,15 @@ export function IncidentDetailPage() {
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={data.status}
-                onValueChange={(value) => updateStatus.mutate(value as IncidentStatus)}
+                onValueChange={(value) => {
+                  const status = value as IncidentStatus
+
+                  if (status === data.status) return
+
+                  // Closing an open incident asks first; every other change goes straight through.
+                  if (isClosedStatus(status) && !isClosedStatus(data.status)) setClosingAs(status)
+                  else updateStatus.mutate({ status })
+                }}
                 disabled={updateStatus.isPending}
               >
                 <SelectTrigger className="w-36" aria-label={t.statusLabel}>
@@ -171,6 +201,20 @@ export function IncidentDetailPage() {
                 </Button>
               </div>
             </div>
+          )}
+
+          {closingAs && (
+            <VerdictDialog
+              status={closingAs}
+              pending={updateStatus.isPending}
+              onCancel={() => setClosingAs(null)}
+              onConfirm={(verdict) =>
+                updateStatus.mutate(
+                  { status: closingAs, verdict },
+                  { onSuccess: () => setClosingAs(null) },
+                )
+              }
+            />
           )}
         </div>
       </div>

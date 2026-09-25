@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { incidentsApi, notificationsApi, type IncidentListParams } from '@/api/endpoints'
-import type { Incident, IncidentStatus } from '@/types/api'
+import { useT } from '@/lib/i18n'
+import type { Incident, IncidentStatus, IncidentVerdict } from '@/types/api'
 
 // Query keys mirror the URL shape, so an invalidation reads like the screen it affects.
 export const incidentKeys = {
@@ -50,17 +51,22 @@ function patchCached(
 
 export function useUpdateStatus(id: string) {
   const queryClient = useQueryClient()
+  const t = useT().incidents.detail
 
   return useMutation({
-    mutationFn: (status: IncidentStatus) => incidentsApi.updateStatus(id, status),
-    onSuccess: (_, status) => {
+    mutationFn: ({ status, verdict }: { status: IncidentStatus; verdict?: IncidentVerdict }) =>
+      incidentsApi.updateStatus(id, status, verdict),
+    onSuccess: (_, { status }) => {
       patchCached(queryClient, id, { status })
 
       // The list is filtered and paginated on the server, and a status change can move a row off
       // the current page. Only the server knows, so the list is re-asked rather than guessed.
+      // The detail too: closing and reopening set and clear the verdict and the time, and those
+      // are the server's to state rather than this screen's to guess.
       void queryClient.invalidateQueries({ queryKey: incidentKeys.all })
+      void queryClient.invalidateQueries({ queryKey: incidentKeys.detail(id) })
 
-      toast.success('Status updated')
+      toast.success(t.statusUpdated)
     },
     onError: (error: Error) => toast.error(error.message),
   })
@@ -68,6 +74,7 @@ export function useUpdateStatus(id: string) {
 
 export function useAssignTeam(id: string) {
   const queryClient = useQueryClient()
+  const t = useT().incidents.detail
 
   return useMutation({
     mutationFn: (team: string) => incidentsApi.assignTeam(id, team),
@@ -75,7 +82,7 @@ export function useAssignTeam(id: string) {
       patchCached(queryClient, id, { assignedTeam: team })
       void queryClient.invalidateQueries({ queryKey: incidentKeys.all })
 
-      toast.success(`Assigned to ${team}`)
+      toast.success(t.assignedTo(team))
     },
     onError: (error: Error) => toast.error(error.message),
   })

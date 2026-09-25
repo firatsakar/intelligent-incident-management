@@ -341,6 +341,23 @@ export const tr: Dictionary = {
         'Kaynak, bunun biz kaydı açtıktan sonra başladığını bildiriyor; bu ancak iki saatin uyuşmadığı anlamına gelir. Gördüğünüz rakam bir gecikme değil, o uyuşmazlığın büyüklüğü.',
       noticed: 'söylenmeden fark edildi',
       skewNote: 'kaynağın saati bizimkinin ilerisinde',
+
+      closed: (relative: string) => `${relative} kapandı`,
+      statusUpdated: 'Durum güncellendi',
+      assignedTo: (team: string) => `${team} ekibine atandı`,
+
+      verdictDialog: {
+        title: 'Bu gerçek bir sorun muydu?',
+        description: (status: string) =>
+          `${status} olarak işaretlenmeden önce bir kez soruluyor. Cevap olayın üzerinde kalır; olayı dedektör açtıysa, o hatanın geçmişine de sayılır.`,
+        effect: {
+          Real: 'Gerçekten bir şey bozuktu. Aynı hatanın bir sonraki patlamasının olay açma ihtimali biraz artar.',
+          FalsePositive:
+            'Yapılacak bir şey yoktu. Aynı hatanın bir sonraki patlamasının olay açabilmesi için daha güçlü olması gerekir.',
+        },
+        cancel: 'Vazgeç',
+        confirm: (status: string) => `${status} olarak işaretle`,
+      },
     },
 
     timeline: {
@@ -1178,6 +1195,11 @@ export const tr: Dictionary = {
       InProgress: 'Devam ediyor',
       Resolved: 'Çözüldü',
       Closed: 'Kapandı',
+    },
+
+    verdict: {
+      Real: 'Gerçek sorun',
+      FalsePositive: 'Yanlış alarm',
     },
 
     priority: {
