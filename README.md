@@ -149,6 +149,36 @@ docker-compose up -d
 dotnet run --project src/Services/IncidentService/IncidentService.API
 ```
 
+### First-run setup
+
+There is no default account and no default password. On an empty database the identity service
+writes a one-time setup code to its log, on a single warning line:
+
+```text
+[WRN] First-run setup: no organisation exists yet. Open the console — it asks for this one-time setup code: ABCD-EFGH-JKMN. ...
+```
+
+1. Start the services, the gateway and the console (`npm run dev --prefix web`), and open the
+   console — it goes straight to the setup screen.
+2. Enter the code from the log, your organisation's name, and your own name, email and password
+   (12 characters or more). You are signed in as the organisation's first Admin.
+3. Invite your team from **Settings → Organization**, where the organisation's name can also be
+   changed later.
+
+The code only lives in memory: restarting the identity service issues a new one, and completing
+the setup spends it — once any user exists, the setup screen never opens again. One installation
+holds one organisation.
+
+For an automated install, skip the screen by configuring the first Admin before the first start
+(environment variables, or user secrets in development):
+
+```bash
+Identity__Seed__Email=admin@example.com
+Identity__Seed__Password=<at least 12 characters>
+Identity__Seed__OrganizationName="Example Operations"
+Identity__Seed__DisplayName="Platform Admin"
+```
+
 ---
 
 ## 🗺️ Roadmap
@@ -166,11 +196,12 @@ dotnet run --project src/Services/IncidentService/IncidentService.API
 - [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
 - [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
 - [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
+- [x] First-run setup — an empty installation is claimed from the console with a one-time code from the server's log; no default credentials
 - [x] **MCP integration, GitHub first** — the analysis reads the failing service's recent commits over GitHub's MCP server (read-only, the organisation's own token) and names a suspected change, linked on the incident
 - [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
 - [ ] Unit & integration tests
 - [ ] React frontend & analytics dashboard (MTTR, trends, model performance)
-- [ ] CI/CD & Kubernetes deployment
+- [ ] One-command install — Dockerfiles and a Docker Compose file for the whole platform (CI/CD and Kubernetes are left to each installation)
 
 ---
 
