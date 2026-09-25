@@ -82,6 +82,7 @@ public sealed class CreateIncidentFromSignalCommandHandler
                 Severity = incident.Priority.ToString(),
                 Source = incident.Source.ToString(),
                 DetectedAt = incident.DetectedAt,
+                Service = request.Service,
             },
             cancellationToken
         );

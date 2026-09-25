@@ -36,6 +36,7 @@ public sealed class SignalPromotedEventHandler : IIntegrationEventHandler<Signal
             Description = integrationEvent.Description,
             Severity = integrationEvent.Severity,
             DetectedAt = integrationEvent.DetectedAt,
+            Service = integrationEvent.Service,
         };
 
         await _sender.Send(command, cancellationToken);

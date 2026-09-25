@@ -26,4 +26,8 @@
 		<ProjectReference Include="..\AgentOrchestrator.Application\AgentOrchestrator.Application.csproj" />
 		<ProjectReference Include="..\..\..\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
 	</ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="AgentOrchestrator.Tests" />
+  </ItemGroup>
+
 </Project>
