@@ -63,6 +63,12 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
   const busiest = totals.length > 0 ? Math.max(...totals) : 0
   const windowTotal = totals.reduce((sum, value) => sum + value, 0)
 
+  // What closed each day (Adım 20.8), drawn as a line over the bars. The axis has to reach
+  // whichever is higher, or a day that closed more than it opened draws off the plot.
+  const closed = days.map((day) => day.resolved ?? 0)
+  const closedTotal = closed.reduce((sum, value) => sum + value, 0)
+  const peak = Math.max(busiest, ...closed, 0)
+
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (count === 0) return
 
@@ -98,29 +104,37 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           `aria-live` because the arrow keys change it and nothing else announces that. */}
       <p aria-live="polite" className="min-h-9 text-sm">
         {activeDay ? (
-          <T
-            text={activeDay.total > 0 ? t.dayReadout : t.dayReadoutEmpty}
-            values={{
-              day: <span className="font-medium">{formatUtcDayLong(activeDay.day)}</span>,
-              total: <span className="tabular-nums">{t.dayTotal(activeDay.total)}</span>,
-              breakdown: (
-                <span className="text-muted-foreground tabular-nums">
-                  {incidentPriorities
-                    .filter((priority) => (activeDay.byPriority[priority] ?? 0) > 0)
-                    .map((priority) =>
-                      t.priorityCount(
-                        activeDay.byPriority[priority] ?? 0,
-                        labels.priority[priority],
-                      ),
-                    )
-                    .join(' · ')}
-                </span>
-              ),
-            }}
-          />
+          <>
+            <T
+              text={activeDay.total > 0 ? t.dayReadout : t.dayReadoutEmpty}
+              values={{
+                day: <span className="font-medium">{formatUtcDayLong(activeDay.day)}</span>,
+                total: <span className="tabular-nums">{t.dayTotal(activeDay.total)}</span>,
+                breakdown: (
+                  <span className="text-muted-foreground tabular-nums">
+                    {incidentPriorities
+                      .filter((priority) => (activeDay.byPriority[priority] ?? 0) > 0)
+                      .map((priority) =>
+                        t.priorityCount(
+                          activeDay.byPriority[priority] ?? 0,
+                          labels.priority[priority],
+                        ),
+                      )
+                      .join(' · ')}
+                  </span>
+                ),
+              }}
+            />
+            {(activeDay.resolved ?? 0) > 0 && (
+              <span className="text-muted-foreground tabular-nums">
+                {t.dayResolved(activeDay.resolved)}
+              </span>
+            )}
+          </>
         ) : (
           <span className="text-muted-foreground tabular-nums">
             {t.summary(windowTotal, count)}
+            {closedTotal > 0 && t.resolvedSummary(closedTotal)}
             {busiest > 0 && t.busiest(busiest)}
             {t.hint}
           </span>
@@ -161,7 +175,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
                   onMouseLeave={() => setHovered(null)}
                 />
 
-                {windowTotal === 0 && (
+                {windowTotal === 0 && closedTotal === 0 && (
                   // A drawn-but-empty grid reads as a chart that failed rather than as a quiet
                   // month, and those are opposite things to learn at 3am.
                   <p
@@ -176,7 +190,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           }}
         >
           {({ plot }) => {
-            const ticks = niceTicks(busiest, Math.min(6, Math.max(2, Math.round(plot.height / 44))))
+            const ticks = niceTicks(peak, Math.min(6, Math.max(2, Math.round(plot.height / 44))))
             const scale = linearScale(ticks.max, plot.height)
             const band = bandScale(count, plot.width, { maxStep })
             const picks = pickBandTicks(count, band.step, labelGap)
@@ -208,6 +222,16 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
                   />
                 ))}
 
+                {closedTotal > 0 && band.step > 0 && (
+                  <ClosedLine
+                    values={closed}
+                    xs={closed.map((_, index) => plot.x + band.slot(index).x + band.slot(index).width / 2)}
+                    baseline={plot.y + plot.height}
+                    scale={scale}
+                    dots={band.step >= 8}
+                  />
+                )}
+
                 <BandAxis
                   plot={plot}
                   band={band}
@@ -233,6 +257,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
           <tr>
             <th scope="col">{t.columnDay}</th>
             <th scope="col">{t.columnTotal}</th>
+            <th scope="col">{t.columnResolved}</th>
             {incidentPriorities.map((priority) => (
               <th key={priority} scope="col">
                 {labels.priority[priority]}
@@ -245,6 +270,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
             <tr key={day.day}>
               <th scope="row">{formatUtcDayLong(day.day)}</th>
               <td>{day.total}</td>
+              <td>{day.resolved ?? 0}</td>
               {incidentPriorities.map((priority) => (
                 <td key={priority}>{day.byPriority[priority] ?? 0}</td>
               ))}
@@ -330,6 +356,57 @@ function DayColumn({
   )
 }
 
+/**
+ * What closed each day, over the bars (Adım 20.8). A line rather than a second bar: the bars are
+ * what arrived and are stacked by priority, and a second column per day would halve their width
+ * at ninety days. Where the line runs above the bars, the team closed more than came in.
+ */
+function ClosedLine({
+  values,
+  xs,
+  baseline,
+  scale,
+  dots,
+}: {
+  values: number[]
+  /** The centre of each day's band, in the same order as the values. */
+  xs: number[]
+  baseline: number
+  scale: ReturnType<typeof linearScale>
+  dots: boolean
+}) {
+  const points = values.map((value, index) => ({
+    x: xs[index],
+    y: baseline - scale.span(value),
+    value,
+  }))
+
+  return (
+    <g aria-hidden className="pointer-events-none">
+      <polyline
+        points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+        className="stroke-foreground/80 fill-none"
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {dots &&
+        points
+          .filter((point) => point.value > 0)
+          .map((point) => (
+            <circle
+              key={point.x}
+              cx={point.x}
+              cy={point.y}
+              r={2.5}
+              className="fill-card stroke-foreground/80"
+              strokeWidth={1.5}
+            />
+          ))}
+    </g>
+  )
+}
+
 /** In stacking order, bottom of the bar first, because that is the order the bars are in. */
 function Legend() {
   const { dashboard, labels } = useT()
@@ -344,6 +421,20 @@ function Legend() {
           {labels.priority[priority]}
         </li>
       ))}
+      <li className="flex items-center gap-1.5">
+        <svg width="14" height="10" aria-hidden className="shrink-0">
+          <line
+            x1="1"
+            y1="5"
+            x2="13"
+            y2="5"
+            className="stroke-foreground/80"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+          />
+        </svg>
+        {dashboard.chart.legendResolved}
+      </li>
       <li className="text-dim-foreground">{dashboard.chart.legendNote}</li>
     </ul>
   )

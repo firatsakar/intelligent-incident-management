@@ -32,12 +32,66 @@ public sealed record IncidentStatsDto
     public required int OpenTotal { get; init; }
 
     public required DetectionLatencyDto Detection { get; init; }
+
+    // ---- Adım 20.8 ------------------------------------------------------------------------------
+
+    /// <summary>How long incidents closed in the window took to close.</summary>
+    public required ResolutionDto Resolution { get; init; }
+
+    /// <summary>
+    /// The verdicts given to incidents closed in the window, by where they came from — every
+    /// source present, zeroes included. For Telemetry this is the detector's hit rate.
+    /// </summary>
+    public required IReadOnlyDictionary<string, VerdictCountsDto> Verdicts { get; init; }
+
+    /// <summary>What the analysis did with the incidents opened in the window.</summary>
+    public required AiAnalysisDto Ai { get; init; }
+}
+
+public sealed record ResolutionDto
+{
+    public required int ResolvedCount { get; init; }
+
+    /// <summary>
+    /// From when the problem started — <c>DetectedAt</c>, or <c>CreatedAt</c> when nothing detected
+    /// it — to <c>ResolvedAt</c>. Median and p95, nearest-rank, null when nothing closed.
+    /// </summary>
+    public required double? MedianSeconds { get; init; }
+
+    public required double? P95Seconds { get; init; }
+
+    /// <summary>Every priority present; null where none of that priority closed.</summary>
+    public required IReadOnlyDictionary<string, double?> MedianSecondsByPriority { get; init; }
+}
+
+public sealed record VerdictCountsDto
+{
+    public required int Real { get; init; }
+    public required int FalsePositive { get; init; }
+
+    /// <summary>Closed before a verdict was asked for (before Adım 24).</summary>
+    public required int Unknown { get; init; }
+}
+
+public sealed record AiAnalysisDto
+{
+    public required int Analysed { get; init; }
+    public required int Failed { get; init; }
+
+    /// <summary>Neither yet: the analysis has not come back.</summary>
+    public required int Pending { get; init; }
+
+    /// <summary>Median of the confidences the analyses gave; null when none gave one.</summary>
+    public required double? MedianConfidence { get; init; }
 }
 
 public sealed record IncidentDayBucketDto
 {
     public required DateOnly Day { get; init; }
     public required int Total { get; init; }
+
+    /// <summary>Incidents closed that day, whenever they were opened (Adım 20.8).</summary>
+    public int Resolved { get; init; }
 
     /// <summary>
     /// Always carries every priority, including the zeroes. A stacked bar whose segments appear

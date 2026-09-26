@@ -20,10 +20,13 @@ import { T, useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   incidentPriorities,
+  type AiAnalysisStats,
   type CountsByKey,
   type DetectionLatency,
   type IncidentSource,
   type IncidentStats,
+  type ResolutionStats,
+  type VerdictCounts,
 } from '@/types/api'
 
 import { IncidentsByDayChart } from './IncidentsByDayChart'
@@ -131,6 +134,28 @@ export function DashboardPage() {
           ) : (
             <CardSkeleton height="h-56" />
           )}
+        </div>
+
+        {/* Adım 20.8: what happened to them afterwards — how long they took to close, whether they
+            were real, and what the analysis made of them. */}
+        <div className="lg:col-span-4">
+          {query.data ? (
+            <ResolutionCard resolution={query.data.resolution} days={days} />
+          ) : (
+            <CardSkeleton height="h-56" />
+          )}
+        </div>
+
+        <div className="lg:col-span-4">
+          {query.data ? (
+            <AccuracyCard verdicts={query.data.verdicts} days={days} />
+          ) : (
+            <CardSkeleton height="h-56" />
+          )}
+        </div>
+
+        <div className="lg:col-span-4">
+          {query.data ? <AiCard ai={query.data.ai} days={days} /> : <CardSkeleton height="h-56" />}
         </div>
       </div>
     </div>
@@ -355,6 +380,206 @@ function SourcesCard({
               )
             })}
           </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ResolutionCard({ resolution, days }: { resolution: ResolutionStats; days: DayWindow }) {
+  const { dashboard, labels, window: windowText } = useT()
+  const t = dashboard.resolution
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {resolution.resolvedCount === 0 ? (
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
+        ) : (
+          <>
+            <div className="space-y-1">
+              <span className="block text-3xl leading-none font-semibold tabular-nums">
+                {formatSeconds(resolution.medianSeconds)}
+              </span>
+              <span className="text-muted-foreground text-sm">{t.median}</span>
+            </div>
+
+            <dl className="grid grid-cols-1 gap-y-2 text-sm">
+              <Figure label={t.closed} value={String(resolution.resolvedCount)} />
+              <Figure label={t.p95} value={formatSeconds(resolution.p95Seconds)} />
+            </dl>
+
+            <dl className="space-y-1.5 text-sm">
+              {incidentPriorities.map((priority) => {
+                const median = resolution.medianSecondsByPriority[priority] ?? null
+
+                return (
+                  <div key={priority} className="flex items-baseline justify-between gap-3">
+                    <dt className="text-muted-foreground flex items-center gap-1.5">
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'size-2.5 shrink-0 rounded-[3px]',
+                          priorityBackground[priority],
+                        )}
+                      />
+                      {labels.priority[priority]}
+                    </dt>
+                    <dd className={cn('tabular-nums', median === null && 'text-dim-foreground')}>
+                      {formatSeconds(median)}
+                    </dd>
+                  </div>
+                )
+              })}
+            </dl>
+
+            <p className="text-muted-foreground text-xs leading-relaxed">{t.from}</p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+const noVerdicts: VerdictCounts = { real: 0, falsePositive: 0, unknown: 0 }
+
+function AccuracyCard({
+  verdicts,
+  days,
+}: {
+  verdicts: Record<string, VerdictCounts>
+  days: DayWindow
+}) {
+  const { dashboard, labels, window: windowText } = useT()
+  const t = dashboard.accuracy
+
+  const any = sourceOrder.some((source) => {
+    const counts = verdicts[source] ?? noVerdicts
+    return counts.real + counts.falsePositive + counts.unknown > 0
+  })
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {!any ? (
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
+        ) : (
+          <>
+            <ul className="space-y-3">
+              {sourceOrder.map((source) => {
+                const counts = verdicts[source] ?? noVerdicts
+                const judged = counts.real + counts.falsePositive
+
+                return (
+                  <li key={source} className="space-y-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="text-sm font-medium">{labels.incidentSource[source]}</span>
+                      <span className="text-muted-foreground shrink-0 text-sm tabular-nums">
+                        {judged > 0
+                          ? `${formatPercent(Math.round((counts.real / judged) * 100))} ${t.real}`
+                          : t.none}
+                      </span>
+                    </div>
+
+                    {/* Neutral, both: a false alarm is a finding about the detector, not an alarm. */}
+                    <ProportionBar
+                      segments={[
+                        {
+                          key: 'real',
+                          value: counts.real,
+                          className: 'bg-foreground/70',
+                        },
+                        {
+                          key: 'false',
+                          value: counts.falsePositive,
+                          className: 'bg-foreground/25',
+                        },
+                      ]}
+                    />
+
+                    <p className="text-muted-foreground text-xs tabular-nums">
+                      {t.counts(counts.real, counts.falsePositive)}
+                      {counts.unknown > 0 && t.unknown(counts.unknown)}
+                    </p>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <p className="text-muted-foreground text-xs leading-relaxed">{t.note}</p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function AiCard({ ai, days }: { ai: AiAnalysisStats; days: DayWindow }) {
+  const { dashboard, window: windowText } = useT()
+  const t = dashboard.ai
+
+  const total = ai.analysed + ai.failed + ai.pending
+
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>{t.title}</CardTitle>
+        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-3">
+        {total === 0 ? (
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
+        ) : (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl leading-none font-semibold tabular-nums">
+                {formatPercent(Math.round((ai.analysed / total) * 100))}
+              </span>
+              <span className="text-muted-foreground text-sm">{t.share}</span>
+            </div>
+
+            {/* The one colour on this row of cards: a failed analysis does not fix itself. */}
+            <ProportionBar
+              segments={[
+                {
+                  key: 'analysed',
+                  value: ai.analysed,
+                  className: 'bg-foreground/70',
+                },
+                {
+                  key: 'pending',
+                  value: ai.pending,
+                  className: 'bg-foreground/25',
+                },
+                { key: 'failed', value: ai.failed, className: 'bg-alarm/80' },
+              ]}
+            />
+
+            <dl className="grid grid-cols-1 gap-y-2 text-sm">
+              <Figure label={t.analysed} value={String(ai.analysed)} />
+              <Figure label={t.failed} value={String(ai.failed)} />
+              <Figure label={t.pending} value={String(ai.pending)} />
+              <Figure
+                label={t.confidence}
+                value={
+                  ai.medianConfidence === null
+                    ? '—'
+                    : formatPercent(Math.round(ai.medianConfidence * 100))
+                }
+              />
+            </dl>
+          </>
         )}
       </CardContent>
     </Card>

@@ -843,6 +843,42 @@ export const tr: Dictionary = {
       columnDay: 'Gün (UTC)',
       columnTotal: 'Toplam',
       legendNote: 'Kritik, her çubuğun tabanında',
+      dayResolved: (count: number) => ` · ${count} kapatıldı`,
+      resolvedSummary: (count: number) => ` · ${count} kapatıldı`,
+      legendResolved: 'Kapatılan',
+      columnResolved: 'Kapatılan',
+    },
+
+    resolution: {
+      title: 'Çözüm süresi',
+      description: (scope: string) => `${scope} içinde kapatılan olaylar, UTC.`,
+      empty: 'Bu pencerede kapatılan olay yok.',
+      median: 'medyan, sorunun başlangıcından kapanışa',
+      p95: '95. yüzdelik',
+      closed: 'Kapatılan',
+      from: 'Sorunun başladığı andan — hiçbir şey tespit etmediyse olayın açıldığı andan — kapatıldığı ana kadar.',
+    },
+
+    accuracy: {
+      title: 'Tespit doğruluğu',
+      description: (scope: string) => `${scope} içinde kapatılan olaylara verilen kararlar.`,
+      empty: 'Bu pencerede kararla kapatılan olay yok.',
+      real: 'gerçek',
+      none: 'karar yok',
+      counts: (real: number, falsePositive: number) => `${real} gerçek · ${falsePositive} yanlış alarm`,
+      unknown: (count: number) => ` · ${count} olay karar sorulmadan önce kapandı`,
+      note: 'Telemetri için bu, dedektörün isabet oranıdır — her yanlış alarm aynı imzanın bir sonraki sefer daha az ağır basmasını sağlar.',
+    },
+
+    ai: {
+      title: 'AI analizi',
+      description: (scope: string) => `${scope} içinde açılan olaylar.`,
+      empty: 'Bu pencerede olay yok, analiz edilecek bir şey de yok.',
+      share: 'analiz edildi',
+      analysed: 'Analiz edilen',
+      failed: 'Başarısız',
+      pending: 'Bekleyen',
+      confidence: 'Medyan güven',
     },
   },
 

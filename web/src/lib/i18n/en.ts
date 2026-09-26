@@ -971,6 +971,44 @@ export const en = {
       columnDay: 'Day (UTC)',
       columnTotal: 'Total',
       legendNote: 'Critical at the base of each bar',
+      // Adım 20.8: what closed each day, drawn as a line over the bars.
+      dayResolved: (count: number) => ` · ${count} closed`,
+      resolvedSummary: (count: number) => ` · ${count} closed`,
+      legendResolved: 'Closed',
+      columnResolved: 'Closed',
+    },
+
+    // Adım 20.8
+    resolution: {
+      title: 'Time to resolution',
+      description: (scope: string) => `Incidents closed in the ${scope.toLowerCase()}, UTC.`,
+      empty: 'Nothing was closed in this window.',
+      median: 'median, problem start to close',
+      p95: '95th percentile',
+      closed: 'Closed',
+      from: 'Timed from when the problem started — or from when the incident was opened, if nothing detected it — to when it was closed.',
+    },
+
+    accuracy: {
+      title: 'Detection accuracy',
+      description: (scope: string) => `Verdicts on incidents closed in the ${scope.toLowerCase()}.`,
+      empty: 'No incident was closed with a verdict in this window.',
+      real: 'real',
+      none: 'no verdicts',
+      counts: (real: number, falsePositive: number) => `${real} real · ${falsePositive} false alarms`,
+      unknown: (count: number) => ` · ${count} closed before verdicts were asked`,
+      note: 'For Telemetry this is the detector’s hit rate — each false alarm makes the same signature weigh less next time.',
+    },
+
+    ai: {
+      title: 'AI analysis',
+      description: (scope: string) => `Incidents opened in the ${scope.toLowerCase()}.`,
+      empty: 'No incidents in this window, so nothing to analyse.',
+      share: 'analysed',
+      analysed: 'Analysed',
+      failed: 'Failed',
+      pending: 'Waiting',
+      confidence: 'Median confidence',
     },
   },
 

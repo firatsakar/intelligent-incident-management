@@ -41,13 +41,14 @@ public sealed class GetIncidentStatsQueryHandler
             from = to - MaxWindow;
 
         var rows = await _repository.GetStatsRowsAsync(from, to, cancellationToken);
+        var resolved = await _repository.GetResolvedRowsAsync(from, to, cancellationToken);
         var openByPriority = await _repository.GetOpenCountsByPriorityAsync(cancellationToken);
 
         return new IncidentStatsDto
         {
             From = from,
             To = to,
-            Days = BuildDays(rows, from, to),
+            Days = BuildDays(rows, resolved, from, to),
             ByPriority = CountBy(rows, row => row.Priority),
             ByStatus = CountBy(rows, row => row.Status),
             BySource = CountBy(rows, row => row.Source),
@@ -58,6 +59,9 @@ public sealed class GetIncidentStatsQueryHandler
             Total = rows.Count,
             OpenTotal = openByPriority.Values.Sum(),
             Detection = BuildDetection(rows),
+            Resolution = BuildResolution(resolved),
+            Verdicts = BuildVerdicts(resolved),
+            Ai = BuildAi(rows),
         };
     }
 
@@ -67,6 +71,7 @@ public sealed class GetIncidentStatsQueryHandler
     /// </summary>
     private static List<IncidentDayBucketDto> BuildDays(
         IReadOnlyList<IncidentStatsRow> rows,
+        IReadOnlyList<IncidentResolutionRow> resolved,
         DateTime from,
         DateTime to
     )
@@ -75,6 +80,10 @@ public sealed class GetIncidentStatsQueryHandler
 
         var byDay = rows.GroupBy(row => DateOnly.FromDateTime(row.CreatedAt.ToUniversalTime()))
             .ToDictionary(group => group.Key, group => group.ToList());
+
+        var resolvedByDay = resolved
+            .GroupBy(row => DateOnly.FromDateTime(row.ResolvedAt.ToUniversalTime()))
+            .ToDictionary(group => group.Key, group => group.Count());
 
         var firstDay = DateOnly.FromDateTime(from.ToUniversalTime());
         var lastDay = DateOnly.FromDateTime(to.ToUniversalTime());
@@ -90,6 +99,7 @@ public sealed class GetIncidentStatsQueryHandler
                 {
                     Day = day,
                     Total = inDay?.Count ?? 0,
+                    Resolved = resolvedByDay.GetValueOrDefault(day),
                     ByPriority = FillZeroes(
                         CountBy(inDay ?? [], row => row.Priority),
                         priorities
@@ -119,6 +129,71 @@ public sealed class GetIncidentStatsQueryHandler
             ToldCount = rows.Count(row => !row.DetectedAt.HasValue),
             MedianSeconds = Percentile(latencies, 0.50),
             P95Seconds = Percentile(latencies, 0.95),
+        };
+    }
+
+    // ---- Adım 20.8 ---------------------------------------------------------------------------
+
+    private static double ResolutionSeconds(IncidentResolutionRow row) =>
+        (row.ResolvedAt - (row.DetectedAt ?? row.CreatedAt)).TotalSeconds;
+
+    // Same stance as detection latency: a negative duration is two clocks disagreeing, not an
+    // incident closed before its problem began. It counts as closed and sits out of the times.
+    private static List<double> SortedDurations(IEnumerable<IncidentResolutionRow> rows) =>
+        rows.Select(ResolutionSeconds).Where(seconds => seconds >= 0).OrderBy(seconds => seconds).ToList();
+
+    private static ResolutionDto BuildResolution(IReadOnlyList<IncidentResolutionRow> resolved)
+    {
+        var all = SortedDurations(resolved);
+
+        return new ResolutionDto
+        {
+            ResolvedCount = resolved.Count,
+            MedianSeconds = Percentile(all, 0.50),
+            P95Seconds = Percentile(all, 0.95),
+            MedianSecondsByPriority = Enum.GetValues<IncidentPriority>()
+                .ToDictionary(
+                    priority => priority.ToString(),
+                    priority => Percentile(SortedDurations(resolved.Where(row => row.Priority == priority)), 0.50)
+                ),
+        };
+    }
+
+    private static Dictionary<string, VerdictCountsDto> BuildVerdicts(IReadOnlyList<IncidentResolutionRow> resolved) =>
+        Enum.GetValues<IncidentSource>()
+            .ToDictionary(
+                source => source.ToString(),
+                source =>
+                {
+                    var fromSource = resolved.Where(row => row.Source == source).ToList();
+
+                    return new VerdictCountsDto
+                    {
+                        Real = fromSource.Count(row => row.Verdict == IncidentVerdict.Real),
+                        FalsePositive = fromSource.Count(row => row.Verdict == IncidentVerdict.FalsePositive),
+                        Unknown = fromSource.Count(row => row.Verdict is null),
+                    };
+                }
+            );
+
+    private static AiAnalysisDto BuildAi(IReadOnlyList<IncidentStatsRow> rows)
+    {
+        // A late success clears an earlier failure (Incident.ApplyAiAnalysis), so analysed wins.
+        var analysed = rows.Where(row => row.IsAiAnalyzed).ToList();
+        var failed = rows.Count(row => !row.IsAiAnalyzed && row.AiFailed);
+
+        var confidences = analysed
+            .Where(row => row.AiConfidence.HasValue)
+            .Select(row => row.AiConfidence!.Value)
+            .OrderBy(confidence => confidence)
+            .ToList();
+
+        return new AiAnalysisDto
+        {
+            Analysed = analysed.Count,
+            Failed = failed,
+            Pending = rows.Count - analysed.Count - failed,
+            MedianConfidence = Percentile(confidences, 0.50),
         };
     }
 
