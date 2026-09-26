@@ -47,8 +47,8 @@ public sealed class DatabaseMigrationTests
     [Fact]
     public async Task OnItMigratesTheServicesOwnDatabase()
     {
-        // The in-memory provider has no migrations to run and says so — which is the proof that,
-        // with the flag on, the migration was attempted against the service's own context.
+        // The in-memory provider is not relational and says so as soon as it is asked about its
+        // database — which is the proof that, with the flag on, the service's own context was.
         var error = await Assert.ThrowsAsync<InvalidOperationException>(
             () => Host("true", withDatabase: true).MigrateOnStartupAsync<Probe>()
         );

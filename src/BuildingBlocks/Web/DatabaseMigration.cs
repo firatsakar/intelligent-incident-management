@@ -1,4 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -42,7 +45,7 @@ public static class DatabaseMigration
         var context = scope.ServiceProvider.GetRequiredService<TContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(DatabaseMigration));
 
-        var pending = (await context.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
+        var pending = await PendingAsync(context, cancellationToken);
 
         if (pending.Count == 0)
         {
@@ -60,5 +63,26 @@ public static class DatabaseMigration
         // A failure here is left to stop the process: a service running on a schema it does not
         // match fails later and less clearly, and the container's restart policy tries again.
         await context.Database.MigrateAsync(cancellationToken);
+    }
+
+    private static async Task<List<string>> PendingAsync(DbContext context, CancellationToken cancellationToken)
+    {
+        // A database that does not exist yet is created by MigrateAsync, and everything is pending.
+        if (!await context.GetService<IRelationalDatabaseCreator>().ExistsAsync(cancellationToken))
+            return context.Database.GetMigrations().ToList();
+
+        // Npgsql answers "does the history table exist?" by selecting from it and catching the
+        // failure, and EF's command logger prints that failure as an ERR — twice, since
+        // MigrateAsync asks again. Nothing is wrong, but it would be the first thing every new
+        // installation shows. CREATE TABLE IF NOT EXISTS settles the question without an error,
+        // and MigrateAsync then finds the table too.
+        var history = context.GetService<IHistoryRepository>();
+        await history.CreateIfNotExistsAsync(cancellationToken);
+
+        var applied = (await history.GetAppliedMigrationsAsync(cancellationToken))
+            .Select(row => row.MigrationId)
+            .ToHashSet();
+
+        return context.Database.GetMigrations().Where(id => !applied.Contains(id)).ToList();
     }
 }

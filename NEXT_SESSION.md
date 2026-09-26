@@ -6,17 +6,28 @@
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7, **24** ve
-**25** bitti; `develop` güncel ve push'lanmış, **531 test yeşil**. Ürün **açık kaynak** olacak: 21
-(CI/CD) ve 22 (Kubernetes) yol haritasından çıktı. **Sıradaki: Adım 26 — tek komutla kurulum**
-(`IIM-150`; Dockerfile'lar + tüm platform için docker compose) — **ayrıntılı planı Fırat'la konuşmadan
-başlama.** Ardından kalanlar (23, 20.6, 13.6, Adım 20 kalıntısı, 14, outbox retry tavanı 🔴) yine
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7, **24**,
+**25** ve **26** bitti; `develop` güncel ve push'lanmış, **543 test yeşil**. Ürün **açık kaynak**: 21
+(CI/CD) ve 22 (Kubernetes) çıktı, yerine tek komutla kurulum geldi. **Sıradaki: Adım 27 — servis
+üzerinden olay açma** — konsolda form **yok** (Fırat: platformun amacı olayları otonom yakalamak);
+makine erişimi dahil kapsamı **Fırat'la konuşmadan başlama.** Ardından kalanlar (23, 20.6, 13.6,
+Adım 20 kalıntısı, 14, outbox retry tavanı 🔴, event bus aboneliğinin sessizce ölmesi 🟡) yine
 Fırat'la konuşulacak — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
 önce ne işe yaradığını anlat, kararları sor, sonra plan.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 26 — tek komutla kurulum** (`IIM-150`). `cp deploy/example.env deploy/.env` → zorunlu
+sırları doldur (boşken compose başlamaz) → `docker compose -f deploy/docker-compose.yml --env-file
+deploy/.env up -d --build` → `http://localhost:8080` kurulum ekranı. Tek Postgres (5 veritabanı,
+5 sahip, `deploy/postgres/init.sh`), dışarıya yalnız gateway; Seq/pgAdmin/Kibana `127.0.0.1`'de.
+Servisler `Database:MigrateOnStartup=true` ile kendi migration'larını uyguluyor (geliştirmede kapalı).
+Cookie `Secure` = `Request.IsHttps`; gateway dış proxy'nin `X-Forwarded-*`'ına yalnız
+`ForwardedHeaders:KnownProxies`'teki adres/ağlardan inanıyor. İmajlar `iim-*:local` adıyla yerelde
+duruyor (Fırat kalsın dedi). **Kurulum `.env`'ine yazamazsın** (CLAUDE.md) — kabul için sırları
+script içinde üretip ortam değişkeni olarak ver; `docker compose up/down` ve volume silme Fırat'a sorulur.
 
 **Adım 25 — ilk kurulum ekranı ve organizasyon adı** (`IIM-145`). Varsayılan hesap/parola **yok**.
 Boş veritabanında (ve `Identity:Seed:*` boşken) IdentityService log'a tek bir Warning satırıyla
