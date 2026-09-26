@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIncidentAnalysisRepository, IncidentAnalysisRepository>();
         services.AddScoped<IGitHubConnectionRepository, GitHubConnectionRepository>();
+        services.AddScoped<IAiSettingsRepository, AiSettingsRepository>();
 
         // The organisation's GitHub, read over GitHub's MCP server with the organisation's token.
         services.Configure<GitHubMcpOptions>(configuration.GetSection(GitHubMcpOptions.SectionName));

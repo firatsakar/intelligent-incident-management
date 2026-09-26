@@ -313,6 +313,22 @@ async function roles() {
     }
   }
 
+  // The AI response language (Adım 20.6) is an organisation setting too.
+  for (const role of ['Engineer', 'Viewer']) {
+    for (const [method, path, body] of [
+      ['GET', '/api/ai-settings'],
+      ['PUT', '/api/ai-settings', { responseLanguage: 'Turkish' }],
+    ]) {
+      const response = await call(method, path, token[`canary${role}`], body)
+      check(`${role} ${method} ${path} → 403`, response.status === 403, `got ${response.status}`)
+    }
+  }
+
+  for (const [who, auth] of [['canary', token.canaryAdmin], [other.name, token.otherAdmin]]) {
+    const response = await call('GET', '/api/ai-settings', auth)
+    check(`${who} Admin GET /api/ai-settings → 200`, response.status === 200 && !!response.json?.responseLanguage, `got ${response.status}`)
+  }
+
   const canaryGitHub = await call('GET', '/api/ai-sources/github', token.canaryAdmin)
   check('Admin GET /api/ai-sources/github → 200', canaryGitHub.status === 200, `got ${canaryGitHub.status}`)
 

@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.Application.Changes;
+using AgentOrchestrator.Domain.Enums;
 using System.Text.Json;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.ValueObjects;
@@ -43,6 +44,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         string title,
         string description,
         CodeContext? code,
+        AnalysisLanguage language,
         CancellationToken cancellationToken = default
     )
     {
@@ -74,7 +76,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
 
         try
         {
-            return await RunAsync(organizationId, incidentId, userPrompt, changes, cancellationToken);
+            return await RunAsync(organizationId, incidentId, userPrompt, changes, language, cancellationToken);
         }
         finally
         {
@@ -88,6 +90,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         Guid incidentId,
         string userPrompt,
         ChangeTools? changes,
+        AnalysisLanguage language,
         CancellationToken cancellationToken
     )
     {
@@ -95,7 +98,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         var agent = _client
             .AsAIAgent(
                 model: _options.Model,
-                instructions: BuildInstructions(changes?.Repository),
+                instructions: BuildInstructions(changes?.Repository, language),
                 tools: [BuildSearchTool(organizationId, incidentId), .. changes?.Functions ?? []]
             )
             .AsBuilder()
@@ -187,7 +190,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
         );
     }
 
-    private static string BuildInstructions(RepositoryMapping? repository)
+    internal static string BuildInstructions(RepositoryMapping? repository, AnalysisLanguage language)
     {
         var instructions = """
             You are an expert Site Reliability Engineer (SRE) analyzing production incidents.
@@ -241,6 +244,23 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
             - Below 0.3: insufficient information.
             Never inflate confidence. Finding no similar past incident should LOWER confidence.
             """;
+
+        // Adım 20.6: the organisation reads its analyses in Turkish. Only the prose follows: the
+        // category and priority are keys that notification filters match on, and the search
+        // queries stay English because the index they search is analysed as English.
+        if (language == AnalysisLanguage.Turkish)
+        {
+            instructions += """
+
+                RESPONSE LANGUAGE:
+                Write "reasoning" and every item of "suggestedSteps" in Turkish.
+                - Keep "suggestedPriority" and "suggestedCategory" exactly as one of the English values
+                  listed above: they are keys, not prose.
+                - Keep technical identifiers as they are: exception and class names, service names,
+                  configuration keys, commands and commit shas.
+                - Write your search_similar_incidents queries in English.
+                """;
+        }
 
         if (repository is null)
             return instructions;

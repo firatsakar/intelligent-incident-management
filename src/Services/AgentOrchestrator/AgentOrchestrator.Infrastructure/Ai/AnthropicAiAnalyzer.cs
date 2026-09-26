@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.Application.Changes;
+using AgentOrchestrator.Domain.Enums;
 using System.Text.Json;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.ValueObjects;
@@ -31,10 +32,13 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
         string title,
         string description,
         CodeContext? code,
+        AnalysisLanguage language,
         CancellationToken cancellationToken = default
     )
     {
         // The fallback analyzer has no tools, so it reads no code whatever the context offers.
+        // Nor does it follow the response language (Adım 20.6): it is not registered, and is kept
+        // only as the pre-agent baseline.
         var systemPrompt = BuildSystemPrompt();
         var userPrompt = BuildUserPrompt(title, description);
 

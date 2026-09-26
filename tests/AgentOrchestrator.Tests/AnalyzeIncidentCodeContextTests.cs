@@ -2,6 +2,7 @@ using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Application.Changes;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using AgentOrchestrator.Domain.Aggregates;
+using AgentOrchestrator.Domain.Enums;
 using AgentOrchestrator.Domain.ValueObjects;
 using BuildingBlocks.SharedKernel;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -20,6 +21,7 @@ public sealed class AnalyzeIncidentCodeContextTests
     private readonly IAiAnalyzer _analyzer = Substitute.For<IAiAnalyzer>();
     private readonly IIncidentAnalysisRepository _analyses = Substitute.For<IIncidentAnalysisRepository>();
     private readonly IGitHubConnectionRepository _connections = Substitute.For<IGitHubConnectionRepository>();
+    private readonly IAiSettingsRepository _settings = Substitute.For<IAiSettingsRepository>();
     private readonly AnalyzeIncidentCommandHandler _handler;
 
     private CodeContext? _received;
@@ -34,11 +36,12 @@ public sealed class AnalyzeIncidentCodeContextTests
             _analyses,
             NullLogger<AnalyzeIncidentCommandHandler>.Instance,
             organization,
-            _connections
+            _connections,
+            _settings
         );
 
         _analyzer
-            .AnalyzeAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Do<CodeContext?>(c => _received = c), Arg.Any<CancellationToken>())
+            .AnalyzeAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Do<CodeContext?>(c => _received = c), Arg.Any<AnalysisLanguage>(), Arg.Any<CancellationToken>())
             .Returns(new AnalysisResult { SuggestedPriority = "High", SuggestedCategory = "Application", Reasoning = "r" });
     }
 
