@@ -53,8 +53,27 @@ export interface Incident {
   verdict: IncidentVerdict | null
   /** When it was closed out; cleared if it is reopened. */
   resolvedAt: string | null
+  /** Only for an incident sent through the incident API: the sender's own name for the problem. */
+  externalId: string | null
+  /** The API key it was sent with, by the name it had then. */
+  reportedBy: string | null
   createdAt: string
   updatedAt: string | null
+}
+
+/** A key an external system opens incidents with (Adım 27). Never the key itself. */
+export interface IncidentApiKey {
+  id: string
+  name: string
+  keyPrefix: string
+  createdBy: string
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** The response to creating one — the only place its value appears. */
+export interface IssuedIncidentApiKey extends IncidentApiKey {
+  key: string
 }
 
 export interface AiRelatedChange {

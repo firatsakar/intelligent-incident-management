@@ -1,5 +1,5 @@
 ﻿import { useCanOperate } from '@/features/auth/AuthProvider'
-import { ArrowLeftIcon, ArrowRightIcon, HandIcon, UsersIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, HandIcon, KeyRoundIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -118,6 +118,16 @@ export function IncidentDetailPage() {
               )}
               <Badge variant="secondary">{labels.incidentSource[data.source]}</Badge>
 
+              {data.reportedBy && (
+                <span
+                  className="text-muted-foreground flex min-w-0 items-center gap-1"
+                  title={data.externalId ?? undefined}
+                >
+                  <KeyRoundIcon className="size-3.5 shrink-0" aria-hidden />
+                  <span className="max-w-40 truncate">{t.sentWith(data.reportedBy)}</span>
+                </span>
+              )}
+
               {data.assignedTeam && (
                 <span className="text-muted-foreground flex min-w-0 items-center gap-1">
                   <UsersIcon className="size-3.5 shrink-0" aria-hidden />
@@ -231,7 +241,11 @@ export function IncidentDetailPage() {
             <CardHeader>
               <CardTitle>{t.whatHappened}</CardTitle>
               <CardDescription>
-                {data.source === 'Telemetry' ? t.fromDetector : t.fromOperator}
+                {data.source === 'Telemetry'
+                  ? t.fromDetector
+                  : data.reportedBy
+                    ? t.fromApiKey(data.reportedBy, data.externalId)
+                    : t.fromOperator}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -295,12 +309,17 @@ function DetectionStrip({ incident }: { incident: Incident }) {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
           <span className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-            <HandIcon className="size-4 shrink-0" aria-hidden />
-            {t.openedByHand}
+            {/* Sent by another system is not opened by hand, though neither was detected here. */}
+            {incident.reportedBy ? (
+              <KeyRoundIcon className="size-4 shrink-0" aria-hidden />
+            ) : (
+              <HandIcon className="size-4 shrink-0" aria-hidden />
+            )}
+            {incident.reportedBy ? t.sentWithKey(incident.reportedBy) : t.openedByHand}
           </span>
           <span className="text-sm tabular-nums">{formatDateTime(incident.createdAt)}</span>
           <span className="text-muted-foreground basis-full text-xs leading-relaxed">
-            {t.openedByHandDetail}
+            {incident.reportedBy ? t.sentWithKeyDetail : t.openedByHandDetail}
           </span>
         </CardContent>
       </Card>

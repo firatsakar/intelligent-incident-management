@@ -59,7 +59,7 @@ export function IncidentTimeline({
           label: t.problemStarted,
           at: null,
           state: 'absent',
-          detail: t.notRecorded,
+          detail: incident.reportedBy ? t.notSent : t.notRecorded,
         },
     {
       label: t.incidentOpened,

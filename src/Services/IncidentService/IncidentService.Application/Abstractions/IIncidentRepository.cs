@@ -6,10 +6,19 @@ namespace IncidentService.Application.Abstractions;
 public interface IIncidentRepository
 {
     Task<Incident?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The open (Open or InProgress) incident carrying this external id, if there is one — at most
+    /// one can exist, by a unique index (Adım 27).
+    /// </summary>
+    Task<Incident?> GetOpenByExternalIdAsync(string externalId, CancellationToken cancellationToken = default);
     Task AddAsync(Incident incident, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Saves the unit of work. Throws <see cref="DuplicateExternalIdException"/> when an incident
+    /// being added lost the race for an open external id, and leaves the unit of work without it.
+    /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    // Yeni metodlar
     Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPagedAsync(
         IncidentStatus? status,
         IncidentPriority? priority,

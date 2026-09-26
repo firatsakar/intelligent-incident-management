@@ -31,6 +31,15 @@ internal static class GatewayRoutes
     /// </summary>
     public const string SignInRateLimiterPolicy = "sign-in";
 
+    /// <summary>
+    /// Applied to the incident API (Adım 27), per key: a sender misconfigured to post in a loop
+    /// would otherwise open incidents as fast as it can send them. Far above what alerting sends.
+    /// </summary>
+    public const string IncidentIntakeRateLimiterPolicy = "incident-intake";
+
+    /// <summary>The header the incident API reads its key from — IncidentIntakeController.ApiKeyHeader.</summary>
+    public const string IncidentApiKeyHeader = "X-IIM-Api-Key";
+
     // One cluster per service, not per prefix: two of the five answer on more than one prefix and
     // a cluster is a destination, not a route.
     private const string IdentityCluster = "identity";
@@ -70,7 +79,11 @@ internal static class GatewayRoutes
         ("auth", "/api/auth/{**rest}", IdentityCluster, null),
         // The organisation's members — IdentityService, which is where accounts live.
         ("organization", "/api/organization/{**rest}", IdentityCluster, null),
+        // External systems opening incidents with an API key (Adım 27); the literal wins over the
+        // catch-all below, as sign-in does over /api/auth.
+        ("incident-intake", "/api/incidents/intake", IncidentCluster, IncidentIntakeRateLimiterPolicy),
         ("incidents", "/api/incidents/{**rest}", IncidentCluster, null),
+        ("incident-api-keys", "/api/incident-api-keys/{**rest}", IncidentCluster, null),
         // Routed because the endpoint exists and is reachable; the console never calls it. The
         // normal trigger for an analysis is IncidentDetectedEvent over RabbitMQ.
         ("analyses", "/api/analyses/{**rest}", AgentCluster, null),

@@ -29,6 +29,7 @@ import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { isPushed, type TelemetrySource, type TelemetrySourceKind } from '@/types/api'
 
+import { IncidentApiSection } from './IncidentApiSection'
 import { IngestKeyDialog, otlpEndpoint } from './IngestKeyDialog'
 
 import {
@@ -190,6 +191,8 @@ export function ObservabilitySection() {
           ))}
         </div>
       </section>
+
+      <IncidentApiSection />
 
       <section className="space-y-3">
         <SectionHeading title={settings.shared.comingSoon} />

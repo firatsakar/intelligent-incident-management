@@ -39,6 +39,7 @@ public static class ServiceCollectionExtensions
         );
 
         services.AddScoped<IIncidentRepository, IncidentRepository>();
+        services.AddScoped<IIncidentApiKeyRepository, IncidentApiKeyRepository>();
 
         services.AddScoped<IOutboxStore, IncidentOutboxStore>();
         services.AddScoped<IOutboxMessageHandler, IncidentResolvedOutboxHandler>();

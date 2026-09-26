@@ -39,7 +39,9 @@ public sealed class CreateIncidentCommandHandler
             request.Priority,
             request.Source,
             request.AssignedTeam,
-            detectedAt: request.DetectedAt);
+            detectedAt: request.DetectedAt,
+            externalId: request.ExternalId,
+            reportedBy: request.ReportedBy);
 
         await _repository.AddAsync(incident, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);

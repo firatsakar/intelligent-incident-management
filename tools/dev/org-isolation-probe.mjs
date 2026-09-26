@@ -427,6 +427,67 @@ async function sockets(found) {
   await Promise.all(Object.values(ears).map((ear) => ear.connection.stop()))
 }
 
+// ---- 5. the incident API (Adım 27) ------------------------------------------------------------
+
+// A key is the organisation's, and so is every incident it opens. The probe makes one canary key
+// and deletes it again; the incident it opens carries a fixed external id, so every run after the
+// first finds that open incident instead of opening (and analysing) another.
+async function incidentApi() {
+  console.log('\nThe incident API: keys and the incidents they open stay in their organisation')
+
+  for (const role of ['Engineer', 'Viewer']) {
+    for (const [method, path, body] of [
+      ['GET', '/api/incident-api-keys'],
+      ['POST', '/api/incident-api-keys', { name: 'not an admin' }],
+      ['DELETE', `/api/incident-api-keys/${randomUUID()}`],
+    ]) {
+      const response = await call(method, path, token[`canary${role}`], body)
+      check(`${role} ${method} ${path.replace(/[0-9a-f-]{36}/, (id) => id.slice(0, 8))} → 403`, response.status === 403, `got ${response.status}`)
+    }
+  }
+
+  const created = await call('POST', '/api/incident-api-keys', token.canaryAdmin, { name: 'isolation-probe' })
+  check('Admin creates a canary key → 201', created.status === 201, `got ${created.status}`)
+  if (created.status !== 201) return
+
+  const key = created.json
+
+  const otherKeys = await call('GET', '/api/incident-api-keys', token.otherAdmin)
+  check(`${other.name} does not list canary's key`, otherKeys.status === 200 && !(otherKeys.json ?? []).some((k) => k.id === key.id), `got ${otherKeys.status}`)
+
+  const otherDelete = await call('DELETE', `/api/incident-api-keys/${key.id}`, token.otherAdmin)
+  check(`${other.name} deleting canary's key → 404`, otherDelete.status === 404, `got ${otherDelete.status}`)
+
+  const intake = (apiKey) =>
+    fetch(`${gateway}/api/incidents/intake`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-IIM-Api-Key': apiKey },
+      body: JSON.stringify({
+        title: 'Isolation probe: incident API',
+        description: 'Opened by tools/dev/org-isolation-probe.mjs to check that an API key opens incidents in its own organisation.',
+        priority: 'Low',
+        externalId: 'isolation-probe',
+      }),
+    }).then(async (response) => ({ status: response.status, json: await response.json().catch(() => null) }))
+
+  const sent = await intake(key.key)
+  check('canary key opens or finds its incident → 201/200', [200, 201].includes(sent.status), `got ${sent.status}`)
+
+  if (sent.json?.id) {
+    const mine = await call('GET', `/api/incidents/${sent.json.id}`, token.canaryViewer)
+    check('the incident is canary’s, sent with the key', mine.status === 200 && mine.json?.source === 'Alert', `got ${mine.status} ${mine.json?.source}`)
+
+    const theirs = await call('GET', `/api/incidents/${sent.json.id}`, token.otherAdmin)
+    check(`${other.name} reading it → 404`, theirs.status === 404, `got ${theirs.status}`)
+  }
+
+  const removed = await call('DELETE', `/api/incident-api-keys/${key.id}`, token.canaryAdmin)
+  check('Admin deletes the key → 204', removed.status === 204, `got ${removed.status}`)
+
+  check('a deleted key → 401', (await intake(key.key)).status === 401)
+  check('an unknown key → 401', (await intake('iim_inc_not-a-key')).status === 401)
+}
+
 // ---- run -------------------------------------------------------------------------------------
 
 console.log(`Organisation isolation probe — ${gateway} — canary ${canary.org.slice(0, 8)} vs ${other.name} ${other.org.slice(0, 8)}`)
@@ -435,6 +496,7 @@ const found = await lists()
 await writes(found)
 await roles()
 await sockets(found)
+await incidentApi()
 
 console.log(`\n${passed} passed, ${failures.length} failed`)
 

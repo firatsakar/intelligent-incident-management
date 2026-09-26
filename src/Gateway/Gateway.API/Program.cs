@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using BuildingBlocks.Observability;
+using BuildingBlocks.SharedKernel;
 using BuildingBlocks.Web;
 using Gateway.API;
 using Microsoft.AspNetCore.Builder;
@@ -36,6 +37,31 @@ builder.Services.AddRateLimiter(limiter =>
                     QueueLimit = 0,
                 }
             )
+    );
+
+    // Per key rather than per address: many senders can sit behind one address, and one sender's
+    // loop should not spend another's allowance. Partitioned by the key's hash, so the limiter never
+    // holds a key in the clear; a request without one falls back to its address.
+    limiter.AddPolicy(
+        GatewayRoutes.IncidentIntakeRateLimiterPolicy,
+        context =>
+        {
+            var key = context.Request.Headers[GatewayRoutes.IncidentApiKeyHeader].ToString().Trim();
+
+            var partition = key.Length > 0
+                ? "key:" + AccessKey.Hash(key)
+                : "address:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partition,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }
+            );
+        }
     );
 
     limiter.OnRejected = async (context, cancellationToken) =>

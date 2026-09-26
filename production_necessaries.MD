@@ -201,6 +201,20 @@ kova: dakikada toplam 10). Diğer uçlar sınırsız: `POST /api/incidents` bir 
 tetikliyor, entegrasyon test uçları dışarıya istek atıyor. Kimliksiz erişim kapandığı için risk
 artık yalnızca kötü niyetli bir *üye*den geliyor, ama sıfır değil.
 
+- **Adım 27:** olay API'si (`POST /api/incidents/intake`) **anahtar başına dakikada 60** ile
+  sınırlı (kova anahtarın hash'i, anahtarsızsa adres). Her yeni olay bir AI çağrısıdır; 60/dk
+  bir döngüye giren göndericiyi durdurur ama maliyet tavanı değildir — aynı `externalId` ile
+  tekrarlar yeni olay açmadığı için gerçek alarm akışında sorun yok. Limiter gateway'in
+  belleğinde: birden çok gateway replikasında paylaşılmaz.
+
+### 🟢 Olay API'si anahtarları (Adım 27)
+
+Organizasyona ait, adlandırılmış anahtarlar; yalnız **SHA-256 hash**'i saklanıyor, değer bir kez
+gösteriliyor. Yetkisi yalnız olay açmak — okuyamaz, değiştiremez, yanıt yalnız `{ id, created }`.
+Organizasyonu anahtar belirliyor; izolasyon probunda 15 kontrol. Kalanlar: anahtarların **son
+kullanma tarihi yok** (döndürme elle: yeni anahtar → göndericiyi geçir → eskisini sil) ve kimin
+hangi anahtarı ne zaman sildiği yalnız log'da (denetim ekranı Adım 14).
+
 - `dist/`'in gateway'e kopyalanması bir publish adımı olarak henüz yok (Adım 21/22).
 
 ### ⚪ Dev-only uçlar
