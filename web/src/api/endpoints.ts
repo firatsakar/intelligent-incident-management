@@ -3,6 +3,7 @@ import type {
   EvidenceWindow,
   GitHubConnection,
   Incident,
+  IncidentApiKey,
   IncidentPriority,
   IncidentStats,
   IncidentStatus,
@@ -11,6 +12,7 @@ import type {
   Invitation,
   InvitationIssued,
   InvitationPreview,
+  IssuedIncidentApiKey,
   IssuedLink,
   Member,
   NotificationChannelType,
@@ -109,6 +111,16 @@ export const telemetrySourcesApi = {
   /** Revokes the key in the same write. The response is the only place the new one appears. */
   rotateKey: (id: string) =>
     api.post<TelemetrySource>(`/api/telemetry-sources/${id}/rotate-key`),
+}
+
+/** The organisation's incident API keys (Adım 27). Admin only. */
+export const incidentApiKeysApi = {
+  list: () => api.get<IncidentApiKey[]>('/api/incident-api-keys'),
+
+  /** The response carries the key's value, once. */
+  create: (name: string) => api.post<IssuedIncidentApiKey>('/api/incident-api-keys', { name }),
+
+  remove: (id: string) => api.delete<void>(`/api/incident-api-keys/${id}`),
 }
 
 export const notificationsApi = {

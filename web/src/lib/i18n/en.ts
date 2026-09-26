@@ -385,6 +385,7 @@ export const en = {
       // Opened by hand: there is no detection to have been slow. A zero would claim the platform
       // found it instantly.
       openedByHand: 'Opened by hand — nothing detected it',
+      sentThroughApi: 'Sent through the incident API — nothing detected it here',
     },
 
     detail: {
@@ -404,10 +405,18 @@ export const en = {
       fromDetector:
         'Written by the detector from the log records themselves — this is the same text the analysis read.',
       fromOperator: 'As entered when the incident was opened.',
+      fromApiKey: (key: string, externalId: string | null) =>
+        externalId
+          ? `As sent with the ${key} key (external id ${externalId}).`
+          : `As sent with the ${key} key.`,
+      sentWith: (key: string) => `via ${key}`,
 
       openedByHand: 'Opened by hand',
       openedByHandDetail:
         'Nothing detected this, so there is no detection latency to measure — the platform was told rather than noticing. The score breakdown below is absent for the same reason.',
+      sentWithKey: (key: string) => `Sent with the ${key} key`,
+      sentWithKeyDetail:
+        'An external system reported this through the incident API, so there is no detection latency to measure here — the platform was told rather than noticing.',
       problemStarted: 'Problem started',
       sourceClock: 'on the source’s clock',
       incidentOpened: 'Incident opened',
@@ -450,6 +459,7 @@ export const en = {
       problemStarted: 'Problem started',
       onSourceClock: 'On the source clock, not ours.',
       notRecorded: 'Not recorded — this incident was opened by hand.',
+      notSent: 'Not sent — the system that reported it gave no start time.',
 
       incidentOpened: 'Incident opened',
       toDetect: (duration: string) => `+${duration} to detect`,
@@ -1059,6 +1069,46 @@ export const en = {
 
   settings: {
     /** The vocabulary the two catalogue screens share — they are one pattern shown twice. */
+    // Adım 27: how systems that already know they have a problem report it.
+    incidentApi: {
+      heading: 'Incident API',
+      count: (n: number) => `${n} ${n === 1 ? 'key' : 'keys'}`,
+      title: 'Open incidents from your own systems',
+      description:
+        'Scripts, pipelines and alerting tools send an incident with a key made here. Each key belongs to the organisation, can open incidents and nothing else, and names itself on every incident it opens.',
+      endpointLabel: 'Endpoint (POST)',
+      endpointHint: (header: string) => `JSON body; send the key in the ${header} header.`,
+      loadError: 'The keys could not be loaded.',
+      empty: 'No keys yet.',
+      rotate:
+        'To replace a key without a gap: make a new one, move the sender to it, then delete the old one.',
+      create: 'New key',
+      createTitle: 'New API key',
+      createBody:
+        'Name it after the system that will use it. The name is shown on every incident the key opens.',
+      namePlaceholder: 'Grafana, CI pipeline…',
+      nameHint: 'Up to 64 characters, unique in this organisation.',
+      nameRequired: 'Give the key a name.',
+      nameTaken: 'A key with this name already exists.',
+      creating: 'Creating…',
+      createConfirm: 'Create key',
+      issuedTitle: (name: string) => `Key “${name}”`,
+      once: 'This key is shown once. Only its hash is stored, so it cannot be shown again — if it is lost, make a new one.',
+      keyLabel: 'API key',
+      curlLabel: 'Example request',
+      curlHint:
+        'externalId is optional: while an incident with it is open, sending it again returns that incident instead of opening another.',
+      done: 'Done',
+      createdBy: (name: string, when: string) => `created by ${name} ${when}`,
+      lastUsed: (when: string) => `used ${when}`,
+      neverUsed: 'never used',
+      deleteAria: (name: string) => `Delete ${name}`,
+      deleteBody:
+        'Systems sending with this key get 401 from now on. Incidents it already opened keep its name.',
+      deleteConfirm: 'Delete key',
+      deleted: 'Key deleted.',
+    },
+
     shared: {
       availableNow: 'Available now',
       comingSoon: 'Coming soon',

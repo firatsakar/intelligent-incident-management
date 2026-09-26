@@ -329,6 +329,7 @@ export const tr: Dictionary = {
       analysed: 'analiz edildi',
       toOpen: (duration: string) => `açılışa +${duration}`,
       openedByHand: 'Elle açıldı — bunu hiçbir şey tespit etmedi',
+      sentThroughApi: 'Olay API’si üzerinden gönderildi — burada hiçbir şey tespit etmedi',
     },
 
     detail: {
@@ -348,10 +349,18 @@ export const tr: Dictionary = {
       fromDetector:
         'Doğrudan log kayıtlarından üretildi — analizin okuduğu metnin aynısı.',
       fromOperator: 'Olay açılırken girildiği gibi.',
+      fromApiKey: (key, externalId) =>
+        externalId
+          ? `${key} anahtarıyla gönderildiği gibi (harici kimlik ${externalId}).`
+          : `${key} anahtarıyla gönderildiği gibi.`,
+      sentWith: (key) => `${key} anahtarıyla`,
 
       openedByHand: 'Elle açıldı',
       openedByHandDetail:
         'Bunu hiçbir şey tespit etmedi, yani ölçülecek bir tespit gecikmesi de yok — platform fark etmedi, kendisine söylendi. Aşağıdaki puan dökümünün olmamasının sebebi de aynı.',
+      sentWithKey: (key) => `${key} anahtarıyla gönderildi`,
+      sentWithKeyDetail:
+        'Bunu bir dış sistem olay API’si üzerinden bildirdi; burada ölçülecek bir tespit gecikmesi yok — platform fark etmedi, kendisine söylendi.',
       problemStarted: 'Sorunun başlangıcı',
       sourceClock: 'kaynağın saatiyle',
       incidentOpened: 'Olayın açılışı',
@@ -391,6 +400,7 @@ export const tr: Dictionary = {
       problemStarted: 'Sorunun başlangıcı',
       onSourceClock: 'Kaynağın saatiyle, bizimkiyle değil.',
       notRecorded: 'Kaydedilmedi — bu olay elle açıldı.',
+      notSent: 'Gönderilmedi — bildiren sistem bir başlangıç zamanı vermedi.',
 
       incidentOpened: 'Olayın açılışı',
       toDetect: (duration: string) => `tespit için +${duration}`,
@@ -914,6 +924,45 @@ export const tr: Dictionary = {
 
 
   settings: {
+    incidentApi: {
+      heading: 'Olay API’si',
+      count: (n) => `${n} anahtar`,
+      title: 'Kendi sistemlerinizden olay açın',
+      description:
+        'Script’ler, CI hatları ve alarm araçları burada üretilen bir anahtarla olay gönderir. Her anahtar organizasyona aittir, yalnız olay açabilir ve açtığı her olayda adıyla görünür.',
+      endpointLabel: 'Uç (POST)',
+      endpointHint: (header) => `JSON gövde; anahtarı ${header} başlığında gönderin.`,
+      loadError: 'Anahtarlar yüklenemedi.',
+      empty: 'Henüz anahtar yok.',
+      rotate:
+        'Bir anahtarı kesintisiz değiştirmek için: yenisini üretin, göndereni ona geçirin, sonra eskisini silin.',
+      create: 'Yeni anahtar',
+      createTitle: 'Yeni API anahtarı',
+      createBody:
+        'Onu kullanacak sistemin adını verin. Ad, anahtarın açtığı her olayda görünür.',
+      namePlaceholder: 'Grafana, CI hattı…',
+      nameHint: 'En fazla 64 karakter, bu organizasyonda tekil.',
+      nameRequired: 'Anahtara bir ad verin.',
+      nameTaken: 'Bu adla bir anahtar zaten var.',
+      creating: 'Oluşturuluyor…',
+      createConfirm: 'Anahtarı oluştur',
+      issuedTitle: (name) => `“${name}” anahtarı`,
+      once: 'Bu anahtar yalnız bir kez gösterilir. Yalnız hash’i saklanır, yeniden gösterilemez — kaybolursa yenisini üretin.',
+      keyLabel: 'API anahtarı',
+      curlLabel: 'Örnek istek',
+      curlHint:
+        'externalId isteğe bağlıdır: onunla açılmış bir olay açıkken aynısını göndermek yeni olay açmaz, o olayı döner.',
+      done: 'Tamam',
+      createdBy: (name, when) => `${name} oluşturdu, ${when}`,
+      lastUsed: (when) => `son kullanım ${when}`,
+      neverUsed: 'hiç kullanılmadı',
+      deleteAria: (name) => `${name} anahtarını sil`,
+      deleteBody:
+        'Bu anahtarla gönderen sistemler bundan sonra 401 alır. Açtığı olaylar adını korur.',
+      deleteConfirm: 'Anahtarı sil',
+      deleted: 'Anahtar silindi.',
+    },
+
     shared: {
       availableNow: 'Şu anda mevcut',
       comingSoon: 'Yakında',

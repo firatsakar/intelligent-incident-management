@@ -346,7 +346,10 @@ function IncidentRow({ incident }: { incident: Incident }) {
         ) : (
           // Opened by hand: there is no detection to have been slow. An em dash says that; a
           // zero would claim the platform found it instantly.
-          <span className="text-dim-foreground" title={t.openedByHand}>
+          <span
+            className="text-dim-foreground"
+            title={incident.reportedBy ? t.sentThroughApi : t.openedByHand}
+          >
             —
           </span>
         )}
