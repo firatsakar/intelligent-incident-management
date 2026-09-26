@@ -22,6 +22,11 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
     private readonly SemaphoreSlim _consumerLock = new(1, 1);
     private IChannel? _consumerChannel;
 
+    // Cancelled on shutdown: what stops a subscription that is still waiting for the broker.
+    private readonly CancellationTokenSource _stopping = new();
+
+    private static readonly TimeSpan MaxSubscribeRetryDelay = TimeSpan.FromSeconds(30);
+
     public RabbitMqEventBus(RabbitMqConnection connection, ILogger<RabbitMqEventBus> logger, IServiceScopeFactory scopeFactory, EventBusOptions options)
     {
         _connection = connection;
@@ -95,33 +100,69 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
 
     // Binds the service queue to one more routing key, opening the shared consumer channel on the
     // first subscription. The lock keeps concurrent Subscribe calls from opening two channels.
+    //
+    // Until it succeeds, it keeps trying (Adım 28). It used to try once and log the failure, and a
+    // service whose broker was not up yet — every service, when a host boots and starts every
+    // container at once — then ran for good without a consumer, healthy to look at and deaf. The
+    // connection's own retries cover a broker that is seconds away; this covers one that is not.
     private async Task BindAsync(string eventName)
     {
-        try
+        for (var attempt = 1; !_stopping.IsCancellationRequested; attempt++)
         {
-            await _consumerLock.WaitAsync();
             try
             {
-                _consumerChannel ??= await CreateConsumerChannelAsync();
+                await _consumerLock.WaitAsync(_stopping.Token);
 
-                await _consumerChannel.QueueBindAsync(
-                    queue: QueueName,
-                    exchange: _options.ExchangeName,
-                    routingKey: eventName);
+                try
+                {
+                    // A channel left closed by the failure before is not one to bind on.
+                    if (_consumerChannel is { IsOpen: false })
+                    {
+                        await _consumerChannel.DisposeAsync();
+                        _consumerChannel = null;
+                    }
+
+                    _consumerChannel ??= await CreateConsumerChannelAsync();
+
+                    await _consumerChannel.QueueBindAsync(
+                        queue: QueueName,
+                        exchange: _options.ExchangeName,
+                        routingKey: eventName);
+                }
+                finally
+                {
+                    _consumerLock.Release();
+                }
+
+                _logger.LogInformation(
+                    "Bound queue {QueueName} to routing key {EventName}.", QueueName, eventName);
+
+                return;
             }
-            finally
+            catch (OperationCanceledException) when (_stopping.IsCancellationRequested)
             {
-                _consumerLock.Release();
+                return;
             }
+            catch (Exception ex)
+            {
+                var delay = TimeSpan.FromSeconds(Math.Min(Math.Pow(2, attempt), MaxSubscribeRetryDelay.TotalSeconds));
 
-            _logger.LogInformation(
-                "Bound queue {QueueName} to routing key {EventName}.", QueueName, eventName);
-        }
-        catch (Exception ex)
-        {
-            // Subscribe() is fire-and-forget, so an unlogged failure here would leave the service
-            // running with no consumer and no visible reason why.
-            _logger.LogError(ex, "Failed to subscribe to integration event: {EventName}", eventName);
+                _logger.LogWarning(
+                    ex,
+                    "Subscribing to {EventName} failed (attempt {Attempt}); retrying in {Delay} s. Until it succeeds this service receives none of these events.",
+                    eventName,
+                    attempt,
+                    delay.TotalSeconds);
+
+                try
+                {
+                    await Task.Delay(delay, _stopping.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
         }
     }
 
@@ -223,11 +264,16 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // First, so a subscription still waiting for the broker stops rather than retrying against
+        // a connection being torn down. The lock is left undisposed for the same reason: a
+        // subscription between its wait and its release must not find it gone.
+        await _stopping.CancelAsync();
+
         if (_consumerChannel is not null)
             await _consumerChannel.DisposeAsync();
 
-        _consumerLock.Dispose();
-
         await _connection.DisposeAsync();
+
+        _stopping.Dispose();
     }
 }
