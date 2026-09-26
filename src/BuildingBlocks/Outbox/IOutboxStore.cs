@@ -17,4 +17,7 @@ public interface IOutboxStore
         DateTimeOffset cutoff,
         CancellationToken cancellationToken = default
     );
+
+    // Rows that gave up (Adım 28): what the hourly sweep reports while any remain.
+    Task<int> CountParkedAsync(CancellationToken cancellationToken = default);
 }

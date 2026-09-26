@@ -19,7 +19,7 @@ public sealed class TelemetryOutboxStore : IOutboxStore
     )
     {
         return await _context
-            .OutboxMessages.Where(m => m.ProcessedOn == null)
+            .OutboxMessages.Where(OutboxMessage.Due(DateTimeOffset.UtcNow))
             .OrderBy(m => m.OccurredOn)
             .Take(batchSize)
             .ToListAsync(cancellationToken);
@@ -39,4 +39,7 @@ public sealed class TelemetryOutboxStore : IOutboxStore
             .OutboxMessages.Where(m => m.ProcessedOn != null && m.ProcessedOn < cutoff)
             .ExecuteDeleteAsync(cancellationToken);
     }
+
+    public Task<int> CountParkedAsync(CancellationToken cancellationToken = default) =>
+        _context.OutboxMessages.CountAsync(m => m.ParkedAt != null, cancellationToken);
 }
