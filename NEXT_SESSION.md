@@ -6,18 +6,37 @@
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7, **24**,
-**25**, **26** ve **27** bitti; `develop` güncel ve push'lanmış, **558 test yeşil**, prob **93/93**.
-Ürün **açık kaynak**: 21 (CI/CD) ve 22 (Kubernetes) çıktı, yerine tek komutla kurulum geldi.
-**`master` geride:** son sürüm noktası PR #20; Adım 26 ve 27 yalnız `develop`'ta — Fırat GitHub'da
-`deploy/`'u göremedi çünkü varsayılan dal `master`. `develop` → `master` (PR ile) Fırat'ın kararı.
-Kalanlar (23, 20.6, 13.6, Adım 20 kalıntısı, 14, outbox retry tavanı 🔴, event bus aboneliğinin
-sessizce ölmesi 🟡) Fırat'la konuşulacak — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
-önce ne işe yaradığını anlat, kararları sor, sonra plan.
+Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, **20.6**, 20.7,
+**20.8**, **23**, **24**, **25**, **26**, **27** ve **28** bitti; `develop` güncel ve push'lanmış,
+**594 test yeşil** (entegrasyon testleri Docker ister), prob **99/99**. Ürün **açık kaynak**.
+**`master` geride:** son sürüm noktası PR #20; Adım 26'dan beri her şey yalnız `develop`'ta —
+`develop` → `master` (PR ile) Fırat'ın kararı. **Kalan iki iş Fırat'la ayrıntılı konuşulacak:**
+**13.6 — hazır alarm adaptörleri** (Grafana / Alertmanager / Datadog / CloudWatch gövdeleri olay
+API'sine; alarm "çözüldü" gelince kapatma ayrı bir karar, çünkü kapatma insan kararı istiyor) ve
+**14 — yorumlar ve olay geçmişi** (denetim kaydı; basit tablo mu event sourcing mi). Sırayı sen
+önerme, sor; kapsamı belirsiz adımda önce ne işe yaradığını anlat, kararları sor, sonra plan.
 
 ---
 
 ## Nerede kaldık
+
+**2026-09-26, Fırat'ın sırasıyla dört adım** (13.6 ve 14 hariç kalanlar):
+- **Adım 28 — sessiz arızalar** (`IIM-159`): outbox başarısız satırı `min(5 sn × 2^(n−1), 15 dk)`
+  bekleyerek deniyor, 20. hatada **bekletiyor** (`ParkedAt`; saatlik taramada Warning; yeniden
+  kuyruğa alma SQL'i `production_necessaries.MD`'de). Abonelik RabbitMQ hazır olana kadar arka planda
+  deniyor (2 → 30 sn).
+- **Adım 23 — entegrasyon testleri** (`IIM-162`): `tests/Integration.Tests`, Testcontainers
+  (`postgres:16`, `rabbitmq:3`). Beş migration + model uyumu, org filtreleri, benzersiz index'ler,
+  JSON geri okuma, outbox `Due`, geç açılan broker, kuyruk başına servis. Yolda: `EventBus:RetryCount`
+  hiç okunmuyordu (düzeltildi).
+- **Adım 20.6 — AI yanıt dili** (`IIM-165`): Ayarlar → Organizasyon'da İngilizce / Türkçe (ajan
+  veritabanında `ai_settings`, `/api/ai-settings`, Admin). Türkçe'de gerekçe ve adımlar Türkçe;
+  kategori/öncelik İngilizce anahtar, arama sorguları İngilizce. Kanarya İngilizce'ye geri alındı.
+- **Adım 20.8 — çözüm analitiği** (`IIM-168`): genel bakışta Çözüm süresi / Tespit doğruluğu / AI
+  analizi kartları, günlük grafikte "Kapatılan" çizgisi (`/api/incidents/stats` genişledi).
+- **Dikkat:** `web/src/lib/i18n/*.ts` düzenlemesi Vite HMR'ını bozuyor → iki dev sunucuyu yeniden
+  başlat. Projede biçimlendirici ayarı **yok**; `npx prettier` varsayılanla (noktalı virgüllü)
+  biçimlendirir — kullanma ya da `--no-semi --single-quote --print-width 100` ver.
 
 **Adım 27 — servis üzerinden olay açma** (`IIM-155`). Konsolda olay formu **yok** (Fırat). Admin
 Ayarlar → Entegrasyonlar → Gözlemlenebilirlik → **Olay API'si**'nden adlandırılmış anahtar üretir
