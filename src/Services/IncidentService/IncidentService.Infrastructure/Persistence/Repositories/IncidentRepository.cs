@@ -1,7 +1,9 @@
 ﻿using IncidentService.Application.Abstractions;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
+using IncidentService.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace IncidentService.Infrastructure.Persistence.Repositories;
 
@@ -22,6 +24,12 @@ public sealed class IncidentRepository : IIncidentRepository
         return await _context.Incidents.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
+    public Task<Incident?> GetOpenByExternalIdAsync(string externalId, CancellationToken cancellationToken = default) =>
+        _context.Incidents.FirstOrDefaultAsync(
+            x => x.ExternalId == externalId && (x.Status == IncidentStatus.Open || x.Status == IncidentStatus.InProgress),
+            cancellationToken
+        );
+
     public async Task AddAsync(Incident incident, CancellationToken cancellationToken = default)
     {
         await _context.Incidents.AddAsync(incident, cancellationToken);
@@ -29,7 +37,24 @@ public sealed class IncidentRepository : IIncidentRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is PostgresException
+                  {
+                      SqlState: PostgresErrorCodes.UniqueViolation,
+                      ConstraintName: IncidentConfiguration.OpenExternalIdIndex,
+                  })
+        {
+            // Out of the unit of work, or the next save in this scope would try the same insert
+            // again and fail the same way.
+            foreach (var entry in ex.Entries)
+                entry.State = EntityState.Detached;
+
+            throw new DuplicateExternalIdException(ex);
+        }
     }
 
     public async Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPagedAsync(

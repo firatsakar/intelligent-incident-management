@@ -54,6 +54,15 @@ public sealed class Incident : AggregateRoot
     // When it was closed out. Null while open; cleared when reopened.
     public DateTime? ResolvedAt { get; private set; }
 
+    // The sender's own name for the problem, for an incident opened through the incident API
+    // (Adım 27). While an incident with it is open, the same name finds that incident instead of
+    // opening another — alerting tools resend what is still firing.
+    public string? ExternalId { get; private set; }
+
+    // The name of the API key that sent it, as it was then. Kept on the incident, not looked up,
+    // so it still says who sent it after the key is deleted.
+    public string? ReportedBy { get; private set; }
+
     public static Incident Create(
         Guid organizationId,
         string title,
@@ -65,7 +74,9 @@ public sealed class Incident : AggregateRoot
         // id so that a redelivered event collides on the primary key instead of opening a second
         // incident.
         Guid? id = null,
-        DateTime? detectedAt = null
+        DateTime? detectedAt = null,
+        string? externalId = null,
+        string? reportedBy = null
     )
     {
         // No domain event. There was one — IncidentCreatedDomainEvent — and nothing ever listened:
@@ -82,6 +93,8 @@ public sealed class Incident : AggregateRoot
             Source = source,
             AssignedTeam = assignedTeam,
             DetectedAt = detectedAt,
+            ExternalId = externalId,
+            ReportedBy = reportedBy,
         };
     }
 

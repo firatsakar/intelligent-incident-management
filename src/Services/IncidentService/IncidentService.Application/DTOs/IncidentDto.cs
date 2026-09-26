@@ -37,6 +37,10 @@ public sealed record IncidentDto
     public IncidentVerdict? Verdict { get; init; }
     public DateTime? ResolvedAt { get; init; }
 
+    // Only for an incident opened through the incident API (Adım 27).
+    public string? ExternalId { get; init; }
+    public string? ReportedBy { get; init; }
+
     public DateTime CreatedAt { get; init; }
     public DateTime? UpdatedAt { get; init; }
 
@@ -62,6 +66,8 @@ public sealed record IncidentDto
             AiRelatedChanges = incident.AiRelatedChanges,
             Verdict = incident.Verdict,
             ResolvedAt = incident.ResolvedAt,
+            ExternalId = incident.ExternalId,
+            ReportedBy = incident.ReportedBy,
             CreatedAt = incident.CreatedAt,
             UpdatedAt = incident.UpdatedAt,
         };
