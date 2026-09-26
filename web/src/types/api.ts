@@ -292,6 +292,33 @@ export interface IncidentDayBucket {
   day: string
   total: number
   byPriority: CountsByKey
+  /** Closed that day, whenever they were opened (Adım 20.8). */
+  resolved: number
+}
+
+/** Incidents closed in the window: how long they took (Adım 20.8). */
+export interface ResolutionStats {
+  resolvedCount: number
+  /** From detectedAt (or createdAt when nothing detected it) to resolvedAt. Null when none closed. */
+  medianSeconds: number | null
+  p95Seconds: number | null
+  /** Every priority present; null where none of that priority closed. */
+  medianSecondsByPriority: Record<string, number | null>
+}
+
+export interface VerdictCounts {
+  real: number
+  falsePositive: number
+  /** Closed before a verdict was asked for. */
+  unknown: number
+}
+
+/** What the analysis did with the incidents opened in the window. */
+export interface AiAnalysisStats {
+  analysed: number
+  failed: number
+  pending: number
+  medianConfidence: number | null
 }
 
 export interface DetectionLatency {
@@ -316,6 +343,10 @@ export interface IncidentStats {
   total: number
   openTotal: number
   detection: DetectionLatency
+  resolution: ResolutionStats
+  /** By source, every source present. */
+  verdicts: Record<string, VerdictCounts>
+  ai: AiAnalysisStats
 }
 
 export interface Funnel {
