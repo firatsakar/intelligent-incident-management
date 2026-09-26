@@ -7,6 +7,8 @@ using AgentOrchestrator.API.BackgroundServices;
 using AgentOrchestrator.Application.Commands.AnalyzeIncident;
 using AgentOrchestrator.Application.EventHandlers;
 using AgentOrchestrator.Infrastructure;
+using AgentOrchestrator.Infrastructure.Ai;
+using AgentOrchestrator.Infrastructure.Persistence;
 using BuildingBlocks.Contracts;
 using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
@@ -57,6 +59,20 @@ builder.Services.AddPlatformAuth(builder.Configuration);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<AgentDbContext>();
+
+// Without a key the service still runs: the model refuses each call, the analysis is marked failed
+// on its incident and not retried. Said once here, so an installation missing it finds out from
+// the first lines of the log rather than from the first incident (Adım 26).
+if (string.IsNullOrWhiteSpace(app.Configuration[$"{AiAnalyzerOptions.SectionName}:{nameof(AiAnalyzerOptions.ApiKey)}"]))
+{
+    app.Logger.LogWarning(
+        "{Section}:{Key} is not set: every analysis will be marked failed until it is.",
+        AiAnalyzerOptions.SectionName,
+        nameof(AiAnalyzerOptions.ApiKey)
+    );
+}
 
 if (app.Environment.IsDevelopment())
 {

@@ -1,0 +1,277 @@
+# The whole platform in one command (Adım 26):
+#
+#   cp deploy/example.env deploy/.env      # then fill in the required values
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+#
+# Then open http://localhost:8080 — the console asks for the one-time setup code, which the
+# identity service writes to its log:
+#
+#   docker compose -f deploy/docker-compose.yml --env-file deploy/.env logs identity
+#
+# One door to the network: the gateway, which serves the console and every API. The admin
+# interfaces (Seq, pgAdmin, Kibana) answer on 127.0.0.1 only; Postgres, RabbitMQ and Elasticsearch
+# answer inside this network only.
+#
+# This is not the development setup — that is the docker-compose.yml at the repository root, which
+# runs only the infrastructure and leaves the services to `dotnet run`.
+
+name: iim
+
+# What every .NET service shares: the bus, the logs, the signing key, and migrations on startup.
+x-service: &service
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+    seq:
+      condition: service_started
+  networks:
+    - iim
+
+x-service-environment: &service-environment
+  EventBus__Host: rabbitmq
+  EventBus__UserName: iim
+  EventBus__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in deploy/.env (see deploy/example.env)}
+  # When the host boots, every container starts at once and RabbitMQ takes its time; a service that
+  # gives up on it keeps running without its subscriptions. Eight doubling retries wait ~8.5 minutes
+  # (development's three wait 14 seconds, measured as just enough on a warm restart).
+  EventBus__RetryCount: "8"
+  Seq__Url: http://seq
+  Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in deploy/.env (see deploy/example.env)}
+  Database__MigrateOnStartup: "true"
+
+services:
+
+  # --- Infrastructure -----------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in deploy/.env (see deploy/example.env)}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      INCIDENT_DB_PASSWORD: ${INCIDENT_DB_PASSWORD:?Set INCIDENT_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      AGENT_DB_PASSWORD: ${AGENT_DB_PASSWORD:?Set AGENT_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      NOTIFICATION_DB_PASSWORD: ${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      TELEMETRY_DB_PASSWORD: ${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Runs on the first start only: five databases, five owners.
+      - ./postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    healthcheck:
+      # Over TCP: while the first-start script runs, the server listens on its socket only, so this
+      # passes once the five databases exist.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - iim
+
+  rabbitmq:
+    image: rabbitmq:3
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: iim
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in deploy/.env (see deploy/example.env)}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+    networks:
+      - iim
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      # Reachable from this network only, and a derived view of analyses the incident service
+      # already holds — the same trade-off as development.
+      - xpack.security.enabled=false
+      - cluster.name=iim
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs 'http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 30s
+    networks:
+      - iim
+
+  seq:
+    image: datalust/seq:latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD:?Set SEQ_ADMIN_PASSWORD in deploy/.env (see deploy/example.env)}
+    volumes:
+      - seq_data:/data
+    ports:
+      - "127.0.0.1:${SEQ_PORT:-8081}:80"
+    networks:
+      - iim
+
+  # --- Admin interfaces ---------------------------------------------------------------------------
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:?Set PGADMIN_EMAIL in deploy/.env (see deploy/example.env)}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:?Set PGADMIN_PASSWORD in deploy/.env (see deploy/example.env)}
+      PGADMIN_CONFIG_SERVER_MODE: "True"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      # The IIM server already listed; its password is POSTGRES_PASSWORD.
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "127.0.0.1:${PGADMIN_PORT:-5050}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - iim
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.4.3
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "127.0.0.1:${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - iim
+
+  # --- IIM ----------------------------------------------------------------------------------------
+
+  identity:
+    <<: *service
+    image: iim-identity:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args:
+        PROJECT: src/Services/IdentityService/IdentityService.API/IdentityService.API.csproj
+        ASSEMBLY: IdentityService.API
+    environment:
+      <<: *service-environment
+      ConnectionStrings__IdentityDb: Host=postgres;Database=identity_db;Username=identity_user;Password=${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      # Invitation and password-reset links point here.
+      Console__BaseUrl: ${IIM_PUBLIC_URL:-http://localhost:8080}
+      Mail__Host: ${SMTP_HOST:-}
+      Mail__Port: ${SMTP_PORT:-587}
+      Mail__From: ${SMTP_FROM:-}
+      Mail__Username: ${SMTP_USERNAME:-}
+      Mail__Password: ${SMTP_PASSWORD:-}
+      Mail__UseTls: ${SMTP_USE_TLS:-true}
+
+  incident:
+    <<: *service
+    image: iim-incident:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args:
+        PROJECT: src/Services/IncidentService/IncidentService.API/IncidentService.API.csproj
+        ASSEMBLY: IncidentService.API
+    environment:
+      <<: *service-environment
+      ConnectionStrings__IncidentDb: Host=postgres;Database=incident_db;Username=incident_user;Password=${INCIDENT_DB_PASSWORD:?Set INCIDENT_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+
+  agent:
+    <<: *service
+    image: iim-agent:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args:
+        PROJECT: src/Services/AgentOrchestrator/AgentOrchestrator.API/AgentOrchestrator.API.csproj
+        ASSEMBLY: AgentOrchestrator.API
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      seq:
+        condition: service_started
+    environment:
+      <<: *service-environment
+      ConnectionStrings__AgentDb: Host=postgres;Database=agent_db;Username=agent_user;Password=${AGENT_DB_PASSWORD:?Set AGENT_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      Elasticsearch__Uri: http://elasticsearch:9200
+      AiAnalyzer__ApiKey: ${ANTHROPIC_API_KEY:-}
+
+  notification:
+    <<: *service
+    image: iim-notification:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args:
+        PROJECT: src/Services/NotificationService/NotificationService.API/NotificationService.API.csproj
+        ASSEMBLY: NotificationService.API
+    environment:
+      <<: *service-environment
+      ConnectionStrings__NotificationDb: Host=postgres;Database=notification_db;Username=notification_user;Password=${NOTIFICATION_DB_PASSWORD:?Set NOTIFICATION_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+
+  telemetry:
+    <<: *service
+    image: iim-telemetry:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.service
+      args:
+        PROJECT: src/Services/TelemetryIngestionService/TelemetryIngestionService.API/TelemetryIngestionService.API.csproj
+        ASSEMBLY: TelemetryIngestionService.API
+    environment:
+      <<: *service-environment
+      ConnectionStrings__TelemetryDb: Host=postgres;Database=telemetry_db;Username=telemetry_user;Password=${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+
+  gateway:
+    image: iim-gateway:local
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.gateway
+    restart: unless-stopped
+    environment:
+      Seq__Url: http://seq
+      Services__Identity: http://identity:8080
+      Services__Incident: http://incident:8080
+      Services__Agent: http://agent:8080
+      Services__Notification: http://notification:8080
+      Services__Telemetry: http://telemetry:8080
+      ForwardedHeaders__KnownProxies: ${FORWARDED_KNOWN_PROXIES:-}
+    ports:
+      # The only port open to the network: the console, the API and OTLP log ingest.
+      - "${IIM_PORT:-8080}:8080"
+    depends_on:
+      - identity
+      - incident
+      - agent
+      - notification
+      - telemetry
+    networks:
+      - iim
+
+networks:
+  iim:
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  seq_data:
+  pgadmin_data:

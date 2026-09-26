@@ -11,6 +11,7 @@ using IncidentService.Application.Abstractions;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
+using IncidentService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -74,6 +75,8 @@ builder.Services.AddPlatformAuth(builder.Configuration);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<IncidentDbContext>();
 
 app.UseExceptionHandler();
 

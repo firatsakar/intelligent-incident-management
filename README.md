@@ -123,7 +123,75 @@ The result: remediation steps specific to *this* system's history, and a confide
 
 > ⚠️ This project is under active development. Setup instructions will be expanded as the platform matures.
 
-### Prerequisites
+### Install with Docker
+
+Everything — infrastructure, services, gateway and console — from one compose file. You need
+[Docker](https://www.docker.com/) with Compose v2 and about 6 GB of memory for it.
+
+**1. Fill in the settings — before the first start.** There are no default passwords; compose
+refuses to start while a required value is empty.
+
+```bash
+git clone https://github.com/firatsakar/intelligent-incident-management.git
+cd intelligent-incident-management
+cp deploy/example.env deploy/.env
+```
+
+Open `deploy/.env` and fill in every value under *Required*, one secret per line:
+
+```bash
+openssl rand -hex 32
+```
+
+Add `ANTHROPIC_API_KEY` for the AI analysis (without it everything else works and each analysis
+is marked failed). Every setting is explained in the file.
+
+**2. Start it.** The first build takes several minutes.
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+```
+
+**3. Open the console** at http://localhost:8080 and complete the [first-run setup](#first-run-setup).
+The setup code is in the identity service's log:
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file deploy/.env logs identity | grep "First-run setup"
+```
+
+| What | Where |
+|------|-------|
+| Console and API | `http://<server>:8080` — the only port open to the network |
+| OTLP log ingest | `http://<server>:8080/otlp/v1/logs` |
+| Seq (IIM's own logs and traces) | http://127.0.0.1:8081 — user `admin`; asks for a new password at first sign-in |
+| pgAdmin | http://127.0.0.1:5050 |
+| Kibana | http://127.0.0.1:5601 |
+
+The admin interfaces answer on the server itself only. From another machine, tunnel to them:
+`ssh -L 8081:127.0.0.1:8081 -L 5050:127.0.0.1:5050 -L 5601:127.0.0.1:5601 you@server`.
+
+**HTTPS.** Put your own TLS proxy in front of port 8080 — for example Caddy:
+
+```text
+iim.example.com {
+    reverse_proxy localhost:8080
+}
+```
+
+Then set `IIM_PUBLIC_URL=https://iim.example.com` and tell IIM to believe the proxy about the
+caller's address and scheme: `FORWARDED_KNOWN_PROXIES=172.16.0.0/12` for a proxy on the Docker
+host (it reaches the published port from the Docker bridge). Over plain HTTP — trying it out on a
+LAN address — everything works too, the session cookies are simply not marked Secure.
+
+**Email.** Invitations and password resets are sent through the SMTP server in `SMTP_*` (your
+company's, Google Workspace, Microsoft 365, SES, SendGrid…). Without one, each invitation link is
+shown to the Admin to pass on. Incident notification emails are separate: each organisation enters
+its own SMTP server in the console, under Settings → Integrations → Notifications.
+
+**Updating.** `git pull`, then the same `up -d --build`. Each service applies its own database
+migrations as it starts. `down` stops everything and keeps the data, which lives in Docker volumes.
+
+### Development
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Docker & Docker Compose](https://www.docker.com/)
@@ -158,8 +226,8 @@ writes a one-time setup code to its log, on a single warning line:
 [WRN] First-run setup: no organisation exists yet. Open the console — it asks for this one-time setup code: ABCD-EFGH-JKMN. ...
 ```
 
-1. Start the services, the gateway and the console (`npm run dev --prefix web`), and open the
-   console — it goes straight to the setup screen.
+1. Open the console — http://localhost:8080 in a Docker install; in development, start the
+   services, the gateway and `npm run dev --prefix web`. It goes straight to the setup screen.
 2. Enter the code from the log, your organisation's name, and your own name, email and password
    (12 characters or more). You are signed in as the organisation's first Admin.
 3. Invite your team from **Settings → Organization**, where the organisation's name can also be
@@ -201,7 +269,7 @@ Identity__Seed__DisplayName="Platform Admin"
 - [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
 - [ ] Unit & integration tests
 - [ ] React frontend & analytics dashboard (MTTR, trends, model performance)
-- [ ] One-command install — Dockerfiles and a Docker Compose file for the whole platform (CI/CD and Kubernetes are left to each installation)
+- [x] One-command install — Dockerfiles and a Docker Compose file for the whole platform (CI/CD and Kubernetes are left to each installation)
 
 ---
 

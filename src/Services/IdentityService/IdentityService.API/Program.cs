@@ -6,6 +6,7 @@ using BuildingBlocks.Web;
 using FluentValidation;
 using IdentityService.Application.Commands.SignIn;
 using IdentityService.Infrastructure;
+using IdentityService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<IdentityDbContext>();
+
+// First, so everything after it — the session cookies' Secure flag above all — sees the scheme the
+// browser used rather than the gateway's plain-HTTP hop (Adım 26).
+app.UseForwardedHeaders(PlatformForwardedHeaders.BehindGateway());
 
 app.UseExceptionHandler();
 

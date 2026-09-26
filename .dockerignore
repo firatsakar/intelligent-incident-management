@@ -1,0 +1,29 @@
+# The build context of deploy/Dockerfile.* (Adım 26). Everything an image needs is under src/ and
+# web/; this keeps out build output, dependencies, and every development secret — user secrets
+# never live in the repository, but appsettings.Development.json and .env do on a developer's disk.
+
+# Build output and dependencies, rebuilt inside the image.
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+
+# Development secrets and per-machine settings.
+**/.env
+**/.env.*
+**/secrets.json
+**/appsettings.*.json
+**/*.user
+**/launchSettings.json
+
+# Not part of any image.
+.git/
+.github/
+.vs/
+.claude/
+tests/
+demo/
+tools/
+deploy/
+docker-compose*.yml
+*.md

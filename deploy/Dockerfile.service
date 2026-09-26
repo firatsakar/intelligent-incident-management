@@ -1,0 +1,38 @@
+# syntax=docker/dockerfile:1
+
+# One recipe for every .NET service (Adım 26). Built from the repository root, which is the build
+# context; deploy/docker-compose.yml passes the two arguments per service:
+#
+#   docker build -f deploy/Dockerfile.service \
+#     --build-arg PROJECT=src/Services/IdentityService/IdentityService.API/IdentityService.API.csproj \
+#     --build-arg ASSEMBLY=IdentityService.API .
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG PROJECT
+WORKDIR /repo
+
+COPY src/ src/
+
+# The NuGet cache survives between builds, so six images restore the shared packages once.
+RUN --mount=type=cache,id=iim-nuget,target=/root/.nuget/packages \
+    dotnet publish "$PROJECT" -c Release -o /app -p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG ASSEMBLY
+WORKDIR /app
+
+COPY --from=build /app .
+
+# Production: no user secrets, no OpenAPI document, no development endpoints. Everything the
+# service needs comes from the environment the compose file sets.
+ENV ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_HTTP_PORTS=8080 \
+    SERVICE_ASSEMBLY=${ASSEMBLY}
+
+EXPOSE 8080
+
+# The image's own unprivileged user.
+USER $APP_UID
+
+# exec, so the service is PID 1's replacement and receives the stop signal itself.
+ENTRYPOINT ["sh", "-c", "exec dotnet \"$SERVICE_ASSEMBLY.dll\""]

@@ -30,6 +30,11 @@ düz metin duruyor ve bu dosyalar repoda. Geliştirme için kabul edilebilir, ü
   değiştirmek tüm oturumları anında geçersiz kılar, ki rotasyonun bedeli bu.
 - Yapılacak: bağlantı dizelerini ortam değişkeni / secret store'a taşı, repodaki değerleri
   yer tutucuya indir. Mevcut parolalar repo geçmişinde kaldığı için **rotasyon gerekir**.
+- ✅ **Kurulum yolunda kapandı (Adım 26).** `deploy/docker-compose.yml` her sırrı ortamdan
+  (`deploy/.env`) alıyor; zorunlu sırlar `deploy/example.env`'de boş ve compose onlarsız
+  başlamıyor, repodaki `appsettings.json` değerleri ortam değişkenleriyle eziliyor. Repodaki
+  parolalar artık yalnız geliştirme makinesindeki altyapıya ait; geliştirme için kabul, ama bir
+  kurulum onları hiç kullanmıyor.
 
 ### 🔴 Müşteri credential'ları veritabanında düz metin
 
@@ -403,12 +408,29 @@ hatalarında sessiz kalır.
 
 ## 6. Dağıtım
 
-### 🔴 Servisler için Dockerfile yok
+### ✅ Servisler için Dockerfile yok — Adım 26'da kapandı
 
-Compose yalnızca altyapıyı (Postgres, RabbitMQ, ES, Seq, Mailpit) ayağa kaldırıyor. Dört .NET
-servisi geliştirme makinesinde `dotnet run` ile çalışıyor. **Dağıtılabilir bir artefakt yok.**
-Ürün açık kaynak olacağı için (Fırat, 2026-09-25) CI/CD ve Kubernetes adımları çıkarıldı; bu
-maddeyi **Adım 26 — tek komutla kurulum** kapatacak.
+`deploy/Dockerfile.service` (beş servis) + `deploy/Dockerfile.gateway` (gateway + konsol) ve
+`deploy/docker-compose.yml`: tek komutla bütün platform, dışarıya tek port (README "Install with
+Docker"). Ürün açık kaynak olduğu için (Fırat, 2026-09-25) imaj registry'si ve CI yok — imajlar
+kurulumu yapanın makinesinde kaynaktan derleniyor.
+
+### 🟡 Event bus aboneliği ilk bağlantıda vazgeçerse servis tüketicisiz çalışıyor
+
+`Subscribe` fire-and-forget; bağlantı `EventBus:RetryCount` denemede (üstel: 2, 4, 8 s…)
+kurulamazsa hata yalnız ERR olarak log'lanıyor ve servis **olay tüketmeden** ayakta kalıyor —
+sessizce duran bir platform. Kabulde (Adım 26) `restart` sonrası RabbitMQ 14 s'de hazır oldu;
+geliştirmenin 3 denemesi (toplam 14 s) tam sınırdaydı. Sunucu açılışında bütün container'lar
+aynı anda kalkar. Kurulum compose'u `EventBus__RetryCount=8` (~8,5 dk) ile bunu hafifletiyor.
+Kalıcı çözüm: abonelik bağlanana kadar arka planda denesin, ya da vazgeçince host'u durdursun
+(restart policy yeniden dener).
+
+### 🟢 Elasticsearch indeks başlatıcı tek deneme yapıyor
+
+Sunucu yeniden açılırken ES ajandan geç kalkarsa `Failed to create Elasticsearch index` ERR'i
+düşüyor. İndeks ilk açılışta (compose `service_healthy` ile sıralı) oluştuğu için işlevsel etkisi
+yok; ES türetilmiş görünüm ilkesiyle de uyumlu. Gürültü rahatsız ederse başlatıcı yeniden
+denemeli.
 
 ### 🟡 Ölçekleme: SignalR backplane ve session affinity (Adım 22'den taşındı)
 
@@ -426,11 +448,14 @@ isteyen için:
 
 Ayrı bir realtime servisi bu ikisini çözmez; o da ölçeklenir, o da backplane ve affinity ister.
 
-### 🔴 Migration stratejisi tanımsız
+### ✅ Migration stratejisi — Adım 26'da karar verildi
 
-Şu an migration'lar elle uygulanıyor (`dotnet ef database update`). Üretimde bir karar gerekir:
-açılışta otomatik migrate (basit, ama çoklu replikada yarış), init container / ayrı job
-(önerilen), ya da elle kontrollü.
+**Açılışta otomatik:** `Database:MigrateOnStartup=true` (kurulum compose'unda açık, geliştirmede
+kapalı) iken her servis hosted service'lerinden önce kendi migration'larını uyguluyor
+(`BuildingBlocks.Web/DatabaseMigration`). Taze veritabanında EF/Npgsql'in "geçmiş tablosu var mı"
+sorgusunun bastığı yanıltıcı ERR'ler, tablo önce `CREATE TABLE IF NOT EXISTS` ile açılarak
+engellendi. Kurulumda her servis tek replika. Çoklu replikaya çıkılırsa migration ayrı bir job'a
+taşınmalı ya da eşzamanlı migrate'in kilidi doğrulanmalı.
 
 ### 🟡 `docker-compose.override.yml` gitignore'da ve repoda yok
 
