@@ -1270,6 +1270,20 @@ export const tr: Dictionary = {
       saved: 'Organizasyonun adı değişti.',
     },
 
+    aiLanguage: {
+      title: 'AI yanıt dili',
+      description:
+        'Analizlerin yazıldığı dil: gerekçe ve önerilen adımlar. Öncelik ve kategori aynı kalır, bildirim filtreleri eşleşmeye devam eder. Bundan sonraki analizlere uygulanır.',
+      options: {
+        English: 'İngilizce',
+        Turkish: 'Türkçe',
+      },
+      save: 'Kaydet',
+      saving: 'Kaydediliyor…',
+      saved: 'AI yanıt dili kaydedildi.',
+      loadError: 'Ayar yüklenemedi.',
+    },
+
     members: {
       title: 'Üyeler',
       description:

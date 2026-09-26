@@ -1,14 +1,16 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
-import { organizationApi } from '@/api/endpoints'
+import { aiSettingsApi, organizationApi } from '@/api/endpoints'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useT } from '@/lib/i18n'
+import { cn } from '@/lib/utils'
+import type { AiResponseLanguage } from '@/types/api'
 
 import { MembersPage } from './MembersPage'
 
@@ -21,6 +23,7 @@ export function OrganizationPage() {
   return (
     <div className="max-w-3xl space-y-8">
       <NameCard />
+      <AiLanguageCard />
       <MembersPage />
     </div>
   )
@@ -91,6 +94,88 @@ function NameCard() {
         <CardFooter>
           <Button type="submit" disabled={rename.isPending || unchanged}>
             {rename.isPending ? t.saving : t.save}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  )
+}
+
+const languages: AiResponseLanguage[] = ['English', 'Turkish']
+
+/**
+ * The language the organisation's analyses are written in (Adım 20.6). Here rather than on each
+ * profile because an analysis is written once and read by the whole team.
+ */
+function AiLanguageCard() {
+  const t = useT().settings.aiLanguage
+  const queryClient = useQueryClient()
+
+  const query = useQuery({ queryKey: ['ai-settings'], queryFn: aiSettingsApi.get })
+  const [choice, setChoice] = useState<AiResponseLanguage | null>(null)
+
+  const saved = query.data?.responseLanguage
+  const selected = choice ?? saved ?? 'English'
+
+  const save = useMutation({
+    mutationFn: (language: AiResponseLanguage) => aiSettingsApi.save(language),
+    onSuccess: (settings) => {
+      queryClient.setQueryData(['ai-settings'], settings)
+      setChoice(null)
+      toast.success(t.saved)
+    },
+    onError: (error: Error) => toast.error(error.message),
+  })
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    save.mutate(selected)
+  }
+
+  return (
+    <Card>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <CardHeader>
+          <CardTitle>{t.title}</CardTitle>
+          <CardDescription>{t.description}</CardDescription>
+        </CardHeader>
+
+        <CardContent>
+          {query.isError ? (
+            <p role="alert" className="text-alarm-ink text-sm">
+              {t.loadError} {query.error.message}
+            </p>
+          ) : (
+            <fieldset disabled={query.isPending} className="flex flex-wrap gap-2">
+              <legend className="sr-only">{t.title}</legend>
+              {languages.map((language) => (
+                <label
+                  key={language}
+                  className={cn(
+                    'has-[:focus-visible]:ring-ring/50 inline-flex h-9 cursor-pointer items-center rounded-lg border px-4 text-sm has-[:focus-visible]:ring-[3px]',
+                    selected === language
+                      ? 'border-primary bg-primary/10 text-foreground font-medium'
+                      : 'border-border text-muted-foreground hover:bg-muted/60',
+                  )}
+                >
+                  <input
+                    type="radio"
+                    name="ai-response-language"
+                    value={language}
+                    checked={selected === language}
+                    className="sr-only"
+                    onChange={() => setChoice(language)}
+                  />
+                  {t.options[language]}
+                </label>
+              ))}
+            </fieldset>
+          )}
+        </CardContent>
+
+        <CardFooter>
+          <Button type="submit" disabled={save.isPending || !saved || selected === saved}>
+            {save.isPending ? t.saving : t.save}
           </Button>
         </CardFooter>
       </form>
