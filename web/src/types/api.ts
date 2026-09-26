@@ -403,6 +403,13 @@ export interface IngestionTick {
 /** The three roles the platform has. The wire values are the enum names, never translated. */
 export type UserRole = 'Admin' | 'Engineer' | 'Viewer'
 
+/** The language analyses are written in (Adım 20.6). An organisation setting. */
+export type AiResponseLanguage = 'English' | 'Turkish'
+
+export interface AiSettings {
+  responseLanguage: AiResponseLanguage
+}
+
 export const userRoles: UserRole[] = ['Admin', 'Engineer', 'Viewer']
 
 /**

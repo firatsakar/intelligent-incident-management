@@ -207,6 +207,14 @@ artık yalnızca kötü niyetli bir *üye*den geliyor, ama sıfır değil.
   tekrarlar yeni olay açmadığı için gerçek alarm akışında sorun yok. Limiter gateway'in
   belleğinde: birden çok gateway replikasında paylaşılmaz.
 
+### 🟢 AI yanıt dili ve benzer olay araması (Adım 20.6)
+
+Türkçe seçen bir organizasyonun analiz gerekçeleri Türkçe yazılıyor ve ES'e öyle indeksleniyor;
+indeksin `reasoning` alanı `english` analyzer'la analiz ediliyor. Ajan arama sorgularını bilerek
+İngilizce yazıyor (talimatta), başlık ve açıklama da çoğunlukla teknik ve İngilizce, bu yüzden
+eşleşme büyük ölçüde korunuyor — ama Türkçe gerekçe metni kök bulmada (stemming) İngilizce kadar iyi
+eşleşmez. Gerekirse `reasoning` için dil başına alan (`reasoning_tr`, `turkish` analyzer).
+
 ### 🟢 Olay API'si anahtarları (Adım 27)
 
 Organizasyona ait, adlandırılmış anahtarlar; yalnız **SHA-256 hash**'i saklanıyor, değer bir kez

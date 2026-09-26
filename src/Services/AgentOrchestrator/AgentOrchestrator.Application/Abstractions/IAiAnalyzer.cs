@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.Application.Changes;
+using AgentOrchestrator.Domain.Enums;
 using AgentOrchestrator.Domain.ValueObjects;
 
 namespace AgentOrchestrator.Application.Abstractions;
@@ -20,6 +21,9 @@ public interface IAiAnalyzer
         string title,
         string description,
         CodeContext? code,
+        // The organisation's response language (Adım 20.6): the reasoning and the steps are
+        // written in it; category and priority stay English keys.
+        AnalysisLanguage language,
         CancellationToken cancellationToken = default
     );
 }

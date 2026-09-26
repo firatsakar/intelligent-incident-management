@@ -1,5 +1,7 @@
 ﻿import { api } from './client'
 import type {
+  AiResponseLanguage,
+  AiSettings,
   EvidenceWindow,
   GitHubConnection,
   Incident,
@@ -235,6 +237,14 @@ export const aiSourcesApi = {
  * The organisation's people. Admin only, reads included — everyone else is answered 403, and a
  * member or invitation of another organisation 404.
  */
+/** How the organisation's analyses are written (Adım 20.6). Admin only. */
+export const aiSettingsApi = {
+  get: () => api.get<AiSettings>('/api/ai-settings'),
+
+  save: (responseLanguage: AiResponseLanguage) =>
+    api.put<AiSettings>('/api/ai-settings', { responseLanguage }),
+}
+
 export const organizationApi = {
   /** The caller's own organisation; there is no id to aim at another. */
   rename: (name: string) => api.patch<{ id: string; name: string }>('/api/organization', { name }),

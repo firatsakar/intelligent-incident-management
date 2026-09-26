@@ -1445,6 +1445,21 @@ export const en = {
       saved: 'Organization renamed.',
     },
 
+    // Adım 20.6: the language the analyses write their prose in.
+    aiLanguage: {
+      title: 'AI response language',
+      description:
+        'The language analyses are written in: the reasoning and the suggested steps. Priority and category stay the same, so notification filters keep matching. Applies to analyses from now on.',
+      options: {
+        English: 'English',
+        Turkish: 'Türkçe',
+      },
+      save: 'Save',
+      saving: 'Saving…',
+      saved: 'AI response language saved.',
+      loadError: 'The setting could not be loaded.',
+    },
+
     members: {
       title: 'Members',
       description:

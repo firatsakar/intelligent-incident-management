@@ -22,6 +22,8 @@ public sealed class AgentDbContext : DbContext
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<GitHubConnection> GitHubConnections => Set<GitHubConnection>();
 
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgentDbContext).Assembly);
@@ -39,6 +41,8 @@ public sealed class AgentDbContext : DbContext
         modelBuilder
             .Entity<GitHubConnection>()
             .HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
+
+        modelBuilder.Entity<AiSettings>().HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
 
         base.OnModelCreating(modelBuilder);
     }
