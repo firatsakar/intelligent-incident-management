@@ -247,6 +247,36 @@ Identity__Seed__OrganizationName="Example Operations"
 Identity__Seed__DisplayName="Platform Admin"
 ```
 
+### Incident API
+
+IIM finds incidents itself, from telemetry. A system that already knows it has a problem — a
+script, a CI pipeline, your own alerting — can report one too. An Admin makes a key under
+**Settings → Integrations → Observability → Incident API**; it is shown once.
+
+```bash
+curl -X POST http://localhost:8080/api/incidents/intake   -H "Content-Type: application/json"   -H "X-IIM-Api-Key: iim_inc_…"   -d '{"title": "Checkout error rate above 5%", "description": "5xx rate above 5% for 10 minutes.", "priority": "High", "externalId": "checkout-error-rate"}'
+```
+
+| Field | |
+|-------|-|
+| `title`, `description` | Required. |
+| `priority` | `Critical`, `High`, `Medium` (default) or `Low`. The analysis suggests one either way. |
+| `externalId` | Your own name for the problem, such as an alert fingerprint. While an incident with it is open, sending it again returns that incident instead of opening another; once it is resolved, the next one opens a new incident. |
+| `detectedAt` | When the problem started (ISO 8601), if not now. |
+
+| Response | |
+|----------|-|
+| `201 {"id": "…", "created": true}` | A new incident, analysed like any other. |
+| `200 {"id": "…", "created": false}` | An open incident already has this `externalId`. |
+| `400` | The body is invalid; the errors name the fields. |
+| `401` | The key is missing, unknown or deleted. |
+| `429` | More than 60 requests in a minute with one key. |
+
+A key belongs to the organisation and can open incidents, nothing else — it cannot read them.
+Every incident it opens shows its name. To rotate one without a gap, make a new key, move the
+sender to it, then delete the old one. Alertmanager, Grafana and similar tools can send this JSON
+from their own webhook templates; built-in adapters for their formats are not there yet.
+
 ---
 
 ## 🗺️ Roadmap
@@ -265,6 +295,7 @@ Identity__Seed__DisplayName="Platform Admin"
 - [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
 - [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
 - [x] First-run setup — an empty installation is claimed from the console with a one-time code from the server's log; no default credentials
+- [x] Incident API — external systems open incidents with an organisation API key, deduplicated by their own external id
 - [x] **MCP integration, GitHub first** — the analysis reads the failing service's recent commits over GitHub's MCP server (read-only, the organisation's own token) and names a suspected change, linked on the incident
 - [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
 - [ ] Unit & integration tests

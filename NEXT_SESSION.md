@@ -7,17 +7,27 @@
 ## Tek cümlelik durum
 
 Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, 20.7, **24**,
-**25** ve **26** bitti; `develop` güncel ve push'lanmış, **543 test yeşil**. Ürün **açık kaynak**: 21
-(CI/CD) ve 22 (Kubernetes) çıktı, yerine tek komutla kurulum geldi. **Sıradaki: Adım 27 — servis
-üzerinden olay açma** — konsolda form **yok** (Fırat: platformun amacı olayları otonom yakalamak);
-makine erişimi dahil kapsamı **Fırat'la konuşmadan başlama.** Ardından kalanlar (23, 20.6, 13.6,
-Adım 20 kalıntısı, 14, outbox retry tavanı 🔴, event bus aboneliğinin sessizce ölmesi 🟡) yine
-Fırat'la konuşulacak — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
+**25**, **26** ve **27** bitti; `develop` güncel ve push'lanmış, **558 test yeşil**, prob **93/93**.
+Ürün **açık kaynak**: 21 (CI/CD) ve 22 (Kubernetes) çıktı, yerine tek komutla kurulum geldi.
+**`master` geride:** son sürüm noktası PR #20; Adım 26 ve 27 yalnız `develop`'ta — Fırat GitHub'da
+`deploy/`'u göremedi çünkü varsayılan dal `master`. `develop` → `master` (PR ile) Fırat'ın kararı.
+Kalanlar (23, 20.6, 13.6, Adım 20 kalıntısı, 14, outbox retry tavanı 🔴, event bus aboneliğinin
+sessizce ölmesi 🟡) Fırat'la konuşulacak — sırayı sen önerme, sor. Kapsamı belirsiz bir adımda 24 ve 17.5'teki gibi yap:
 önce ne işe yaradığını anlat, kararları sor, sonra plan.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 27 — servis üzerinden olay açma** (`IIM-155`). Konsolda olay formu **yok** (Fırat). Admin
+Ayarlar → Entegrasyonlar → Gözlemlenebilirlik → **Olay API'si**'nden adlandırılmış anahtar üretir
+(`iim_inc_…`, bir kez gösterilir, hash saklanır). `POST /api/incidents/intake` + `X-IIM-Api-Key`:
+201 yeni / 200 aynı `externalId` ile açık olay / 401 / 429 (anahtar başına 60/dk). Olay `Source =
+Alert`, `ReportedBy` = anahtarın adı; AI analizi ve bildirimler her olaydaki gibi. Açık olaylarda
+`(OrganizationId, ExternalId)` kısmi tekil index yarışı tutuyor. Prob her koşuda `isolation-probe`
+anahtarını üretip siliyor; sabit `externalId` sayesinde kanaryada tek bir açık olay kalıyor.
+**Dikkat:** `web/src/lib/i18n/*.ts` düzenlemesi Vite HMR'ını bozabiliyor ("useLanguage must be used
+inside LanguageProvider") — dev sunucuyu yeniden başlat.
 
 **Adım 26 — tek komutla kurulum** (`IIM-150`). `cp deploy/example.env deploy/.env` → zorunlu
 sırları doldur (boşken compose başlamaz) → `docker compose -f deploy/docker-compose.yml --env-file
