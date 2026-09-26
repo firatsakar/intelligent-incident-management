@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Adım 23: the tests that need the real thing — Postgres and RabbitMQ in Docker, started by
+       Testcontainers for the run and thrown away after it. Docker must be running. -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.15.0" />
+    <PackageReference Include="Testcontainers.RabbitMq" Version="4.15.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks\EventBus\BuildingBlocks.EventBus.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\Outbox\BuildingBlocks.Outbox.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\Web\BuildingBlocks.Web.csproj" />
+    <ProjectReference Include="..\..\src\Services\AgentOrchestrator\AgentOrchestrator.Infrastructure\AgentOrchestrator.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\IdentityService\IdentityService.Infrastructure\IdentityService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\IncidentService\IncidentService.Infrastructure\IncidentService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\NotificationService\NotificationService.Infrastructure\NotificationService.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Services\TelemetryIngestionService\TelemetryIngestionService.Infrastructure\TelemetryIngestionService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

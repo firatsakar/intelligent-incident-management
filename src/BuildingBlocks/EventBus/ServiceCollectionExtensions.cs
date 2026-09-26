@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using RabbitMQ.Client;
 
 namespace BuildingBlocks.EventBus;
@@ -24,7 +25,13 @@ public static class ServiceCollectionExtensions
                 VirtualHost = options.VirtualHost
             });
 
-        services.AddSingleton<RabbitMqConnection>();
+        // Built by hand so the configured retry count reaches it. Left to the container, the
+        // constructor's default of three was used and EventBus:RetryCount was read by nothing
+        // (found in Adım 23).
+        services.AddSingleton(sp => new RabbitMqConnection(
+            sp.GetRequiredService<IConnectionFactory>(),
+            sp.GetRequiredService<ILogger<RabbitMqConnection>>(),
+            options.RetryCount));
         services.AddSingleton<IEventBus, RabbitMqEventBus>();
 
         return services;

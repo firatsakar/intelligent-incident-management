@@ -69,6 +69,7 @@
     <Project Path="tests/BuildingBlocks.Tests/BuildingBlocks.Tests.csproj" />
     <Project Path="tests/IdentityService.Tests/IdentityService.Tests.csproj" />
     <Project Path="tests/IncidentService.Tests/IncidentService.Tests.csproj" />
+    <Project Path="tests/Integration.Tests/Integration.Tests.csproj" />
     <Project Path="tests/NotificationService.Tests/NotificationService.Tests.csproj" />
     <Project Path="tests/TelemetryIngestionService.Tests/TelemetryIngestionService.Tests.csproj" />
   </Folder>

@@ -196,6 +196,11 @@ migrations as it starts. `down` stops everything and keeps the data, which lives
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
 - [Docker & Docker Compose](https://www.docker.com/)
 
+`dotnet test` runs the unit tests and `tests/Integration.Tests`, which start a throwaway Postgres
+and RabbitMQ in Docker through Testcontainers — so Docker must be running. They check what only
+the real thing can: every service's migrations against its model, organisation filters in SQL,
+unique indexes, and a subscription made before the broker is up.
+
 ### Running the Infrastructure
 
 ```bash
