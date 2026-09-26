@@ -25,9 +25,6 @@ Konsol girişte `GET /api/auth/setup` sorar, gerekiyorsa `/setup`'a yönlenir: k
 ilk Admin → oturum açılır. Yanlış kod / kurulmuş sistem / ikinci deneme hepsi aynı 404; tamamlama
 ucu gateway'de rate-limit'li. **Kurulum başına tek organizasyon**; ad Ayarlar → **Organizasyon**'dan
 değişir (eski Üyeler sekmesi; `/settings/members` oraya yönlenir). README'de "First-run setup".
-**Kabul artığı (zararsız, silmek Fırat'a sorulur):** identity Postgres'inde (`:5437`) boş
-kurulumla açılmış `identity_setup_acceptance` veritabanı ve RabbitMQ'da bağsız
-`iim_setup_acceptance` exchange'i.
 
 **Adım 17.5 — AI analizi GitHub'a bakıyor (MCP)** (`IIM-137`). Ayarlar → **Entegrasyonlar**
 artık tek sayfa, üç grup: Gözlemlenebilirlik (telemetri) · **Analiz (GitHub)** · Bildirimler —

@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using BuildingBlocks.Observability;
+using BuildingBlocks.Web;
 using Gateway.API;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -62,6 +63,21 @@ builder.Services.AddRateLimiter(limiter =>
 var app = builder.Build();
 
 var console = SpaHosting.TryResolve(app.Configuration, app.Logger);
+
+// First of all: the static files, the rate limiter and the proxied services all read the caller's
+// address and scheme, and behind the installer's TLS proxy those are what the proxy reports — but
+// only a proxy named in configuration is believed (Adım 26).
+var forwarded = PlatformForwardedHeaders.ForEdge(app.Configuration);
+
+if (forwarded is not null)
+{
+    app.UseForwardedHeaders(forwarded);
+
+    app.Logger.LogInformation(
+        "Believing X-Forwarded-For and X-Forwarded-Proto from {Proxies}.",
+        app.Configuration[PlatformForwardedHeaders.KnownProxiesConfigurationKey]
+    );
+}
 
 // No UseHttpsRedirection here, and it comes out of the four older services in Parça 5. TLS
 // terminates at this edge; a service behind it that redirects to https is redirecting a request

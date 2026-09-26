@@ -324,7 +324,10 @@ public sealed class AuthController : ControllerBase
             Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero),
         };
 
-    // Secure would make these cookies invisible over plain HTTP, which is how the gateway is
-    // reached in development. In production TLS terminates at the gateway and the flag is on.
-    private bool Secure => !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+    // Secure exactly when the browser used HTTPS. Behind the installer's TLS proxy and the gateway
+    // that arrives as X-Forwarded-Proto (PlatformForwardedHeaders); over plain HTTP — development,
+    // or trying an installation out on a LAN address — a Secure cookie would never be sent back
+    // and nobody could sign in. It used to be "not localhost", which inside a container network,
+    // where the gateway calls this service by its service name, meant always.
+    private bool Secure => Request.IsHttps;
 }

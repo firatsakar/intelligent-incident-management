@@ -11,6 +11,7 @@ using TelemetryIngestionService.API.Realtime;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.CreateTelemetrySource;
 using TelemetryIngestionService.Infrastructure;
+using TelemetryIngestionService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -78,6 +79,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddRequestDecompression();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<TelemetryDbContext>();
 
 app.UseExceptionHandler();
 
