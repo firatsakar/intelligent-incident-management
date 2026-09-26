@@ -41,6 +41,16 @@ public interface IIncidentRepository
     );
 
     /// <summary>
+    /// Every incident closed inside the window, by <c>ResolvedAt</c> (Adım 20.8). See
+    /// <see cref="IncidentResolutionRow"/> for why this is a read of its own.
+    /// </summary>
+    Task<IReadOnlyList<IncidentResolutionRow>> GetResolvedRowsAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
     /// Priority counts for everything not yet resolved or closed. <b>Deliberately ignores the
     /// window</b>: an incident opened six weeks ago and still open is the one an operator most
     /// needs to see, and a date filter would be the thing that hid it.

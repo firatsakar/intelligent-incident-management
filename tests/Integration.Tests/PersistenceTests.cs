@@ -151,6 +151,37 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
+    // ---- Adım 20.8: the stats reads translate to SQL and read what they say ---------------------
+
+    [Fact]
+    public async Task TheStatsReadClosedIncidentsByWhenTheyClosedWithTheirVerdicts()
+    {
+        await using var provider = await IncidentService();
+        await using var scope = provider.ScopeFor(OrgA);
+        var incidents = scope.ServiceProvider.GetRequiredService<IIncidentRepository>();
+
+        var closed = Alert("stats-closed");
+        var open = Alert("stats-open");
+        await incidents.AddAsync(closed);
+        await incidents.AddAsync(open);
+        await incidents.SaveChangesAsync();
+
+        closed.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.FalsePositive);
+        closed.RecordAiAnalysisFailure("model unavailable");
+        await incidents.SaveChangesAsync();
+
+        var window = (From: DateTime.UtcNow.AddHours(-1), To: DateTime.UtcNow.AddHours(1));
+
+        var resolved = await incidents.GetResolvedRowsAsync(window.From, window.To);
+        var row = Assert.Single(resolved);
+        Assert.Equal(IncidentVerdict.FalsePositive, row.Verdict);
+        Assert.Equal(IncidentSource.Alert, row.Source);
+
+        var rows = await incidents.GetStatsRowsAsync(window.From, window.To);
+        Assert.Equal(2, rows.Count);
+        Assert.Single(rows, r => r.AiFailed);
+    }
+
     // ---- notifications: one delivery per integration and incident -------------------------------
 
     [Fact]

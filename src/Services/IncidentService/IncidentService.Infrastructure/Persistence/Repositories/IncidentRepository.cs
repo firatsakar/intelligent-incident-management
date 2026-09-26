@@ -106,7 +106,33 @@ public sealed class IncidentRepository : IIncidentRepository
                 x.DetectedAt,
                 x.Priority,
                 x.Status,
-                x.Source
+                x.Source,
+                x.IsAiAnalyzed,
+                x.AiAnalysisError != null,
+                x.AiConfidence
+            ))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IncidentResolutionRow>> GetResolvedRowsAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Six scalars again. ResolvedAt is kept through Resolved -> Closed and cleared on a reopen,
+        // so this reads exactly the incidents that are closed and were closed in the window.
+        return await _context
+            .Incidents.AsNoTracking()
+            .Where(x => x.ResolvedAt != null && x.ResolvedAt >= from && x.ResolvedAt <= to)
+            .OrderBy(x => x.ResolvedAt)
+            .Select(x => new IncidentResolutionRow(
+                x.CreatedAt,
+                x.DetectedAt,
+                x.ResolvedAt!.Value,
+                x.Priority,
+                x.Source,
+                x.Verdict
             ))
             .ToListAsync(cancellationToken);
     }

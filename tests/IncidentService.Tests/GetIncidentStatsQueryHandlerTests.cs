@@ -21,8 +21,30 @@ public sealed class GetIncidentStatsQueryHandlerTests
         _handler = new GetIncidentStatsQueryHandler(_repository);
 
         GivenRows();
+        GivenResolved();
         GivenOpen();
     }
+
+    private void GivenResolved(params IncidentResolutionRow[] rows)
+    {
+        IReadOnlyList<IncidentResolutionRow> result = rows;
+
+        _repository
+            .GetResolvedRowsAsync(Arg.Any<DateTime>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+    }
+
+    private static IncidentResolutionRow Closed(
+        DateTime resolvedAt,
+        TimeSpan took,
+        IncidentPriority priority = IncidentPriority.High,
+        IncidentSource source = IncidentSource.Telemetry,
+        IncidentVerdict? verdict = IncidentVerdict.Real,
+        bool detected = true
+    ) =>
+        detected
+            ? new(resolvedAt - took - TimeSpan.FromMinutes(3), resolvedAt - took, resolvedAt, priority, source, verdict)
+            : new(resolvedAt - took, null, resolvedAt, priority, source, verdict);
 
     private void GivenRows(params IncidentStatsRow[] rows)
     {
@@ -235,5 +257,110 @@ public sealed class GetIncidentStatsQueryHandlerTests
         Assert.Equal(2, stats.ByPriority["Low"]);
         Assert.Equal(2, stats.BySource["Manual"]);
         Assert.Equal(1, stats.ByStatus["Resolved"]);
+    }
+    // ---- Adım 20.8 --------------------------------------------------------------------------------
+
+    private Task<IncidentService.Application.DTOs.IncidentStatsDto> Window() =>
+        _handler.Handle(new GetIncidentStatsQuery(Noon.AddDays(-7), Noon), CancellationToken.None);
+
+    [Fact]
+    public async Task ResolutionTimeRunsFromWhenTheProblemStartedToWhenItClosed()
+    {
+        GivenResolved(
+            // Detected: timed from DetectedAt, not from when the record was filed three minutes later.
+            Closed(Noon.AddHours(-1), TimeSpan.FromMinutes(30)),
+            // Opened by hand: nothing detected it, so the clock starts at CreatedAt.
+            Closed(Noon.AddHours(-2), TimeSpan.FromMinutes(90), detected: false),
+            Closed(Noon.AddHours(-3), TimeSpan.FromMinutes(60), priority: IncidentPriority.Low)
+        );
+
+        var stats = await Window();
+
+        Assert.Equal(3, stats.Resolution.ResolvedCount);
+        Assert.Equal(3600, stats.Resolution.MedianSeconds);
+        Assert.Equal(5400, stats.Resolution.P95Seconds);
+        // Nearest-rank, as everywhere on this screen: of two, the lower — a duration that happened.
+        Assert.Equal(1800, stats.Resolution.MedianSecondsByPriority["High"]);
+        Assert.Equal(3600, stats.Resolution.MedianSecondsByPriority["Low"]);
+        Assert.Null(stats.Resolution.MedianSecondsByPriority["Critical"]);
+    }
+
+    [Fact]
+    public async Task NothingClosedIsNoAnswerRatherThanAnInstantOne()
+    {
+        var stats = await Window();
+
+        Assert.Equal(0, stats.Resolution.ResolvedCount);
+        Assert.Null(stats.Resolution.MedianSeconds);
+        Assert.Null(stats.Resolution.P95Seconds);
+    }
+
+    [Fact]
+    public async Task AClosureBeforeItsOwnDetectionCountsButSitsOutOfTheTimes()
+    {
+        GivenResolved(
+            Closed(Noon, TimeSpan.FromMinutes(10)),
+            // Two clocks disagreeing: closed "before" the problem started.
+            Closed(Noon, TimeSpan.FromMinutes(-5))
+        );
+
+        var stats = await Window();
+
+        Assert.Equal(2, stats.Resolution.ResolvedCount);
+        Assert.Equal(600, stats.Resolution.MedianSeconds);
+    }
+
+    [Fact]
+    public async Task VerdictsAreCountedBySourceWithEverySourcePresent()
+    {
+        GivenResolved(
+            Closed(Noon, TimeSpan.FromMinutes(5), source: IncidentSource.Telemetry, verdict: IncidentVerdict.Real),
+            Closed(Noon, TimeSpan.FromMinutes(5), source: IncidentSource.Telemetry, verdict: IncidentVerdict.Real),
+            Closed(Noon, TimeSpan.FromMinutes(5), source: IncidentSource.Telemetry, verdict: IncidentVerdict.FalsePositive),
+            Closed(Noon, TimeSpan.FromMinutes(5), source: IncidentSource.Alert, verdict: null)
+        );
+
+        var stats = await Window();
+
+        Assert.Equal(2, stats.Verdicts["Telemetry"].Real);
+        Assert.Equal(1, stats.Verdicts["Telemetry"].FalsePositive);
+        Assert.Equal(1, stats.Verdicts["Alert"].Unknown);
+        Assert.Equal(0, stats.Verdicts["Manual"].Real + stats.Verdicts["Manual"].FalsePositive + stats.Verdicts["Manual"].Unknown);
+    }
+
+    [Fact]
+    public async Task AnalysesAreAnalysedFailedOrPending_AndALateSuccessIsAnalysed()
+    {
+        GivenRows(
+            Row(Noon) with { IsAiAnalyzed = true, AiConfidence = 0.9 },
+            Row(Noon) with { IsAiAnalyzed = true, AiConfidence = 0.6 },
+            Row(Noon) with { IsAiAnalyzed = true, AiConfidence = 0.8, AiFailed = true },
+            Row(Noon) with { AiFailed = true },
+            Row(Noon)
+        );
+
+        var stats = await Window();
+
+        Assert.Equal(3, stats.Ai.Analysed);
+        Assert.Equal(1, stats.Ai.Failed);
+        Assert.Equal(1, stats.Ai.Pending);
+        Assert.Equal(0.8, stats.Ai.MedianConfidence);
+    }
+
+    [Fact]
+    public async Task EachDayCountsWhatClosedThatDay_WheneverItWasOpened()
+    {
+        GivenResolved(
+            // Opened weeks before the window, closed inside it: still today's closure.
+            Closed(Noon, TimeSpan.FromDays(40)),
+            Closed(Noon.AddDays(-1), TimeSpan.FromHours(2)),
+            Closed(Noon.AddDays(-1), TimeSpan.FromHours(1))
+        );
+
+        var stats = await Window();
+
+        Assert.Equal(1, stats.Days.Single(day => day.Day == DateOnly.FromDateTime(Noon)).Resolved);
+        Assert.Equal(2, stats.Days.Single(day => day.Day == DateOnly.FromDateTime(Noon.AddDays(-1))).Resolved);
+        Assert.Equal(0, stats.Days.Single(day => day.Day == DateOnly.FromDateTime(Noon.AddDays(-2))).Resolved);
     }
 }
