@@ -323,7 +323,13 @@ Hiçbir servis `/health` ya da `/ready` sunmuyor. Kubernetes liveness/readiness 
   tüketiciler korur), ama kopya **yayın** ve gereksiz yük oluşur.
 - Yapılacak: `SELECT ... FOR UPDATE SKIP LOCKED` ile satır kiralama, ya da dağıtık kilit.
 
-### 🔴 Outbox'ta yeniden deneme sınırı yok
+### ✅ Outbox'ta yeniden deneme sınırı yok — Adım 28'de kapandı (`IIM-160`)
+
+**Kapanış:** başarısız satır artık `min(5 sn × 2^(n−1), 15 dk)` bekleyerek deneniyor ve **20. hatada
+bekletiliyor** (`ParkedAt`, ~3,2 saat sonra; tek Error satırı). Saatlik tarama bekletilen satır
+varken her tur Warning yazıyor. Yeniden kuyruğa almak:
+`UPDATE outbox_messages SET "ParkedAt" = NULL, "RetryCount" = 0, "NextAttemptAt" = NULL WHERE "Id" = '…';`
+Aşağısı geçmiş:
 
 `OutboxDispatcher` başarısız bir satırı her 5 saniyede **sınırsız** yeniden dener ve her denemede
 handler'ın ilk yan etkisi (publish) tekrar olur. Adım 17'de canlı görüldü: organizasyon kapsamı
@@ -429,7 +435,12 @@ hatalarında sessiz kalır.
 Docker"). Ürün açık kaynak olduğu için (Fırat, 2026-09-25) imaj registry'si ve CI yok — imajlar
 kurulumu yapanın makinesinde kaynaktan derleniyor.
 
-### 🟡 Event bus aboneliği ilk bağlantıda vazgeçerse servis tüketicisiz çalışıyor
+### ✅ Event bus aboneliği ilk bağlantıda vazgeçerse servis tüketicisiz çalışıyor — Adım 28'de kapandı (`IIM-161`)
+
+**Kapanış:** abonelik artık bağlanana kadar arka planda deniyor (2 sn → en fazla 30 sn, her
+başarısızlık Warning, kapanışta duruyor); kanal kopuksa yeniden kuruluyor. Canlıda kanıtlandı:
+boş bir porta bağlanan kopya iki kez başarısız oldu, broker açılınca üçüncü denemede bağlandı.
+Kurulum compose'undaki geçici `EventBus__RetryCount=8` kaldırıldı. Aşağısı geçmiş:
 
 `Subscribe` fire-and-forget; bağlantı `EventBus:RetryCount` denemede (üstel: 2, 4, 8 s…)
 kurulamazsa hata yalnız ERR olarak log'lanıyor ve servis **olay tüketmeden** ayakta kalıyor —

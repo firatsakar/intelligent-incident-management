@@ -34,10 +34,6 @@ x-service-environment: &service-environment
   EventBus__Host: rabbitmq
   EventBus__UserName: iim
   EventBus__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in deploy/.env (see deploy/example.env)}
-  # When the host boots, every container starts at once and RabbitMQ takes its time; a service that
-  # gives up on it keeps running without its subscriptions. Eight doubling retries wait ~8.5 minutes
-  # (development's three wait 14 seconds, measured as just enough on a warm restart).
-  EventBus__RetryCount: "8"
   Seq__Url: http://seq
   Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in deploy/.env (see deploy/example.env)}
   Database__MigrateOnStartup: "true"

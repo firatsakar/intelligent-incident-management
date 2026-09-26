@@ -40,6 +40,19 @@ public sealed class OutboxCleanupService : BackgroundService
 
                 if (removed > 0)
                     _logger.LogInformation("Removed {Count} processed outbox row(s).", removed);
+
+                // Said every hour for as long as it is true — a parked row is an event some other
+                // service never received, and one log line at the moment it parked is easy to miss.
+                var parked = await store.CountParkedAsync(stoppingToken);
+
+                if (parked > 0)
+                {
+                    _logger.LogWarning(
+                        "{Count} outbox row(s) are parked after {Attempts} failed attempts and will not be dispatched again until requeued (clear ParkedAt).",
+                        parked,
+                        OutboxMessage.MaxAttempts
+                    );
+                }
             }
             catch (Exception ex)
             {

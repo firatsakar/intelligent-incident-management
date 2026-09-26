@@ -103,13 +103,11 @@ public sealed class OutboxDispatcher : BackgroundService
                 // between the two.
                 await handler.HandleAsync(message, cancellationToken);
 
-                message.ProcessedOn = DateTimeOffset.UtcNow;
-                message.Error = null;
+                message.MarkDispatched(DateTimeOffset.UtcNow);
             }
             catch (Exception ex)
             {
-                message.RetryCount++;
-                message.Error = ex.Message;
+                var parked = message.MarkFailed(ex.Message, DateTimeOffset.UtcNow);
 
                 activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
 
@@ -120,6 +118,19 @@ public sealed class OutboxDispatcher : BackgroundService
                     message.Type,
                     message.RetryCount
                 );
+
+                if (parked)
+                {
+                    // Once per row: from here nothing retries it, and nothing but this line and
+                    // the hourly count says it happened.
+                    _logger.LogError(
+                        "Outbox message {MessageId} (type {Type}) parked after {Attempts} failed attempts; it will not be dispatched again unless requeued. Last error: {Error}",
+                        message.Id,
+                        message.Type,
+                        message.RetryCount,
+                        message.Error
+                    );
+                }
             }
         }
 
