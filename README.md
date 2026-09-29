@@ -232,46 +232,86 @@ everybody is signed out and the stored integration credentials can no longer be 
 
 ### Development
 
+For working on the code, the services run with `dotnet run` and the console with Vite, against
+infrastructure in Docker. You need:
+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 24](https://nodejs.org/)
 - [Docker & Docker Compose](https://www.docker.com/)
 
-`dotnet test` runs the unit tests and `tests/Integration.Tests`, which start a throwaway Postgres
-and RabbitMQ in Docker through Testcontainers — so Docker must be running. They check what only
-the real thing can: every service's migrations against its model, organisation filters in SQL,
-unique indexes, and a subscription made before the broker is up.
+The commands below are for bash; on Windows, use Git Bash.
 
-### Running the Infrastructure
-
-For development the services run with `dotnet run` against infrastructure from
-`docker-compose.dev.yml` (RabbitMQ, a PostgreSQL per service, Elasticsearch, Kibana, Seq, pgAdmin,
-Mailpit). Its passwords come from a `.env` next to it:
+**1. Start the infrastructure.** `docker-compose.dev.yml` runs RabbitMQ, a PostgreSQL per service,
+Elasticsearch, Kibana, Seq, pgAdmin and Mailpit, published on `127.0.0.1` only. Its development
+passwords match the connection strings in each service's `appsettings.json`, so no `.env` is
+needed.
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-| Tool | URL |
-|------|-----|
-| RabbitMQ Management | http://localhost:15672 |
-| pgAdmin | http://localhost:5050 |
-| Seq (Logs) | http://localhost:8081 |
-| Elasticsearch | http://localhost:9200 |
-| Kibana | http://localhost:5601 |
+| Tool | URL | Sign-in |
+|------|-----|---------|
+| RabbitMQ Management | http://localhost:15672 | `admin` / `Admin1234!` |
+| Seq (the platform's logs and traces) | http://localhost:8081 | `admin` / `Admin1234!` |
+| pgAdmin | http://localhost:5050 | `admin@example.com` / `Admin1234!` |
+| Mailpit (every email the platform sends) | http://localhost:8025 | — |
+| Elasticsearch | http://localhost:9200 | — |
+| Kibana | http://localhost:5601 | — |
+| Seq (demo: a customer's log system to connect) | http://localhost:8082 | — |
 
-### Running a Service
-
-```bash
-dotnet run --project src/Services/IncidentService/IncidentService.API
-```
-
-Two secrets come from user secrets in development and are never committed: `Jwt:SigningKey` (every
-service) and `Secrets:EncryptionKey` (NotificationService, TelemetryIngestionService,
-AgentOrchestrator — the key that encrypts customer credentials in their databases; each service
-only reads its own, so each can have its own). For example:
+**2. Set the secrets, once.** They go into user secrets and are never committed. Every service
+validates the same JWT signing key; three services also encrypt customer credentials in their
+databases, each with its own key. The Anthropic key is optional: without it incidents are still
+created and detected, but their AI analysis fails.
 
 ```bash
-dotnet user-secrets set "Secrets:EncryptionKey" "$(openssl rand -base64 32)" --project src/Services/NotificationService/NotificationService.API
+jwt_key=$(openssl rand -base64 48)
+for service in IdentityService IncidentService NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet user-secrets set "Jwt:SigningKey" "$jwt_key" --project src/Services/$service/$service.API
+done
+for service in NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet user-secrets set "Secrets:EncryptionKey" "$(openssl rand -base64 32)" --project src/Services/$service/$service.API
+done
+dotnet user-secrets set "AiAnalyzer:ApiKey" "<your Anthropic API key>" --project src/Services/AgentOrchestrator/AgentOrchestrator.API
 ```
+
+**3. Create the databases.** In development, migrations are applied by hand, so a new migration
+is read before it runs:
+
+```bash
+dotnet tool install --global dotnet-ef
+for service in IdentityService IncidentService NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet ef database update --project src/Services/$service/$service.Infrastructure --startup-project src/Services/$service/$service.API
+done
+```
+
+**4. Run the services, the gateway and the console.** Each in its own terminal:
+
+```bash
+dotnet run --project src/Services/IdentityService/IdentityService.API --launch-profile http
+dotnet run --project src/Services/IncidentService/IncidentService.API --launch-profile http
+dotnet run --project src/Services/NotificationService/NotificationService.API --launch-profile http
+dotnet run --project src/Services/TelemetryIngestionService/TelemetryIngestionService.API --launch-profile http
+dotnet run --project src/Services/AgentOrchestrator/AgentOrchestrator.API --launch-profile http
+dotnet run --project src/Gateway/Gateway.API --launch-profile http
+```
+
+```bash
+npm ci --prefix web
+npm run dev --prefix web
+```
+
+The console is at http://localhost:5173. Vite sends `/api`, `/hubs` and `/otlp` to the gateway
+(http://localhost:5100), which routes them to the services. The first time, the console opens the
+first-run setup, described below.
+
+**Tests.** `dotnet test` runs the unit tests and `tests/Integration.Tests`, which start a
+throwaway Postgres and RabbitMQ in Docker through Testcontainers, so Docker must be running. They
+check what only the real thing can: every service's migrations against its model, organisation
+filters in SQL, unique indexes, and a subscription made before the broker is up. For the console,
+`npm run build`, `npm run lint` and `npm run check:i18n` in `web/`. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### First-run setup
 

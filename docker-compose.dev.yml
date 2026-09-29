@@ -1,7 +1,10 @@
 # Development infrastructure only: RabbitMQ, a PostgreSQL per service, Elasticsearch, Kibana, Seq,
-# pgAdmin, Mailpit and the demo's own Seq. The services run with `dotnet run` against it, and its
-# passwords come from a .env next to this file. Ports are published on 127.0.0.1 only; they match
-# the connection strings in each service's appsettings.json.
+# pgAdmin, Mailpit, and a second Seq that stands in for a customer's log system. The services run
+# with `dotnet run` against it. Ports are published on 127.0.0.1 only.
+#
+# Every credential has a development default that matches the connection strings in each service's
+# appsettings.json, so a fresh clone needs no .env. A .env next to this file still overrides them;
+# change a database password there and the service's connection string has to change with it.
 #
 #   docker compose -f docker-compose.dev.yml up -d
 #
@@ -17,8 +20,8 @@ services:
       - "127.0.0.1:15672:15672"    # management UI
     hostname: rabbitmq
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-Admin1234!}
     volumes:
       - incident-management-rabbitmq_data:/var/lib/rabbitmq
     networks:
@@ -35,15 +38,15 @@ services:
     ports:
       - "127.0.0.1:5433:5432"
     environment:
-      POSTGRES_USER: ${INCIDENT_DB_USER}
-      POSTGRES_PASSWORD: ${INCIDENT_DB_PASS}
-      POSTGRES_DB: ${INCIDENT_DB_NAME}
+      POSTGRES_USER: ${INCIDENT_DB_USER:-incident_user}
+      POSTGRES_PASSWORD: ${INCIDENT_DB_PASS:-Incident1234!}
+      POSTGRES_DB: ${INCIDENT_DB_NAME:-incident_db}
     volumes:
       - postgres_incident_data:/var/lib/postgresql/data
     networks:
       - incident_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${INCIDENT_DB_USER} -d ${INCIDENT_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${INCIDENT_DB_USER:-incident_user} -d ${INCIDENT_DB_NAME:-incident_db}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -54,15 +57,15 @@ services:
     ports:
       - "127.0.0.1:5434:5432"
     environment:
-      POSTGRES_USER: ${NOTIFICATION_DB_USER}
-      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASS}
-      POSTGRES_DB: ${NOTIFICATION_DB_NAME}
+      POSTGRES_USER: ${NOTIFICATION_DB_USER:-notification_user}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASS:-Notification1234!}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME:-notification_db}
     volumes:
       - postgres_notification_data:/var/lib/postgresql/data
     networks:
       - incident_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d ${NOTIFICATION_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER:-notification_user} -d ${NOTIFICATION_DB_NAME:-notification_db}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -73,15 +76,15 @@ services:
     ports:
       - "127.0.0.1:5435:5432"
     environment:
-      POSTGRES_USER: ${TELEMETRY_DB_USER}
-      POSTGRES_PASSWORD: ${TELEMETRY_DB_PASS}
-      POSTGRES_DB: ${TELEMETRY_DB_NAME}
+      POSTGRES_USER: ${TELEMETRY_DB_USER:-telemetry_user}
+      POSTGRES_PASSWORD: ${TELEMETRY_DB_PASS:-Telemetry1234!}
+      POSTGRES_DB: ${TELEMETRY_DB_NAME:-telemetry_db}
     volumes:
       - postgres_telemetry_data:/var/lib/postgresql/data
     networks:
       - incident_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${TELEMETRY_DB_USER} -d ${TELEMETRY_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${TELEMETRY_DB_USER:-telemetry_user} -d ${TELEMETRY_DB_NAME:-telemetry_db}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -93,15 +96,15 @@ services:
     ports:
       - "127.0.0.1:5436:5432"
     environment:
-      POSTGRES_USER: ${AGENT_DB_USER}
-      POSTGRES_PASSWORD: ${AGENT_DB_PASS}
-      POSTGRES_DB: ${AGENT_DB_NAME}
+      POSTGRES_USER: ${AGENT_DB_USER:-agent_user}
+      POSTGRES_PASSWORD: ${AGENT_DB_PASS:-Agent1234!}
+      POSTGRES_DB: ${AGENT_DB_NAME:-agent_db}
     volumes:
       - postgres_agent_data:/var/lib/postgresql/data
     networks:
       - incident_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${AGENT_DB_USER} -d ${AGENT_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AGENT_DB_USER:-agent_user} -d ${AGENT_DB_NAME:-agent_db}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -112,15 +115,15 @@ services:
     ports:
       - "127.0.0.1:5437:5432"
     environment:
-      POSTGRES_USER: ${IDENTITY_DB_USER}
-      POSTGRES_PASSWORD: ${IDENTITY_DB_PASS}
-      POSTGRES_DB: ${IDENTITY_DB_NAME}
+      POSTGRES_USER: ${IDENTITY_DB_USER:-identity_user}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASS:-Identity1234!}
+      POSTGRES_DB: ${IDENTITY_DB_NAME:-identity_db}
     volumes:
       - postgres_identity_data:/var/lib/postgresql/data
     networks:
       - incident_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER} -d ${IDENTITY_DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER:-identity_user} -d ${IDENTITY_DB_NAME:-identity_db}"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -133,7 +136,7 @@ services:
       - "127.0.0.1:5341:5341"      # ingestion
     environment:
       ACCEPT_EULA: "Y"
-      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_FIRSTRUN_ADMINPASSWORD}
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_FIRSTRUN_ADMINPASSWORD:-Admin1234!}
     volumes:
       - incident-management-seq_data:/data
     networks:
@@ -146,8 +149,8 @@ services:
     ports:
       - "127.0.0.1:5050:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS:-Admin1234!}
     volumes:
       - incident-management-pgadmin_data:/var/lib/pgadmin
     networks:
@@ -157,6 +160,7 @@ services:
       - postgres_notification
       - postgres_telemetry
       - postgres_agent
+      - postgres_identity
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
