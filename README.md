@@ -243,6 +243,15 @@ docker-compose up -d
 dotnet run --project src/Services/IncidentService/IncidentService.API
 ```
 
+Two secrets come from user secrets in development and are never committed: `Jwt:SigningKey` (every
+service) and `Secrets:EncryptionKey` (NotificationService, TelemetryIngestionService,
+AgentOrchestrator — the key that encrypts customer credentials in their databases; each service
+only reads its own, so each can have its own). For example:
+
+```bash
+dotnet user-secrets set "Secrets:EncryptionKey" "$(openssl rand -base64 32)" --project src/Services/NotificationService/NotificationService.API
+```
+
 ### First-run setup
 
 There is no default account and no default password. On an empty database the identity service

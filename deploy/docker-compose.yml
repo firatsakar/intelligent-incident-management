@@ -36,6 +36,7 @@ x-service-environment: &service-environment
   EventBus__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in deploy/.env (see deploy/example.env)}
   Seq__Url: http://seq
   Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in deploy/.env (see deploy/example.env)}
+  Secrets__EncryptionKey: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in deploy/.env (see deploy/example.env)}
   Database__MigrateOnStartup: "true"
 
 services:
@@ -235,6 +236,7 @@ services:
     environment:
       <<: *service-environment
       ConnectionStrings__TelemetryDb: Host=postgres;Database=telemetry_db;Username=telemetry_user;Password=${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      Telemetry__LogRetentionDays: ${LOG_RETENTION_DAYS:-7}
 
   gateway:
     image: iim-gateway:local

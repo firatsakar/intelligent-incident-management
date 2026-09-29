@@ -62,6 +62,9 @@ var app = builder.Build();
 
 await app.MigrateOnStartupAsync<AgentDbContext>();
 
+// Adım 30: credentials saved before they were encrypted at rest are encrypted now, once.
+await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
+
 // Without a key the service still runs: the model refuses each call, the analysis is marked failed
 // on its incident and not retried. Said once here, so an installation missing it finds out from
 // the first lines of the log rather than from the first incident (Adım 26).

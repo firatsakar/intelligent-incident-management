@@ -288,6 +288,158 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
+    // ---- Adım 30: customer credentials are encrypted in the column -----------------------------
+
+    private Task<ServiceProvider> NotificationService() =>
+        Migrated<NotificationDbContext>(
+            "NotificationDb",
+            (services, configuration) => global::NotificationService.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+    private static async Task<string> RawConfig(DbContext context, Guid id) =>
+        (await context.Database.SqlQueryRaw<string>("SELECT config::text AS \"Value\" FROM integrations WHERE \"Id\" = {0}", id).ToListAsync()).Single();
+
+    [Fact]
+    public async Task AnIntegrationsPasswordIsEncryptedInTheDatabaseAndReadBackInTheClear()
+    {
+        await using var provider = await NotificationService();
+        Guid id;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var integration = NotificationIntegration.Create(
+                OrgA,
+                "On-call email",
+                NotificationChannelType.Email,
+                new Dictionary<string, string> { ["Host"] = "smtp.example.com", ["Password"] = "hunter2-smtp" }
+            );
+            context.Integrations.Add(integration);
+            await context.SaveChangesAsync();
+            id = integration.Id;
+
+            var raw = await RawConfig(context, id);
+            Assert.DoesNotContain("hunter2-smtp", raw);
+            Assert.Contains(BuildingBlocks.SharedKernel.SecretProtector.Prefix, raw);
+            Assert.Contains("smtp.example.com", raw);
+        }
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var read = await context.Integrations.SingleAsync(x => x.Id == id);
+
+            Assert.Equal("hunter2-smtp", read.Config["Password"]);
+        }
+    }
+
+    [Fact]
+    public async Task ACredentialStoredBeforeEncryptionIsEncryptedOnStart()
+    {
+        await using var provider = await NotificationService();
+        Guid id;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var integration = NotificationIntegration.Create(
+                OrgA,
+                "Jira",
+                NotificationChannelType.Jira,
+                new Dictionary<string, string> { ["BaseUrl"] = "https://acme.atlassian.net", ["ApiToken"] = "placeholder" }
+            );
+            context.Integrations.Add(integration);
+            await context.SaveChangesAsync();
+            id = integration.Id;
+
+            // As a row written before Adım 30 would look.
+            await context.Database.ExecuteSqlRawAsync(
+                "UPDATE integrations SET config = {0}::jsonb WHERE \"Id\" = {1}",
+                "{\"BaseUrl\":\"https://acme.atlassian.net\",\"ApiToken\":\"legacy-jira-token\"}",
+                id
+            );
+        }
+
+        await global::NotificationService.Infrastructure.Persistence.StoredSecretsEncryption.EncryptPlaintextAsync(
+            provider,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance
+        );
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+
+            Assert.DoesNotContain("legacy-jira-token", await RawConfig(context, id));
+            Assert.Equal("legacy-jira-token", (await context.Integrations.SingleAsync(x => x.Id == id)).Config["ApiToken"]);
+        }
+    }
+
+    [Fact]
+    public async Task AGitHubTokenIsEncryptedInTheDatabase()
+    {
+        await using var provider = await Migrated<AgentDbContext>(
+            "AgentDb",
+            (services, configuration) => global::AgentOrchestrator.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+        await using var scope = provider.ScopeFor(OrgA);
+        var context = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
+
+        var connection = GitHubConnection.Create(OrgA, "github_pat_example_token_value", [], isEnabled: true);
+        context.GitHubConnections.Add(connection);
+        await context.SaveChangesAsync();
+
+        var raw = (
+            await context.Database.SqlQueryRaw<string>("SELECT \"Token\" AS \"Value\" FROM github_connections WHERE \"Id\" = {0}", connection.Id).ToListAsync()
+        ).Single();
+
+        Assert.StartsWith(BuildingBlocks.SharedKernel.SecretProtector.Prefix, raw);
+
+        context.ChangeTracker.Clear();
+        Assert.Equal("github_pat_example_token_value", (await context.GitHubConnections.SingleAsync()).Token);
+    }
+
+    // ---- Adım 30: log records are kept for the retention period, then dropped ----------------
+
+    [Fact]
+    public async Task TheRetentionSweepDropsOnlyLogRecordsOlderThanTheCutoff()
+    {
+        await using var provider = await Migrated<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>(
+            "TelemetryDb",
+            (services, configuration) =>
+                global::TelemetryIngestionService.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+        var now = DateTime.UtcNow;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>();
+            var source = Guid.NewGuid();
+
+            global::TelemetryIngestionService.Domain.Aggregates.LogRecord LogRecordAt(DateTime age) =>
+                global::TelemetryIngestionService.Domain.Aggregates.LogRecord.Create(
+                    OrgA, source, Guid.NewGuid().ToString(), "checkout", global::TelemetryIngestionService.Domain.Enums.LogSeverity.Error,
+                    "boom", "boom", null, null, "fp", age, TimeSpan.FromMinutes(5)
+                );
+
+            context.LogRecords.AddRange(LogRecordAt(now.AddDays(-9)), LogRecordAt(now.AddDays(-8)), LogRecordAt(now.AddHours(-1)));
+            await context.SaveChangesAsync();
+        }
+
+        var retention = provider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.LogRetentionService>();
+
+        // Swept with no organisation in scope: retention is the installation's, not a tenant's.
+        Assert.Equal(2, await retention.SweepAsync(now - retention.Retention));
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>();
+            var left = Assert.Single(await context.LogRecords.ToListAsync());
+            Assert.True(left.Timestamp > now.AddDays(-1));
+        }
+    }
+
     // ---- Adım 17.5: an analysis with suspected changes reads back ----------------------------
 
     [Fact]
@@ -395,5 +547,103 @@ public sealed class PersistenceTests(PostgresFixture postgres)
             Assert.Equal([fresh.Id, ready.Id], (await store.GetPendingAsync(20)).Select(row => row.Id));
             Assert.Equal(1, await store.CountParkedAsync());
         }
+    }
+
+    // ---- Adım 30: one worker per job however many replicas run --------------------------------
+
+    [Fact]
+    public async Task TwoDispatchersNeverClaimTheSameOutboxRows()
+    {
+        await using var provider = await IncidentService();
+
+        var rows = Enumerable
+            .Range(0, 3)
+            .Select(i => new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = OrgA,
+                Type = "IncidentResolvedDomainEvent",
+                Payload = "{}",
+                OccurredOn = DateTimeOffset.UtcNow.AddSeconds(-10 + i),
+            })
+            .ToList();
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IncidentDbContext>();
+            context.OutboxMessages.AddRange(rows);
+            await context.SaveChangesAsync();
+        }
+
+        // Two replicas on the same tick: the first claims two rows, the second gets only the third.
+        await using var first = provider.CreateAsyncScope();
+        await using var second = provider.CreateAsyncScope();
+
+        var firstStore = first.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var secondStore = second.ServiceProvider.GetRequiredService<IOutboxStore>();
+
+        var claimedFirst = await firstStore.GetPendingAsync(2);
+        var claimedSecond = await secondStore.GetPendingAsync(20);
+
+        Assert.Equal([rows[0].Id, rows[1].Id], claimedFirst.Select(row => row.Id));
+        Assert.Equal([rows[2].Id], claimedSecond.Select(row => row.Id));
+
+        // The first finishes: its stamps commit and nobody claims those rows again.
+        foreach (var row in claimedFirst)
+            row.MarkDispatched(DateTimeOffset.UtcNow);
+
+        await firstStore.SaveChangesAsync();
+
+        await using var third = provider.CreateAsyncScope();
+        Assert.Empty(await third.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20));
+    }
+
+    [Fact]
+    public async Task ADispatcherThatDiesMidBatchLeavesItsRowsForTheNext()
+    {
+        await using var provider = await IncidentService();
+
+        var row = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = OrgA,
+            Type = "IncidentResolvedDomainEvent",
+            Payload = "{}",
+            OccurredOn = DateTimeOffset.UtcNow,
+        };
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IncidentDbContext>();
+            context.OutboxMessages.Add(row);
+            await context.SaveChangesAsync();
+        }
+
+        // Claimed and never completed — the scope goes away as a crashed process's would.
+        await using (var dying = provider.CreateAsyncScope())
+            Assert.Single(await dying.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20));
+
+        await using var next = provider.CreateAsyncScope();
+        Assert.Equal(row.Id, Assert.Single(await next.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20)).Id);
+    }
+
+    [Fact]
+    public async Task OneReplicaPollsASourceAtATime()
+    {
+        var connectionString = await postgres.NewDatabaseAsync();
+        var source = Guid.NewGuid();
+
+        await using (var held = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source))
+        {
+            Assert.NotNull(held);
+            Assert.Null(await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source));
+
+            // A different source is somebody else's poll.
+            await using var other = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, Guid.NewGuid());
+            Assert.NotNull(other);
+        }
+
+        await using var afterwards = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source);
+        Assert.NotNull(afterwards);
     }
 }
