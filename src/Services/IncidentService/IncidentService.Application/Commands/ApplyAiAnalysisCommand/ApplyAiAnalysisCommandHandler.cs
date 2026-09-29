@@ -48,8 +48,10 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
 
         // Delivery is at-least-once: a redelivered result is applied again, harmlessly, and must
         // not appear in the trail twice.
-        if (firstAnalysis)
-            _activity.Add(IncidentActivity.AnalysisApplied(incident, priorityBefore));
+        var recorded = firstAnalysis ? IncidentActivity.AnalysisApplied(incident, priorityBefore) : null;
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -60,5 +62,6 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

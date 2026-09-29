@@ -45,8 +45,10 @@ public sealed class RecordAiAnalysisFailureCommandHandler
         incident.RecordAiAnalysisFailure(request.Error);
 
         // The same failure redelivered is the same failure, recorded once.
-        if (incident.AiAnalysisError != errorBefore)
-            _activity.Add(IncidentActivity.AnalysisFailed(incident));
+        var recorded = incident.AiAnalysisError == errorBefore ? null : IncidentActivity.AnalysisFailed(incident);
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -55,5 +57,6 @@ public sealed class RecordAiAnalysisFailureCommandHandler
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

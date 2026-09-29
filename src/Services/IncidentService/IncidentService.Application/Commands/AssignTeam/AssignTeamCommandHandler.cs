@@ -36,8 +36,12 @@ public sealed class AssignTeamCommandHandler : IRequestHandler<AssignTeamCommand
 
         incident.AssignTeam(request.Team);
 
-        if (incident.AssignedTeam != before)
-            _activity.Add(IncidentActivity.TeamAssigned(incident, before, _user.AsActor()));
+        var recorded = incident.AssignedTeam == before
+            ? null
+            : IncidentActivity.TeamAssigned(incident, before, _user.AsActor());
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -46,5 +50,6 @@ public sealed class AssignTeamCommandHandler : IRequestHandler<AssignTeamCommand
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

@@ -1,12 +1,14 @@
 using BuildingBlocks.EventBus;
 using BuildingBlocks.SharedKernel;
 using IncidentService.Application.Abstractions;
+using IncidentService.Application.Commands.AddIncidentComment;
 using IncidentService.Application.Commands.ApplyAiAnalysis;
 using IncidentService.Application.Commands.AssignTeam;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.CreateIncidentFromSignal;
 using IncidentService.Application.Commands.RecordAiAnalysisFailure;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
+using IncidentService.Application.DTOs;
 using IncidentService.Application.Queries.GetIncidentActivity;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
@@ -139,6 +141,27 @@ public sealed class IncidentActivityTests
         );
 
         Assert.Empty(_activity.Rows);
+        await _realtime.DidNotReceive().ActivityRecordedAsync(Arg.Any<IncidentActivityDto>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task ARecordedChangeReachesOpenScreensAfterTheSave()
+    {
+        var incident = Stored();
+
+        await StatusHandler().Handle(
+            new UpdateIncidentStatusCommand { IncidentId = incident.Id, NewStatus = IncidentStatus.InProgress },
+            CancellationToken.None
+        );
+
+        Received.InOrder(() =>
+        {
+            _incidents.SaveChangesAsync(Arg.Any<CancellationToken>());
+            _realtime.ActivityRecordedAsync(
+                Arg.Is<IncidentActivityDto>(dto => dto.Kind == IncidentActivityKind.StatusChanged && dto.To == "InProgress"),
+                Arg.Any<CancellationToken>()
+            );
+        });
     }
 
     // ---- team --------------------------------------------------------------------------------
@@ -288,6 +311,63 @@ public sealed class IncidentActivityTests
         var row = Assert.Single(_activity.Rows);
         Assert.Equal(ActivityActorKind.Detector, row.ActorKind);
         Assert.Null(row.ActorName);
+    }
+
+    // ---- comments ----------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ACommentIsSavedAsTheSignedInPersonAndAnnounced()
+    {
+        var incident = Stored();
+        var handler = new AddIncidentCommentCommandHandler(_incidents, _activity, _realtime, _user);
+
+        var dto = await handler.Handle(new AddIncidentCommentCommand(incident.Id, " Rolled back. "), CancellationToken.None);
+
+        var row = Assert.Single(_activity.Rows);
+        Assert.Equal(IncidentActivityKind.Commented, row.Kind);
+        Assert.Equal("Rolled back.", row.Text);
+        Assert.Equal((ActivityActorKind.User, PersonId, "Ayşe Operator"), (row.ActorKind, row.ActorId, row.ActorName));
+        Assert.Equal(row.Id, dto.Id);
+
+        await _incidents.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _realtime.Received(1).ActivityRecordedAsync(Arg.Is<IncidentActivityDto>(x => x.Id == row.Id), Arg.Any<CancellationToken>());
+
+        // A comment is about the people working it, not a change to the incident.
+        Assert.Null(incident.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task ACommentOnAnIncidentThatIsNotThereIsNotFoundAndNothingIsSaved()
+    {
+        var handler = new AddIncidentCommentCommandHandler(_incidents, _activity, _realtime, _user);
+
+        await Assert.ThrowsAsync<IncidentNotFoundException>(() =>
+            handler.Handle(new AddIncidentCommentCommand(Guid.NewGuid(), "Hello"), CancellationToken.None)
+        );
+
+        Assert.Empty(_activity.Rows);
+        await _incidents.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("   ", false)]
+    [InlineData("Looking at the pool now.", true)]
+    public void ACommentIsRefusedBeforeTheHandlerWhenItHasNoText(string text, bool valid)
+    {
+        var result = new AddIncidentCommentCommandValidator().Validate(new AddIncidentCommentCommand(Guid.NewGuid(), text));
+
+        Assert.Equal(valid, result.IsValid);
+    }
+
+    [Fact]
+    public void ACommentLongerThanTheLimitIsRefusedButSurroundingWhitespaceDoesNotCount()
+    {
+        var validator = new AddIncidentCommentCommandValidator();
+        var atLimit = new string('x', IncidentActivity.TextMaxLength);
+
+        Assert.True(validator.Validate(new AddIncidentCommentCommand(Guid.NewGuid(), $"  {atLimit}\n")).IsValid);
+        Assert.False(validator.Validate(new AddIncidentCommentCommand(Guid.NewGuid(), atLimit + "x")).IsValid);
     }
 
     // ---- reading -----------------------------------------------------------------------------

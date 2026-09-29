@@ -48,8 +48,12 @@ public sealed class UpdateIncidentStatusCommandHandler
         incident.UpdateStatus(request.NewStatus, request.Verdict);
 
         // Setting the status it already has records nothing: the trail is of changes.
-        if (incident.Status != before)
-            _activity.Add(IncidentActivity.StatusChanged(incident, before, _user.AsActor()));
+        var recorded = incident.Status == before
+            ? null
+            : IncidentActivity.StatusChanged(incident, before, _user.AsActor());
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -59,5 +63,6 @@ public sealed class UpdateIncidentStatusCommandHandler
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

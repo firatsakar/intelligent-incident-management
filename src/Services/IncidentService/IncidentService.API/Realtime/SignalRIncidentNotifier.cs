@@ -33,6 +33,11 @@ public sealed class SignalRIncidentNotifier : IRealtimeNotifier
         CancellationToken cancellationToken = default
     ) => SendAsync("incidentChanged", incident, cancellationToken);
 
+    public Task ActivityRecordedAsync(
+        IncidentActivityDto activity,
+        CancellationToken cancellationToken = default
+    ) => SendAsync("activityRecorded", activity, cancellationToken);
+
     // A broadcast is the last thing a command does and the least important. The incident is
     // already committed by this point, so a failed push must not turn a successful write into a
     // 500, nor dead-letter the message that caused it. Whoever is watching gets it on their next

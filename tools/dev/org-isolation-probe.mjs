@@ -259,6 +259,9 @@ async function writes(found) {
   const attempts = [
     incident && ['PATCH', `/api/incidents/${incident}/team`, { team: 'isolation-probe' }],
     incident && ['PATCH', `/api/incidents/${incident}/status`, { newStatus: 'InProgress' }],
+    // An incident's history is as much the organisation's as the incident (Adım 14).
+    incident && ['GET', `/api/incidents/${incident}/activity`],
+    incident && ['POST', `/api/incidents/${incident}/comments`, { text: 'isolation probe: from outside' }],
     source && ['PATCH', `/api/telemetry-sources/${source}/enabled`, { isEnabled: true }],
     source && ['POST', `/api/telemetry-sources/${source}/rotate-key`],
     integration && ['PATCH', `/api/integrations/${integration}/enabled`, { isEnabled: true }],
@@ -362,6 +365,17 @@ async function roles() {
   if (incident) {
     const response = await call('PATCH', `/api/incidents/${incident.id}/team`, token.canaryViewer, { team: 'viewer' })
     check('Viewer cannot work an incident → 403', response.status === 403, `got ${response.status}`)
+
+    // Adım 14: everyone reads the history; only those who work the incident write in it. The
+    // Engineer's comment is empty on purpose — past the policy, refused by validation, nothing kept.
+    const history = await call('GET', `/api/incidents/${incident.id}/activity`, token.canaryViewer)
+    check('Viewer reads an incident\'s history → 200', history.status === 200 && Array.isArray(history.json), `got ${history.status}`)
+
+    const viewerComment = await call('POST', `/api/incidents/${incident.id}/comments`, token.canaryViewer, { text: 'viewer' })
+    check('Viewer cannot comment → 403', viewerComment.status === 403, `got ${viewerComment.status}`)
+
+    const emptyComment = await call('POST', `/api/incidents/${incident.id}/comments`, token.canaryEngineer, { text: '   ' })
+    check('Engineer may comment; an empty one → 400', emptyComment.status === 400, `got ${emptyComment.status}`)
   }
 }
 
@@ -389,8 +403,9 @@ async function listen(hub, auth) {
     'signalRecorded',
     'signatureChanged',
     'ingestionCompleted',
+    'activityRecorded',
   ]) {
-    connection.on(event, (payload) => heard.push({ event, id: payload?.id ?? payload }))
+    connection.on(event, (payload) => heard.push({ event, id: payload?.id ?? payload, incidentId: payload?.incidentId }))
   }
 
   await connection.start()
@@ -418,8 +433,11 @@ async function sockets(found) {
     otherSignals: await listen('/hubs/signals', token.otherAdmin),
   }
 
-  // One operational change and one configuration change, both on canary test data.
-  await call('PATCH', `/api/incidents/${incident}/team`, token.canaryAdmin, { team: 'isolation-probe' })
+  // One operational change and one configuration change, both on canary test data. The team
+  // alternates so that the change is a real one and lands in the incident's history.
+  const before = await call('GET', `/api/incidents/${incident}`, token.canaryAdmin)
+  const team = before.json?.assignedTeam === 'isolation-probe' ? 'isolation-probe-2' : 'isolation-probe'
+  await call('PATCH', `/api/incidents/${incident}/team`, token.canaryAdmin, { team })
   const current = await call('GET', `/api/telemetry-sources/${source}`, token.canaryAdmin)
   await call('PATCH', `/api/telemetry-sources/${source}/enabled`, token.canaryAdmin, { isEnabled: current.json?.isEnabled ?? true })
 
@@ -430,6 +448,9 @@ async function sockets(found) {
   check('canary Admin hears the canary incident change', heardEvent('canaryAdminIncidents', 'incidentChanged'))
   check('canary Viewer hears the canary incident change', heardEvent('canaryViewerIncidents', 'incidentChanged'))
   check(`${other.name} hears no canary incident change`, !heardEvent('otherIncidents', 'incidentChanged'))
+  check('canary Admin hears the history row', heardEvent('canaryAdminIncidents', 'activityRecorded'))
+  check('canary Viewer hears the history row', heardEvent('canaryViewerIncidents', 'activityRecorded'))
+  check(`${other.name} hears no canary history row`, !heardEvent('otherIncidents', 'activityRecorded'))
   check('canary Admin hears the source change', heardEvent('canaryAdminSignals', 'sourceChanged'))
   check('canary Viewer hears no source change (configuration)', !heardEvent('canaryViewerSignals', 'sourceChanged'))
   check(`${other.name} hears no canary source change`, !heardEvent('otherSignals', 'sourceChanged'))
@@ -437,7 +458,9 @@ async function sockets(found) {
   // Anything the other organisation's sockets heard at all during the window is canary traffic
   // unless that organisation happened to be busy; its ids must not be canary ids.
   const canaryIds = new Set([...found.incidents.canary, ...found['telemetry sources'].canary])
-  const leaked = [...ears.otherIncidents.heard, ...ears.otherSignals.heard].filter((item) => canaryIds.has(item.id))
+  const leaked = [...ears.otherIncidents.heard, ...ears.otherSignals.heard].filter(
+    (item) => canaryIds.has(item.id) || canaryIds.has(item.incidentId),
+  )
   check(`${other.name}'s sockets heard no canary id`, leaked.length === 0, leaked.map((item) => item.event).join(', '))
 
   await Promise.all(Object.values(ears).map((ear) => ear.connection.stop()))
