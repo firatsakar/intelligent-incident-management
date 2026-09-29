@@ -68,6 +68,9 @@ var app = builder.Build();
 
 await app.MigrateOnStartupAsync<NotificationDbContext>();
 
+// Adım 30: credentials saved before they were encrypted at rest are encrypted now, once.
+await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
+
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

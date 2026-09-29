@@ -288,6 +288,117 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
+    // ---- Adım 30: customer credentials are encrypted in the column -----------------------------
+
+    private Task<ServiceProvider> NotificationService() =>
+        Migrated<NotificationDbContext>(
+            "NotificationDb",
+            (services, configuration) => global::NotificationService.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+    private static async Task<string> RawConfig(DbContext context, Guid id) =>
+        (await context.Database.SqlQueryRaw<string>("SELECT config::text AS \"Value\" FROM integrations WHERE \"Id\" = {0}", id).ToListAsync()).Single();
+
+    [Fact]
+    public async Task AnIntegrationsPasswordIsEncryptedInTheDatabaseAndReadBackInTheClear()
+    {
+        await using var provider = await NotificationService();
+        Guid id;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var integration = NotificationIntegration.Create(
+                OrgA,
+                "On-call email",
+                NotificationChannelType.Email,
+                new Dictionary<string, string> { ["Host"] = "smtp.example.com", ["Password"] = "hunter2-smtp" }
+            );
+            context.Integrations.Add(integration);
+            await context.SaveChangesAsync();
+            id = integration.Id;
+
+            var raw = await RawConfig(context, id);
+            Assert.DoesNotContain("hunter2-smtp", raw);
+            Assert.Contains(BuildingBlocks.SharedKernel.SecretProtector.Prefix, raw);
+            Assert.Contains("smtp.example.com", raw);
+        }
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var read = await context.Integrations.SingleAsync(x => x.Id == id);
+
+            Assert.Equal("hunter2-smtp", read.Config["Password"]);
+        }
+    }
+
+    [Fact]
+    public async Task ACredentialStoredBeforeEncryptionIsEncryptedOnStart()
+    {
+        await using var provider = await NotificationService();
+        Guid id;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+            var integration = NotificationIntegration.Create(
+                OrgA,
+                "Jira",
+                NotificationChannelType.Jira,
+                new Dictionary<string, string> { ["BaseUrl"] = "https://acme.atlassian.net", ["ApiToken"] = "placeholder" }
+            );
+            context.Integrations.Add(integration);
+            await context.SaveChangesAsync();
+            id = integration.Id;
+
+            // As a row written before Adım 30 would look.
+            await context.Database.ExecuteSqlRawAsync(
+                "UPDATE integrations SET config = {0}::jsonb WHERE \"Id\" = {1}",
+                "{\"BaseUrl\":\"https://acme.atlassian.net\",\"ApiToken\":\"legacy-jira-token\"}",
+                id
+            );
+        }
+
+        await global::NotificationService.Infrastructure.Persistence.StoredSecretsEncryption.EncryptPlaintextAsync(
+            provider,
+            Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance
+        );
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<NotificationDbContext>();
+
+            Assert.DoesNotContain("legacy-jira-token", await RawConfig(context, id));
+            Assert.Equal("legacy-jira-token", (await context.Integrations.SingleAsync(x => x.Id == id)).Config["ApiToken"]);
+        }
+    }
+
+    [Fact]
+    public async Task AGitHubTokenIsEncryptedInTheDatabase()
+    {
+        await using var provider = await Migrated<AgentDbContext>(
+            "AgentDb",
+            (services, configuration) => global::AgentOrchestrator.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+        await using var scope = provider.ScopeFor(OrgA);
+        var context = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
+
+        var connection = GitHubConnection.Create(OrgA, "github_pat_example_token_value", [], isEnabled: true);
+        context.GitHubConnections.Add(connection);
+        await context.SaveChangesAsync();
+
+        var raw = (
+            await context.Database.SqlQueryRaw<string>("SELECT \"Token\" AS \"Value\" FROM github_connections WHERE \"Id\" = {0}", connection.Id).ToListAsync()
+        ).Single();
+
+        Assert.StartsWith(BuildingBlocks.SharedKernel.SecretProtector.Prefix, raw);
+
+        context.ChangeTracker.Clear();
+        Assert.Equal("github_pat_example_token_value", (await context.GitHubConnections.SingleAsync()).Token);
+    }
+
     // ---- Adım 17.5: an analysis with suspected changes reads back ----------------------------
 
     [Fact]

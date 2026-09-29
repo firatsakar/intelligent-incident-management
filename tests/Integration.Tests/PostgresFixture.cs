@@ -46,6 +46,8 @@ public sealed class PostgresCollection : ICollectionFixture<PostgresFixture>
 /// </summary>
 public static class ServiceUnderTest
 {
+    public const string TestEncryptionKey = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+
     public static ServiceProvider Build(
         string connectionName,
         string connectionString,
@@ -58,6 +60,9 @@ public static class ServiceUnderTest
                 {
                     [$"ConnectionStrings:{connectionName}"] = connectionString,
                     ["Database:MigrateOnStartup"] = "true",
+                    // One key for the whole run: a DbContext's model, and the converters in it,
+                    // are built once per process.
+                    [BuildingBlocks.SharedKernel.SecretProtector.ConfigurationKey] = TestEncryptionKey,
                 }
             )
             .Build();
