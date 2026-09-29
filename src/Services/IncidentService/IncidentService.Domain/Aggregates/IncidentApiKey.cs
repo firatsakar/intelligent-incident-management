@@ -4,7 +4,7 @@ namespace IncidentService.Domain.Aggregates;
 
 /// <summary>
 /// A key an external system opens incidents with — a script, a CI pipeline, an organisation's own
-/// alerting — without anybody signing in (Adım 27).
+/// alerting — without anybody signing in.
 /// </summary>
 /// <remarks>
 /// <para>

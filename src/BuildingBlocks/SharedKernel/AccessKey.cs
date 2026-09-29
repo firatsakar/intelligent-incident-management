@@ -5,7 +5,7 @@ namespace BuildingBlocks.SharedKernel;
 
 /// <summary>
 /// A credential a machine sends with every request instead of signing in: the OTLP ingest key
-/// (Adım 13.5) and the incident API key (Adım 27).
+/// and the incident API key.
 /// </summary>
 /// <remarks>
 /// 256 random bits behind a recognisable prefix — the prefix is what makes a leaked key findable by

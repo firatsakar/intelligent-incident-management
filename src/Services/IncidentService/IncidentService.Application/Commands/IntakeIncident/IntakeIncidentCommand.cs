@@ -6,7 +6,7 @@ using MediatR;
 namespace IncidentService.Application.Commands.IntakeIncident;
 
 /// <summary>
-/// An incident sent by an external system with an organisation's API key (Adım 27).
+/// An incident sent by an external system with an organisation's API key.
 /// </summary>
 /// <remarks>
 /// Only what a sender can know: no team, no source (it is <see cref="IncidentSource.Alert"/> by

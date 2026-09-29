@@ -6,7 +6,7 @@ using IncidentService.Domain.ValueObjects;
 namespace IncidentService.Domain.Aggregates;
 
 /// <summary>
-/// One thing that happened to an incident, who did it and when (Adım 14): opened, moved, assigned,
+/// One thing that happened to an incident, who did it and when: opened, moved, assigned,
 /// analysed, commented on. <see cref="Entity.CreatedAt"/> is the moment.
 /// </summary>
 /// <remarks>

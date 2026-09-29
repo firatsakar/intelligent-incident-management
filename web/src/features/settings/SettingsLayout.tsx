@@ -29,7 +29,7 @@ interface SettingsPage {
    *  languages — the compiler checks the key, not a comment. */
   id: keyof Dictionary['settingsNav']['pages']
   icon: LucideIcon
-  /** The organisation's configuration, which only its Admins may see (Adım 16.5). */
+  /** The organisation's configuration, which only its Admins may see. */
   adminOnly?: boolean
 }
 
@@ -37,7 +37,7 @@ interface SettingsPage {
 // and it is the one that is reached by wanting "my settings" rather than by wanting a connector.
 // The organisation next — its name and its people, before its plumbing. Then one page for
 // everything the platform connects to,
-// grouped inside by what each connection is for (Fırat, 2026-09-25): a tab per connector type was
+// grouped inside by what each connection is for: a tab per connector type was
 // the product's plumbing drawn as navigation.
 const pages: SettingsPage[] = [
   { to: '/settings/profile', id: 'profile', icon: UserRoundIcon },

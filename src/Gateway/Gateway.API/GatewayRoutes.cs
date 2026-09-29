@@ -32,7 +32,7 @@ internal static class GatewayRoutes
     public const string SignInRateLimiterPolicy = "sign-in";
 
     /// <summary>
-    /// Applied to the incident API (Adım 27), per key: a sender misconfigured to post in a loop
+    /// Applied to the incident API, per key: a sender misconfigured to post in a loop
     /// would otherwise open incidents as fast as it can send them. Far above what alerting sends.
     /// </summary>
     public const string IncidentIntakeRateLimiterPolicy = "incident-intake";
@@ -79,7 +79,7 @@ internal static class GatewayRoutes
         ("auth", "/api/auth/{**rest}", IdentityCluster, null),
         // The organisation's members — IdentityService, which is where accounts live.
         ("organization", "/api/organization/{**rest}", IdentityCluster, null),
-        // External systems opening incidents with an API key (Adım 27); the literal wins over the
+        // External systems opening incidents with an API key; the literal wins over the
         // catch-all below, as sign-in does over /api/auth.
         ("incident-intake", "/api/incidents/intake", IncidentCluster, IncidentIntakeRateLimiterPolicy),
         ("incidents", "/api/incidents/{**rest}", IncidentCluster, null),

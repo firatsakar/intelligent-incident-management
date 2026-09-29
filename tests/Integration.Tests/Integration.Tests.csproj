@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Adım 23: the tests that need the real thing — Postgres and RabbitMQ in Docker, started by
+  <!-- The tests that need the real thing — Postgres and RabbitMQ in Docker, started by
        Testcontainers for the run and thrown away after it. Docker must be running. -->
 
   <PropertyGroup>

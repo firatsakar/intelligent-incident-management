@@ -5,7 +5,7 @@ using MediatR;
 
 namespace IncidentService.Application.Queries.GetIncidentActivity;
 
-/// <summary>What an incident went through, oldest first (Adım 14).</summary>
+/// <summary>What an incident went through, oldest first.</summary>
 public sealed record GetIncidentActivityQuery(Guid IncidentId) : IRequest<IReadOnlyList<IncidentActivityDto>>;
 
 public sealed class GetIncidentActivityQueryHandler

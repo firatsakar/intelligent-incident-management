@@ -258,7 +258,7 @@ public sealed class DetectSignalsCommandHandlerTests
     [Fact]
     public async Task ASingleFatal_BypassesTheThresholdEntirely()
     {
-        // The bug caught by hand in Adım 13: the fatal shortcut sat *after* the threshold check,
+        // A bug once caught by hand: the fatal shortcut sat *after* the threshold check,
         // so one crash was filtered out before anything looked at it. Waiting for three crashes
         // before treating one as conclusive defeats the point.
         GivenRules(Rule(threshold: 3));

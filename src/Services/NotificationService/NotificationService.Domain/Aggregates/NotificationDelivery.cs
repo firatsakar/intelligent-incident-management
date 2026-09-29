@@ -25,7 +25,7 @@ public sealed class NotificationDelivery : AggregateRoot
     /// What the integration was called, and which channel it was, when this went through it.
     /// </summary>
     /// <remarks>
-    /// Copied onto the row (Adım 16.5) so the delivery history reads on its own. Integrations are
+    /// Copied onto the row so the delivery history reads on its own. Integrations are
     /// the organisation's configuration and only its Admins may read them now; the incident screen
     /// every role opens still has to say where a notification went. Null for rows written before
     /// the column existed whose integration was already deleted by then.

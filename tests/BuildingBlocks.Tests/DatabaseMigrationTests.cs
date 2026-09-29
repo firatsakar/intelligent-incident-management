@@ -9,7 +9,7 @@ using NSubstitute;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 26: an installation applies its migrations as it starts; development does not, and runs
+// An installation applies its migrations as it starts; development does not, and runs
 // them by hand after reading them. The flag is the whole difference, so the flag is what is pinned.
 public sealed class DatabaseMigrationTests
 {

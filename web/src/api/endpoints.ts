@@ -123,7 +123,7 @@ export const telemetrySourcesApi = {
     api.post<TelemetrySource>(`/api/telemetry-sources/${id}/rotate-key`),
 }
 
-/** The organisation's incident API keys (Adım 27). Admin only. */
+/** The organisation's incident API keys. Admin only. */
 export const incidentApiKeysApi = {
   list: () => api.get<IncidentApiKey[]>('/api/incident-api-keys'),
 
@@ -204,7 +204,7 @@ export const authApi = {
       password,
     }),
 
-  /** Whether this installation still needs its first Admin (Adım 25). Nothing more. */
+  /** Whether this installation still needs its first Admin. Nothing more. */
   setupStatus: () => api.get<{ required: boolean }>('/api/auth/setup'),
 
   /**
@@ -225,7 +225,7 @@ export const authApi = {
 }
 
 /**
- * The outside systems an analysis may read (Adım 17.5). Admin only, reads included.
+ * The outside systems an analysis may read. Admin only, reads included.
  */
 export const aiSourcesApi = {
   github: () => api.get<GitHubConnection>('/api/ai-sources/github'),
@@ -245,7 +245,7 @@ export const aiSourcesApi = {
  * The organisation's people. Admin only, reads included — everyone else is answered 403, and a
  * member or invitation of another organisation 404.
  */
-/** How the organisation's analyses are written (Adım 20.6). Admin only. */
+/** How the organisation's analyses are written. Admin only. */
 export const aiSettingsApi = {
   get: () => api.get<AiSettings>('/api/ai-settings'),
 

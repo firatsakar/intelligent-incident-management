@@ -41,7 +41,7 @@ public static class LoggingExtensions
                     // Authentication registers Data Protection, and in a container it warns on
                     // every start that its keys live in the container and are not encrypted.
                     // Nothing here protects data with it — sessions are signed JWTs — so the
-                    // warnings describe a risk the platform does not have (Adım 26).
+                    // warnings describe a risk the platform does not have.
                     .MinimumLevel.Override("Microsoft.AspNetCore.DataProtection", LogEventLevel.Error)
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Service", serviceName)

@@ -2,7 +2,7 @@ using BuildingBlocks.Outbox;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 28: a row that fails waits longer each time and, after hours of failing, stops. Before this
+// A row that fails waits longer each time and, after hours of failing, stops. Before this
 // it was retried every five seconds forever, and a failure that would never go away republished
 // its event every five seconds for as long as nobody looked.
 public sealed class OutboxRetryPolicyTests

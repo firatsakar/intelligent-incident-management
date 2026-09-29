@@ -21,7 +21,7 @@ using NotificationIntegration = NotificationService.Domain.Aggregates.Integratio
 
 namespace Integration.Tests;
 
-// What only a real database can say (Adım 23): that a unique index is there and does what the
+// What only a real database can say: that a unique index is there and does what the
 // code relies on it for, that a query filter is real SQL and not a hope, and that what is written
 // can be read back.
 [Collection(PostgresCollection.Name)]
@@ -89,7 +89,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 27: one open incident per external id --------------------------------------------
+    // ---- one open incident per external id -----------------------------------------------------
 
     [Fact]
     public async Task ASecondOpenIncidentWithTheSameExternalIdIsRefusedAndLeavesNothingBehind()
@@ -152,7 +152,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 14: the activity trail commits with the change and stays in its organisation -------
+    // ---- the activity trail commits with the change and stays in its organisation ----------------
 
     [Fact]
     public async Task AnIncidentAndItsHistorySaveTogetherAndOnlyItsOrganisationReadsThem()
@@ -218,7 +218,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         Assert.Equal(winner.Id, Assert.Single(await context.IncidentActivities.ToListAsync()).IncidentId);
     }
 
-    // ---- Adım 20.8: the stats reads translate to SQL and read what they say ---------------------
+    // ---- the stats reads translate to SQL and read what they say --------------------------------
 
     [Fact]
     public async Task TheStatsReadClosedIncidentsByWhenTheyClosedWithTheirVerdicts()
@@ -288,7 +288,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 30: customer credentials are encrypted in the column -----------------------------
+    // ---- customer credentials are encrypted in the column --------------------------------------
 
     private Task<ServiceProvider> NotificationService() =>
         Migrated<NotificationDbContext>(
@@ -352,7 +352,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
             await context.SaveChangesAsync();
             id = integration.Id;
 
-            // As a row written before Adım 30 would look.
+            // As a row written before encryption at rest would look.
             await context.Database.ExecuteSqlRawAsync(
                 "UPDATE integrations SET config = {0}::jsonb WHERE \"Id\" = {1}",
                 "{\"BaseUrl\":\"https://acme.atlassian.net\",\"ApiToken\":\"legacy-jira-token\"}",
@@ -399,7 +399,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         Assert.Equal("github_pat_example_token_value", (await context.GitHubConnections.SingleAsync()).Token);
     }
 
-    // ---- Adım 30: log records are kept for the retention period, then dropped ----------------
+    // ---- log records are kept for the retention period, then dropped -------------------------
 
     [Fact]
     public async Task TheRetentionSweepDropsOnlyLogRecordsOlderThanTheCutoff()
@@ -440,7 +440,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 17.5: an analysis with suspected changes reads back ----------------------------
+    // ---- an analysis with suspected changes reads back ---------------------------------------
 
     [Fact]
     public async Task AnAnalysisWithRelatedChangesIsReadBackAndCanBeReplaced()
@@ -484,8 +484,8 @@ public sealed class PersistenceTests(PostgresFixture postgres)
             analysisId = analysis.Id;
         }
 
-        // Read in a scope of its own: materialised from the database, not the change tracker. The
-        // Adım 17.5 bug was exactly here — a fixed-size default that EF could not fill.
+        // Read in a scope of its own: materialised from the database, not the change tracker. A
+        // past bug was exactly here — a fixed-size default that EF could not fill.
         await using (var scope = provider.ScopeFor(OrgA))
         {
             var context = scope.ServiceProvider.GetRequiredService<AgentDbContext>();
@@ -505,7 +505,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 28: what the dispatcher picks, in real SQL --------------------------------------
+    // ---- what the dispatcher picks, in real SQL -----------------------------------------------
 
     [Fact]
     public async Task TheDispatcherSkipsWhatIsDoneParkedOrStillWaiting()
@@ -549,7 +549,7 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         }
     }
 
-    // ---- Adım 30: one worker per job however many replicas run --------------------------------
+    // ---- one worker per job however many replicas run -----------------------------------------
 
     [Fact]
     public async Task TwoDispatchersNeverClaimTheSameOutboxRows()

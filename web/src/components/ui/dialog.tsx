@@ -47,7 +47,7 @@ function DialogContent({
   showCloseButton?: boolean
 }) {
   // The close control is icon-only, so this label is the whole of what a screen reader has to go
-  // on. It lived here as a literal until the Adım 20.7 audit found it — the i18n scan reads JSX
+  // on. It lived here as a literal until a copy audit found it — the i18n scan reads JSX
   // text and labelled props, and a bare `sr-only` span inside a kit primitive is neither.
   const { common } = useT()
   const closeLabel = common.close

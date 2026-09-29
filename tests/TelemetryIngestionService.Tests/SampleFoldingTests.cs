@@ -2,7 +2,7 @@ using TelemetryIngestionService.Domain.Services;
 
 namespace TelemetryIngestionService.Tests;
 
-// The storage decision of Adım 13.5: a signature's count and a few sample lines, not every line.
+// The storage decision: a signature's count and a few sample lines, not every line.
 // Every rule below exists because getting it wrong silently changes what detection sees.
 public sealed class SampleFoldingTests
 {

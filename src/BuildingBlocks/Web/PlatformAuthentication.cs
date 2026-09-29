@@ -80,7 +80,7 @@ public sealed class PlatformJwtOptions
 /// What a role may do, named by the capability rather than by the role.
 /// </summary>
 /// <remarks>
-/// Two distinctions (Adım 16.5, Fırat's rule): whether a person may work the incidents, and
+/// Two distinctions: whether a person may work the incidents, and
 /// whether they may see and change what belongs to the organisation itself. Viewers read the
 /// operational screens and write nothing. Engineers also work the incidents. Only an Admin sees or
 /// changes the organisation's configuration — where alerts go, which logs are read, who the

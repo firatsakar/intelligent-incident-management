@@ -37,7 +37,7 @@ const kindIcon: Record<IncidentActivityKind, LucideIcon> = {
 const commentMax = 4000
 
 /**
- * What the incident went through and who did it (Adım 14), oldest first, with the comments of
+ * What the incident went through and who did it, oldest first, with the comments of
  * the people working it in the same stream.
  *
  * The timeline above answers "when did each stage happen"; this answers "who did what". They are

@@ -1,7 +1,7 @@
 namespace IncidentService.Application.Abstractions;
 
 /// <summary>
-/// An open incident with the same external id was saved first (Adım 27).
+/// An open incident with the same external id was saved first.
 /// </summary>
 /// <remarks>
 /// Two requests carrying the same alert can both find no open incident and both try to open one;

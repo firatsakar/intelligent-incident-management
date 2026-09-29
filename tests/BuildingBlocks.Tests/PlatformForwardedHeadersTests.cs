@@ -9,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 26: an installation puts its own TLS proxy in front of the gateway. The scheme the browser
+// An installation puts its own TLS proxy in front of the gateway. The scheme the browser
 // used decides whether the session cookies are Secure; the caller's address decides which bucket
 // the sign-in rate limiter counts against. These run the framework's own middleware with the
 // options the gateway and the identity service install, so what is pinned is the behaviour, not

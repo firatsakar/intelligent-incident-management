@@ -132,7 +132,7 @@ public sealed class GetIncidentStatsQueryHandler
         };
     }
 
-    // ---- Adım 20.8 ---------------------------------------------------------------------------
+    // ---- resolution analytics -------------------------------------------------------------
 
     private static double ResolutionSeconds(IncidentResolutionRow row) =>
         (row.ResolvedAt - (row.DetectedAt ?? row.CreatedAt)).TotalSeconds;

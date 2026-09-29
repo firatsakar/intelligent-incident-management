@@ -4,6 +4,10 @@
     <File Path="docker-compose.dev.yml" />
     <File Path="example.env" />
     <File Path="README.md" />
+    <File Path="CONTRIBUTING.md" />
+    <File Path="SECURITY.md" />
+    <File Path="LICENSE" />
+    <File Path="NOTICE" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />

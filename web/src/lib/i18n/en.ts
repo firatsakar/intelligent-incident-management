@@ -9,7 +9,7 @@ import { plural } from './translate'
  * open and `scoreTerm()` falls back to splitting the camel case — but these must have words in
  * every language, so they go through `byKey`.
  *
- * `precedent` and `falsePositivePrecedent` are no longer emitted: Adım 24 folded them into
+ * `precedent` and `falsePositivePrecedent` are no longer emitted: the feedback loop folded them into
  * `history`. They stay because signals recorded before then carry them in their breakdown, and an
  * old record should keep reading as what it was.
  */
@@ -186,9 +186,9 @@ export const en = {
     forgot: 'Forgot your password? An Admin of your organisation can send you a link to set a new one.',
   },
 
-  // ---- the account's own screens (Adım 16.5) ---------------------------------------------
+  // ---- the account's own screens ---------------------------------------------
 
-  // A fresh installation's first screen (Adım 25).
+  // A fresh installation's first screen.
   setup: {
     title: 'Set up this installation',
     subtitle: 'Nobody has signed in here yet. Create the organisation and its first Admin — you.',
@@ -375,7 +375,7 @@ export const en = {
       statusUpdated: 'Status updated',
       assignedTo: (team: string) => `Assigned to ${team}`,
 
-      // Asked when an open incident is closed (Adım 24). Each option says what it does to the
+      // Asked when an open incident is closed. Each option says what it does to the
       // detector, so the choice is made knowing its effect.
       verdictDialog: {
         title: 'Was this a real problem?',
@@ -417,7 +417,7 @@ export const en = {
       notYet: 'not yet',
     },
 
-    // Adım 14. Every row is "<who> <did what>", so each action below follows a name.
+    // Every row is "<who> <did what>", so each action below follows a name.
     activity: {
       title: 'History',
       loadError: 'The history could not be loaded.',
@@ -498,7 +498,7 @@ export const en = {
 
       reasoning: 'Reasoning',
 
-      // Adım 17.5: commits the analysis read in the service's repository and named as causes.
+      // Commits the analysis read in the service's repository and named as causes.
       suspectedChanges: 'Suspected changes',
       suspectedChangesHintLabel: 'Where suspected changes come from',
       suspectedChangesHint:
@@ -791,14 +791,13 @@ export const en = {
       caption: 'Incidents opened per UTC day, by priority.',
       columnDay: 'Day (UTC)',
       columnTotal: 'Total',
-      // Adım 20.8: what closed each day, drawn as a line over the bars.
+      // What closed each day, drawn as a line over the bars.
       dayResolved: (count: number) => ` · ${count} closed`,
       resolvedSummary: (count: number) => ` · ${count} closed`,
       legendResolved: 'Closed',
       columnResolved: 'Closed',
     },
 
-    // Adım 20.8
     resolution: {
       title: 'Time to resolution',
       empty: 'Nothing was closed in this window.',
@@ -899,7 +898,7 @@ export const en = {
 
   settings: {
     /** The vocabulary the two catalogue screens share — they are one pattern shown twice. */
-    // Adım 27: how systems that already know they have a problem report it.
+    // How systems that already know they have a problem report it.
     incidentApi: {
       heading: 'Incident API',
       count: (n: number) => `${n} ${n === 1 ? 'key' : 'keys'}`,
@@ -1155,10 +1154,10 @@ export const en = {
         `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
     },
 
-    // What the analysis may read besides the incident (Adım 17.5). The page asks an Admin for a
+    // What the analysis may read besides the incident. The page asks an Admin for a
     // credential to their code, so it says what the credential is and is not used for, in place.
     // Everything the organisation connects the platform to, grouped by what the connection is for,
-    // in the order data moves through them (Fırat, 2026-09-25).
+    // in the order data moves through them.
     hub: {
       jumpTo: 'Groups on this page',
       groups: {
@@ -1223,7 +1222,7 @@ export const en = {
       },
     },
 
-    // The organisation's own settings (Adım 25): its name here; its members below it.
+    // The organisation's own settings: its name here; its members below it.
     organization: {
       title: 'Organization name',
       label: 'Name',
@@ -1233,7 +1232,7 @@ export const en = {
       saved: 'Organization renamed.',
     },
 
-    // Adım 20.6: the language the analyses write their prose in.
+    // The language the analyses write their prose in.
     aiLanguage: {
       title: 'AI response language',
       options: {

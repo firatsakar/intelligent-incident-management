@@ -63,7 +63,7 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
   const busiest = totals.length > 0 ? Math.max(...totals) : 0
   const windowTotal = totals.reduce((sum, value) => sum + value, 0)
 
-  // What closed each day (Adım 20.8), drawn as a line over the bars. The axis has to reach
+  // What closed each day, drawn as a line over the bars. The axis has to reach
   // whichever is higher, or a day that closed more than it opened draws off the plot.
   const closed = days.map((day) => day.resolved ?? 0)
   const closedTotal = closed.reduce((sum, value) => sum + value, 0)
@@ -356,7 +356,7 @@ function DayColumn({
 }
 
 /**
- * What closed each day, over the bars (Adım 20.8). A line rather than a second bar: the bars are
+ * What closed each day, over the bars. A line rather than a second bar: the bars are
  * what arrived and are stacked by priority, and a second column per day would halve their width
  * at ninety days. Where the line runs above the bars, the team closed more than came in.
  */

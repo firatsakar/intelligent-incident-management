@@ -8,7 +8,7 @@ using Testcontainers.RabbitMq;
 
 namespace Integration.Tests;
 
-// The bus against a real broker (Adım 23): the two behaviours every service relies on and no unit
+// The bus against a real broker: the two behaviours every service relies on and no unit
 // test can reach, because RabbitMqConnection is the real client.
 public sealed class RabbitMqTests
 {
@@ -104,7 +104,7 @@ public sealed class RabbitMqTests
         await using (subscriber)
         await using (publisher)
         {
-            // Nothing is listening yet. Until Adım 28 this attempt failed once, logged it, and the
+            // Nothing is listening yet. This attempt used to fail once, logged it, and the
             // service never received anything.
             subscriber.GetRequiredService<IEventBus>().Subscribe<ProbeEvent, ProbeHandler>();
 

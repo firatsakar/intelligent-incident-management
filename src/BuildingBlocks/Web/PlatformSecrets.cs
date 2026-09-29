@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 namespace BuildingBlocks.Web;
 
 /// <summary>
-/// The secrets an installation generated for itself on first start (Adım 31): one file per setting,
+/// The secrets an installation generated for itself on first start: one file per setting,
 /// named as its environment variable would be (<c>Jwt__SigningKey</c>,
 /// <c>ConnectionStrings__IncidentDb</c>), in the directory <c>IIM_SECRETS_DIR</c> names.
 /// </summary>

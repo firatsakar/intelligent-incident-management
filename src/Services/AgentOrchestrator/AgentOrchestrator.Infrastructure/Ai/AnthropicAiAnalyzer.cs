@@ -37,7 +37,7 @@ public sealed class AnthropicAiAnalyzer : IAiAnalyzer
     )
     {
         // The fallback analyzer has no tools, so it reads no code whatever the context offers.
-        // Nor does it follow the response language (Adım 20.6): it is not registered, and is kept
+        // Nor does it follow the response language: it is not registered, and is kept
         // only as the pre-agent baseline.
         var systemPrompt = BuildSystemPrompt();
         var userPrompt = BuildUserPrompt(title, description);

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace TelemetryIngestionService.Infrastructure.Persistence;
 
 /// <summary>
-/// Encrypts the credentials of telemetry sources saved before Adım 30, once, on start. Reading them
+/// Encrypts the credentials of telemetry sources saved before encryption at rest, once, on start. Reading them
 /// already works — a value without the encryption prefix is read as it is — but a source nobody
 /// edits again would otherwise keep its API key in the clear forever.
 /// </summary>

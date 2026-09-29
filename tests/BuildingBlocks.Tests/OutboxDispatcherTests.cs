@@ -125,7 +125,7 @@ public sealed class OutboxDispatcherTests
         Assert.Equal(1, message.RetryCount);
         Assert.Equal("broker unreachable", message.Error);
 
-        // Adım 28: the failure is scheduled, not left for the next tick.
+        // The failure is scheduled, not left for the next tick.
         Assert.NotNull(message.NextAttemptAt);
         Assert.Null(message.ParkedAt);
     }

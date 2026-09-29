@@ -9,16 +9,18 @@
 [![Search](https://img.shields.io/badge/Search-Elasticsearch-005571?logo=elasticsearch&logoColor=white)](https://www.elastic.co/)
 [![AI](https://img.shields.io/badge/AI-Anthropic_Claude-D4A27F?logo=anthropic&logoColor=white)](https://www.anthropic.com/)
 [![Agent Framework](https://img.shields.io/badge/Agents-Microsoft_Agent_Framework-512BD4?logo=microsoft&logoColor=white)](https://github.com/microsoft/agent-framework)
+[![Frontend](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
 ---
 
 ## 📖 Overview
 
-**Intelligent Incident Management** is a backend platform that helps engineering teams detect, triage, and resolve operational incidents faster — with the help of AI.
+**Intelligent Incident Management** is a self-hosted platform — services and a web console — that helps engineering teams detect, triage, and resolve operational incidents faster, with the help of AI.
 
-When something goes wrong in production (a service degrades, an error rate spikes, a database connection pool drains), this platform captures the incident, uses AI to automatically assess its priority and probable root cause, routes it to the right team, and keeps everyone notified — all through a decoupled, event-driven architecture.
+When something goes wrong in production (a service degrades, an error rate spikes, a database connection pool drains), this platform captures the incident — noticed in the logs on its own, reported by an alerting tool through its API, or opened by a person — uses AI to assess its priority and probable root cause, and keeps everyone notified, all through a decoupled, event-driven architecture.
 
-> **Status:** The AI feedback loop is live *and* now performs **root cause analysis**. An incident created via the API is automatically picked up by the AI agent, which forms a hypothesis, **searches the history of past incidents on its own initiative** (agentic tool-calling), and returns a calibrated analysis — suggested priority, category, evidence-based reasoning, concrete remediation steps, and a confidence score grounded in whether this failure has been seen before. All results are delivered reliably through a **Transactional Outbox**, with zero manual intervention. See the [Roadmap](#️-roadmap) below.
+> **How it works, in short:** logs arrive — pulled from Seq or pushed over OTLP — and bursts of the same error become signals. A signal that keeps firing becomes an incident. An AI agent analyses each incident, searching the platform's own history of past incidents and the failing service's recent commits on its own initiative, and returns a suggested priority and category, evidence-based reasoning, remediation steps and a confidence score. The result lands on the incident, live in the console, and in the email, webhook or Jira notifications the organisation configured. Closing an incident records whether it was real, and the detector learns from that.
 
 This project is built as a deep, hands-on exploration of **production-grade distributed systems design** with modern .NET.
 
@@ -37,6 +39,10 @@ This project is built as a deep, hands-on exploration of **production-grade dist
 - **Smart Notifications** — Email, webhook and Jira alerts go out when an analysis completes, filtered by priority and category per integration.
 - **Incident History & Comments** — Every change on an incident is recorded with who made it — a person, an API key, the telemetry detector or the AI analysis — in the same transaction as the change, and the people working it comment in the same stream.
 - **Telemetry-Driven Detection** — Incidents are raised automatically from bursts in the customer's logs, pulled from Seq or pushed over OTLP by any OpenTelemetry Collector or SDK.
+- **Code-Aware Analysis (MCP)** — With a read-only GitHub token, the analysis reads the failing service's recent commits over GitHub's MCP server and names a suspected change, linked on the incident.
+- **Incident API** — Alerting tools and scripts open incidents with an organisation API key, deduplicated by their own external id.
+- **Organisations, Users & Roles** — Invitation-based users with Admin, Engineer and Viewer roles; every record is scoped to its organisation.
+- **Secure by Default** — No default account or password: an installation generates its own secrets on first start, is claimed with a one-time setup code, and encrypts customer credentials at rest.
 
 ---
 
@@ -65,52 +71,62 @@ The web console is served by the gateway, in English and Turkish, with a light a
 The platform is composed of independent microservices coordinated through an event bus, following a **choreography pattern** — services react to events without knowing who published them.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       API Gateway (YARP)                     │
-└─────────────────────────────────────────────────────────────┘
-          │              │               │              │
-          ▼              ▼               ▼              ▼
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
-│   Incident   │ │ Notification │ │  Telemetry   │ │    Agent     │
-│   Service    │ │   Service    │ │  Ingestion   │ │ Orchestrator │
-│              │ │              │ │   Service    │ │    (AI) 🤖   │
-└──────┬───▲───┘ └──────▲───────┘ └──────┬───────┘ └──────▲───┬───┘
-       │   │            │                │                │   │
-       │   └────────────┼────────────────┼────────────────┘   │
-       │                │                │                    │
-       │  ┌─────────────┴────────────────┴────────────────────┘
-       │  │                                            ┌───────────────┐
-       ▼  ▼                                            │ Elasticsearch │
-┌─────────────────────────────────────────────────┐   │  (RCA search) │
-│                RabbitMQ Event Bus                │   └───────▲───────┘
-│  IncidentDetectedEvent ──▶ IncidentAnalyzedEvent │           │
-│      (live, bidirectional AI feedback loop ✅)    │   ┌───────┴───────┐
-└─────────────────────────────────────────────────┘   │ Outbox        │
-                                                       │ Dispatcher    │
-  Each service has its own isolated PostgreSQL DB.     │ (at-least-once)│
-  AgentOrchestrator delivers side effects via the      └───────────────┘
-  Transactional Outbox → RabbitMQ + Elasticsearch.
+       Web console                   Alerting tools                   Log shippers
+            │                               │                               │
+            ▼                               ▼                               ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│       Gateway (YARP): serves the console, routes /api, /hubs (SignalR) and /otlp      │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+        │                 │                 │                 │                 │
+        ▼                 ▼                 ▼                 ▼                 ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│    Identity   │ │    Incident   │ │  Notification │ │   Telemetry   │ │     Agent     │
+│    Service    │ │    Service    │ │    Service    │ │   Ingestion   │ │  Orchestrator │
+│               │ │               │ │               │ │    Service    │ │      (AI)     │
+└───────┬───────┘ └───────┬───────┘ └───────┬───────┘ └───────┬───────┘ └───────┬───────┘
+        ▲                 ▲                 ▲                 ▲                 ▲
+        ▼                 ▼                 ▼                 ▼                 ▼
+┌───────────────────────────────────────────────────────────────────────────────────────┐
+│         RabbitMQ event bus: integration events, one durable queue per service         │
+└───────────────────────────────────────────────────────────────────────────────────────┘
+
+  Each service owns its PostgreSQL database. AgentOrchestrator also indexes analyses in
+  Elasticsearch and reads the failing service's commits over GitHub's MCP server.
 ```
 
-**The AI loop, live today:** `IncidentService` publishes `IncidentDetectedEvent` → `AgentOrchestrator` consumes it and calls Claude. The agent forms a root-cause hypothesis and **calls its `search_similar_incidents` tool on its own** to check the Elasticsearch corpus of past analyses. It persists the analysis, then — through a **Transactional Outbox** — atomically records its intent to (1) publish `IncidentAnalyzedEvent` to RabbitMQ and (2) index the analysis into Elasticsearch. A background dispatcher delivers both reliably. `IncidentService` consumes the event and updates the incident. No manual trigger, no central orchestrator — just services reacting to events.
+**The AI loop:** `IncidentService` publishes `IncidentDetectedEvent` → `AgentOrchestrator` consumes it and calls Claude. The agent forms a root-cause hypothesis and **calls its `search_similar_incidents` tool on its own** to check the Elasticsearch corpus of past analyses. It persists the analysis, then — through a **Transactional Outbox** — atomically records its intent to (1) publish `IncidentAnalyzedEvent` to RabbitMQ and (2) index the analysis into Elasticsearch. A background dispatcher delivers both reliably. `IncidentService` consumes the event and updates the incident. No manual trigger, no central orchestrator — just services reacting to events.
+
+| Event | From → To | What it means |
+|-------|-----------|---------------|
+| `OrganizationCreatedEvent` | Identity → Telemetry | A new organisation gets its detection rule. |
+| `SignalPromotedEvent` | Telemetry → Incident | A signal passed the detection gate: open an incident. |
+| `IncidentDetectedEvent` | Incident → Agent | A new incident to analyse. |
+| `IncidentAnalyzedEvent` | Agent → Incident, Notification | The analysis: applied to the incident and sent to the integrations. |
+| `IncidentAnalysisFailedEvent` | Agent → Incident | The analysis failed; the incident shows it. |
+| `IncidentResolvedEvent` | Incident → Telemetry | Closed with a verdict: the signature is released and the detector learns from it. |
 
 ### Services
 
 | Service | Responsibility |
 |---------|----------------|
-| **IncidentService** | Core incident lifecycle — create, track, update status, assign teams. Consumes AI results and applies them to the incident. |
+| **Gateway** | The single entry point (YARP). Serves the web console and routes `/api`, `/hubs` and `/otlp` to the services; rate-limits the incident API per key. |
+| **IdentityService** | Organisations, users, invitations and roles; sign-in with short-lived JWTs and refresh tokens; the first-run setup. |
+| **IncidentService** | Core incident lifecycle — create, track, update status, assign teams, comment, close with a verdict — with the full history of changes. Opens incidents from promoted signals and from the incident API. Consumes AI results and applies them to the incident. |
 | **AgentOrchestrator** | The AI brain — analyzes incidents and suggests priority, category, reasoning, remediation steps, and a confidence score using Anthropic Claude via the Microsoft Agent Framework. Performs **agentic root cause analysis** by searching past incidents (Elasticsearch tool-calling) and delivers results reliably via a Transactional Outbox. |
-| **NotificationService** | Sends notifications (email, webhook) as incidents are created and updated. *(planned)* |
-| **TelemetryIngestionService** | Pulls logs from Seq or receives them over OTLP/HTTP (`/otlp/v1/logs`), folds bursts into signatures, and promotes anomalous ones to incidents. |
+| **NotificationService** | Sends email, webhook and Jira notifications when an analysis completes, filtered by priority and category per integration, and keeps the delivery history. |
+| **TelemetryIngestionService** | Pulls logs from Seq or receives them over OTLP/HTTP (`/otlp/v1/logs`), folds bursts into signatures, and promotes anomalous ones to incidents. Learns from the verdicts incidents are closed with. |
 
 ### Shared Building Blocks
 
 | Block | Purpose |
 |-------|---------|
-| **SharedKernel** | Base domain primitives (`Entity`, `AggregateRoot`, `DomainEvent`, `ValueObject`). |
+| **SharedKernel** | Base domain primitives (`Entity`, `AggregateRoot`, `DomainEvent`, `ValueObject`), the organisation context, access keys and at-rest encryption of secrets. |
 | **EventBus** | RabbitMQ abstraction for publishing and subscribing to integration events. |
 | **Contracts** | Shared integration event definitions exchanged between services. |
 | **Observability** | Structured logging (Serilog → Seq) and OpenTelemetry tracing (OTLP → Seq) for every service. |
+| **Outbox** | The transactional outbox: domain events harvested into the same `SaveChanges`, a dispatcher with growing back-off, one worker per message across replicas. |
+| **Application** | The validation pipeline, and masking and encryption of credentials in integration settings. |
+| **Web** | JWT authentication and roles, organisation scoping, the SignalR hub base, forwarded headers, migrations on start and the generated-secrets reader. |
 
 ---
 
@@ -129,20 +145,21 @@ The result: remediation steps specific to *this* system's history, and a confide
 ## 🛠️ Tech Stack
 
 - **Runtime:** .NET 10 / ASP.NET Core
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS 4, TanStack Query, Base UI
+- **Gateway & realtime:** YARP, SignalR
 - **Messaging:** RabbitMQ
 - **Database:** PostgreSQL (isolated per service)
 - **Search:** Elasticsearch 9.4 + Kibana (BM25 similarity search / RCA corpus)
-- **AI:** Anthropic Claude API via [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) — including agentic tool-calling
+- **AI:** Anthropic Claude API via [Microsoft Agent Framework](https://github.com/microsoft/agent-framework) — including agentic tool-calling; GitHub's MCP server through the Model Context Protocol C# SDK
 - **Patterns:** Clean Architecture, CQRS, Domain-Driven Design, Event-Driven Architecture, Transactional Outbox
 - **Libraries:** MediatR, FluentValidation, Entity Framework Core, Polly
 - **Observability:** Seq (structured logs and distributed traces), OpenTelemetry
+- **Testing:** xUnit, NSubstitute, Testcontainers (PostgreSQL, RabbitMQ)
 - **Infrastructure:** Docker & Docker Compose
 
 ---
 
 ## 🚀 Getting Started
-
-> ⚠️ This project is under active development. Setup instructions will be expanded as the platform matures.
 
 ### Install with Docker
 
@@ -232,46 +249,86 @@ everybody is signed out and the stored integration credentials can no longer be 
 
 ### Development
 
+For working on the code, the services run with `dotnet run` and the console with Vite, against
+infrastructure in Docker. You need:
+
 - [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js 24](https://nodejs.org/)
 - [Docker & Docker Compose](https://www.docker.com/)
 
-`dotnet test` runs the unit tests and `tests/Integration.Tests`, which start a throwaway Postgres
-and RabbitMQ in Docker through Testcontainers — so Docker must be running. They check what only
-the real thing can: every service's migrations against its model, organisation filters in SQL,
-unique indexes, and a subscription made before the broker is up.
+The commands below are for bash; on Windows, use Git Bash.
 
-### Running the Infrastructure
-
-For development the services run with `dotnet run` against infrastructure from
-`docker-compose.dev.yml` (RabbitMQ, a PostgreSQL per service, Elasticsearch, Kibana, Seq, pgAdmin,
-Mailpit). Its passwords come from a `.env` next to it:
+**1. Start the infrastructure.** `docker-compose.dev.yml` runs RabbitMQ, a PostgreSQL per service,
+Elasticsearch, Kibana, Seq, pgAdmin and Mailpit, published on `127.0.0.1` only. Its development
+passwords match the connection strings in each service's `appsettings.json`, so no `.env` is
+needed.
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-| Tool | URL |
-|------|-----|
-| RabbitMQ Management | http://localhost:15672 |
-| pgAdmin | http://localhost:5050 |
-| Seq (Logs) | http://localhost:8081 |
-| Elasticsearch | http://localhost:9200 |
-| Kibana | http://localhost:5601 |
+| Tool | URL | Sign-in |
+|------|-----|---------|
+| RabbitMQ Management | http://localhost:15672 | `admin` / `Admin1234!` |
+| Seq (the platform's logs and traces) | http://localhost:8081 | `admin` / `Admin1234!` |
+| pgAdmin | http://localhost:5050 | `admin@example.com` / `Admin1234!` |
+| Mailpit (every email the platform sends) | http://localhost:8025 | — |
+| Elasticsearch | http://localhost:9200 | — |
+| Kibana | http://localhost:5601 | — |
+| Seq (demo: a customer's log system to connect) | http://localhost:8082 | — |
 
-### Running a Service
-
-```bash
-dotnet run --project src/Services/IncidentService/IncidentService.API
-```
-
-Two secrets come from user secrets in development and are never committed: `Jwt:SigningKey` (every
-service) and `Secrets:EncryptionKey` (NotificationService, TelemetryIngestionService,
-AgentOrchestrator — the key that encrypts customer credentials in their databases; each service
-only reads its own, so each can have its own). For example:
+**2. Set the secrets, once.** They go into user secrets and are never committed. Every service
+validates the same JWT signing key; three services also encrypt customer credentials in their
+databases, each with its own key. The Anthropic key is optional: without it incidents are still
+created and detected, but their AI analysis fails.
 
 ```bash
-dotnet user-secrets set "Secrets:EncryptionKey" "$(openssl rand -base64 32)" --project src/Services/NotificationService/NotificationService.API
+jwt_key=$(openssl rand -base64 48)
+for service in IdentityService IncidentService NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet user-secrets set "Jwt:SigningKey" "$jwt_key" --project src/Services/$service/$service.API
+done
+for service in NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet user-secrets set "Secrets:EncryptionKey" "$(openssl rand -base64 32)" --project src/Services/$service/$service.API
+done
+dotnet user-secrets set "AiAnalyzer:ApiKey" "<your Anthropic API key>" --project src/Services/AgentOrchestrator/AgentOrchestrator.API
 ```
+
+**3. Create the databases.** In development, migrations are applied by hand, so a new migration
+is read before it runs:
+
+```bash
+dotnet tool install --global dotnet-ef
+for service in IdentityService IncidentService NotificationService TelemetryIngestionService AgentOrchestrator; do
+  dotnet ef database update --project src/Services/$service/$service.Infrastructure --startup-project src/Services/$service/$service.API
+done
+```
+
+**4. Run the services, the gateway and the console.** Each in its own terminal:
+
+```bash
+dotnet run --project src/Services/IdentityService/IdentityService.API --launch-profile http
+dotnet run --project src/Services/IncidentService/IncidentService.API --launch-profile http
+dotnet run --project src/Services/NotificationService/NotificationService.API --launch-profile http
+dotnet run --project src/Services/TelemetryIngestionService/TelemetryIngestionService.API --launch-profile http
+dotnet run --project src/Services/AgentOrchestrator/AgentOrchestrator.API --launch-profile http
+dotnet run --project src/Gateway/Gateway.API --launch-profile http
+```
+
+```bash
+npm ci --prefix web
+npm run dev --prefix web
+```
+
+The console is at http://localhost:5173. Vite sends `/api`, `/hubs` and `/otlp` to the gateway
+(http://localhost:5100), which routes them to the services. The first time, the console opens the
+first-run setup, described below.
+
+**Tests.** `dotnet test` runs the unit tests and `tests/Integration.Tests`, which start a
+throwaway Postgres and RabbitMQ in Docker through Testcontainers, so Docker must be running. They
+check what only the real thing can: every service's migrations against its model, organisation
+filters in SQL, unique indexes, and a subscription made before the broker is up. For the console,
+`npm run build`, `npm run lint` and `npm run check:i18n` in `web/`. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### First-run setup
 
@@ -330,8 +387,8 @@ curl -X POST http://localhost:8080/api/incidents/intake   -H "Content-Type: appl
 
 A key belongs to the organisation and can open incidents, nothing else — it cannot read them.
 Every incident it opens shows its name. To rotate one without a gap, make a new key, move the
-sender to it, then delete the old one. Alertmanager, Grafana and similar tools can send this JSON
-from their own webhook templates; built-in adapters for their formats are not there yet.
+sender to it, then delete the old one. Alertmanager, Grafana and similar tools send this JSON from
+their own webhook templates.
 
 ---
 
@@ -372,13 +429,15 @@ This project deliberately favors **clarity and correctness** over shortcuts:
 - **AI output is structured but schema-flexible.** AI-generated analysis is stored as `jsonb`, so richer output (reasoning, remediation steps, confidence scores, model metadata) can be added without a database migration.
 - **Search is a derived view, not a source of truth.** Elasticsearch can be wiped and rebuilt from PostgreSQL at any time; its startup failure is non-fatal by design.
 - **Reliability over convenience.** External side effects go through a Transactional Outbox rather than fire-and-forget publishing, trading a little latency for guaranteed, atomic delivery.
-- **YAGNI, and no premature abstraction.** Shared code is extracted on the *second* real use, not on speculation. (This is why MCP — and a shared search building block — are scheduled for when a genuine second consumer appears, not now.)
+- **YAGNI, and no premature abstraction.** Shared code is extracted on the *second* real use, not on speculation. (This is also why MCP is used only across a real boundary — GitHub's own server — while the agent reads the platform's own data through in-process tools.)
 
 ---
 
 ## 📝 License
 
-This project is currently developed for educational and portfolio purposes.
+Licensed under the [Apache License 2.0](LICENSE).
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Please report security issues privately, as described in [SECURITY.md](SECURITY.md).
 
 ---
 

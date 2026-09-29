@@ -12,7 +12,7 @@ using NSubstitute;
 
 namespace IdentityService.Tests;
 
-// The first-run setup (Adım 25): an empty installation is claimed once, by whoever can read the
+// The first-run setup: an empty installation is claimed once, by whoever can read the
 // server's log, and never again.
 public sealed class FirstRunSetupTests
 {

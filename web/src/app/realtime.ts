@@ -392,7 +392,7 @@ function upsertSource(client: QueryClient, source: TelemetrySource) {
 }
 
 /**
- * Adds a row to a cached incident history unless it is already there (Adım 14). The hub announces
+ * Adds a row to a cached incident history unless it is already there. The hub announces
  * every row, the writer's own comment included, and whichever of the response and the push
  * arrives second must not show it twice. A history nobody has loaded is left alone.
  */
@@ -446,7 +446,7 @@ export const hubs: HubDefinition[] = [
 
           patchStats(client, (stats) => changeIncident(stats, previous, incident))
         },
-        // A row in an incident's history (Adım 14). Appended only where that history is already
+        // A row in an incident's history. Appended only where that history is already
         // loaded; nobody is looking at the others, and they are read fresh when somebody does.
         activityRecorded: (row: IncidentActivity) => appendActivity(client, row),
       }

@@ -13,7 +13,7 @@ using NSubstitute;
 
 namespace AgentOrchestrator.Tests;
 
-// Adım 20.6: an organisation reads its analyses in its own language. The setting is the
+// An organisation reads its analyses in its own language. The setting is the
 // organisation's, English until it chooses; only the prose follows it.
 public sealed class AiResponseLanguageTests
 {
@@ -90,7 +90,7 @@ public sealed class AiResponseLanguageTests
         Assert.DoesNotContain("RESPONSE LANGUAGE", english);
     }
 
-    // ---- Adım 29: only the two names get through ------------------------------------------------
+    // ---- only the two names get through ---------------------------------------------------------
 
     [Theory]
     [InlineData("English", true)]

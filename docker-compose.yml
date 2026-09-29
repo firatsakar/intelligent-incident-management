@@ -1,4 +1,4 @@
-# The whole platform in one command (Adım 26, Adım 31):
+# The whole platform in one command:
 #
 #   docker compose up --build
 #

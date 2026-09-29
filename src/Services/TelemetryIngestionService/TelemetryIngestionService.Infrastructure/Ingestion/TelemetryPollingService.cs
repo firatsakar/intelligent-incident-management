@@ -89,7 +89,7 @@ public sealed class TelemetryPollingService : BackgroundService
             if (!IsDue(source, cursor))
                 continue;
 
-            // One replica per source (Adım 30). Asked only once the source is due, so an idle tick
+            // One replica per source. Asked only once the source is due, so an idle tick
             // costs no connection; and the cursor is read again once held, because the replica
             // that held it last may have just polled.
             await using var claim = await SourcePollLock.TryAcquireAsync(connectionString, source.Id, cancellationToken);

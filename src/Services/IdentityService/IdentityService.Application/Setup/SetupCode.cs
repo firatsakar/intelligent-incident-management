@@ -4,7 +4,7 @@ using System.Text;
 namespace IdentityService.Application.Setup;
 
 /// <summary>
-/// The one-time code that guards the first-run setup (Adım 25).
+/// The one-time code that guards the first-run setup.
 /// </summary>
 /// <remarks>
 /// <para>

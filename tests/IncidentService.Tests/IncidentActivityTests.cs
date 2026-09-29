@@ -19,7 +19,7 @@ using NSubstitute;
 
 namespace IncidentService.Tests;
 
-// Adım 14: every path that changes an incident leaves exactly one row saying what changed and who
+// Every path that changes an incident leaves exactly one row saying what changed and who
 // did it — and a path that changes nothing, or a message delivered twice, leaves none.
 public sealed class IncidentActivityTests
 {

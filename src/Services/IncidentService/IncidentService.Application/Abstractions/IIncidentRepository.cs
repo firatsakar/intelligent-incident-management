@@ -9,7 +9,7 @@ public interface IIncidentRepository
 
     /// <summary>
     /// The open (Open or InProgress) incident carrying this external id, if there is one — at most
-    /// one can exist, by a unique index (Adım 27).
+    /// one can exist, by a unique index.
     /// </summary>
     Task<Incident?> GetOpenByExternalIdAsync(string externalId, CancellationToken cancellationToken = default);
     Task AddAsync(Incident incident, CancellationToken cancellationToken = default);
@@ -41,7 +41,7 @@ public interface IIncidentRepository
     );
 
     /// <summary>
-    /// Every incident closed inside the window, by <c>ResolvedAt</c> (Adım 20.8). See
+    /// Every incident closed inside the window, by <c>ResolvedAt</c>. See
     /// <see cref="IncidentResolutionRow"/> for why this is a read of its own.
     /// </summary>
     Task<IReadOnlyList<IncidentResolutionRow>> GetResolvedRowsAsync(

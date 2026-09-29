@@ -3,7 +3,7 @@ using Npgsql;
 namespace TelemetryIngestionService.Infrastructure.Ingestion;
 
 /// <summary>
-/// One replica polls a source at a time (Adım 30): a Postgres advisory lock on the source, held on a
+/// One replica polls a source at a time: a Postgres advisory lock on the source, held on a
 /// connection of its own for the length of one poll.
 /// </summary>
 /// <remarks>

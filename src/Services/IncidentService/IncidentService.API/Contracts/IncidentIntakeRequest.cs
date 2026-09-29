@@ -3,7 +3,7 @@ using IncidentService.Domain.Enums;
 namespace IncidentService.API.Contracts;
 
 /// <summary>
-/// The one body the incident API accepts (Adım 27). Nullable throughout so a missing field is
+/// The one body the incident API accepts. Nullable throughout so a missing field is
 /// answered by the validator, in the sender's field names, rather than by the JSON reader.
 /// </summary>
 public sealed record IncidentIntakeRequest

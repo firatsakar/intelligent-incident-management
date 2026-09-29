@@ -69,7 +69,7 @@ export function LoginPage() {
   // Where the guard turned them away from, with its query string intact.
   const from = (location.state as { from?: string } | null)?.from ?? '/'
 
-  // A fresh installation has nobody to sign in as (Adım 25). Never retried: if the answer does
+  // A fresh installation has nobody to sign in as. Never retried: if the answer does
   // not come, the sign-in form is still the right screen to show.
   const setup = useQuery({
     queryKey: ['setup-status'],

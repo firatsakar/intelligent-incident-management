@@ -6,8 +6,7 @@ using Microsoft.Extensions.Configuration;
 namespace BuildingBlocks.Web;
 
 /// <summary>
-/// What the gateway and the services behind it believe about how a request reached them
-/// (Adım 26).
+/// What the gateway and the services behind it believe about how a request reached them.
 /// </summary>
 /// <remarks>
 /// <para>

@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace AgentOrchestrator.Infrastructure.Ai;
 
 /// <summary>
-/// The two tools an analysis gets when its service's code is mapped (Adım 17.5), and the memory of
+/// The two tools an analysis gets when its service's code is mapped, and the memory of
 /// what they returned.
 /// </summary>
 /// <remarks>

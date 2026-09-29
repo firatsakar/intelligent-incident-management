@@ -41,7 +41,7 @@ export interface HeatChanges {
  * The damping, which is the part of this that is a decision rather than bookkeeping.
  *
  * A storm is exactly when this fires most, and an animation an operator cannot dismiss is the
- * worst kind — the connection indicator was deliberately de-animated in Adım 19.5 for the same
+ * worst kind — the connection indicator was deliberately de-animated for the same
  * reason. So there are two limits rather than one:
  *
  *   `coalesceMs`  at most one flash per tile per this long. Thirty signals in a second produce

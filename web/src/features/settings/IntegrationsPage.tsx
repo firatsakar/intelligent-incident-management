@@ -14,7 +14,7 @@ import { ObservabilitySection } from './ObservabilitySection'
  *
  * These were three tabs — Telemetry, AI sources, Integrations — which drew the product's plumbing
  * as navigation and made "where do I connect GitHub?" a question with three candidate answers.
- * Fırat's call (2026-09-25): one Integrations page, a heading per purpose. Each group keeps the
+ * Now one Integrations page, a heading per purpose. Each group keeps the
  * catalogue it had; only the page around them changed.
  */
 

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace AgentOrchestrator.Infrastructure.Persistence;
 
 /// <summary>
-/// Encrypts GitHub tokens saved before Adım 30, once, on start. Reading them already works — a
+/// Encrypts GitHub tokens saved before encryption at rest, once, on start. Reading them already works — a
 /// value without the encryption prefix is read as it is — but a connection nobody edits again would
 /// otherwise keep its token in the clear forever.
 /// </summary>

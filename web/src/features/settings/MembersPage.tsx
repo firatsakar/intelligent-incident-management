@@ -54,7 +54,7 @@ import { OneTimeLinkDialog } from './OneTimeLinkDialog'
 
 /**
  * Who can sign in to this organisation and what each of them may do. Admins only, like everything
- * else that belongs to the organisation rather than to a person (Adım 16.5).
+ * else that belongs to the organisation rather than to a person.
  *
  * The server refuses the two changes that would lock an organisation out — anyone acting on their
  * own account, and the last active Admin being demoted or switched off. This page knows both rules

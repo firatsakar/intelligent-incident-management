@@ -1,4 +1,4 @@
-# The build context of deploy/Dockerfile.* (Adım 26). Everything an image needs is under src/ and
+# The build context of deploy/Dockerfile.*. Everything an image needs is under src/ and
 # web/; this keeps out build output, dependencies, and every development secret — user secrets
 # never live in the repository, but appsettings.Development.json and .env do on a developer's disk.
 

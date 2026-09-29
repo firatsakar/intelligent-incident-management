@@ -32,7 +32,7 @@ import type { GitHubConnection, RepositoryCheck, RepositoryMapping } from '@/typ
 import { GitHubMark } from './BrandIcons'
 
 /**
- * What the analysis may read besides the incident itself (Adım 17.5) — the Analysis group of the
+ * What the analysis may read besides the incident itself — the Analysis group of the
  * Integrations page. One source today: the organisation's GitHub, so the agent can ask "what
  * changed in this service just before it broke?", the question our own data cannot answer.
  *

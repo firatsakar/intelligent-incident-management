@@ -8,7 +8,7 @@ using NSubstitute;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 16.5, Fırat's rule: what belongs to the organisation itself — its integrations, telemetry
+// What belongs to the organisation itself — its integrations, telemetry
 // sources, members — is seen and changed by its Admins only. These pin the two places that rule
 // lives in shared code: the policy every service authorises against, and the hub group every
 // configuration broadcast is addressed to.

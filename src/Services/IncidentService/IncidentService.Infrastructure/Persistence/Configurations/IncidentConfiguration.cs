@@ -85,7 +85,7 @@ public sealed class IncidentConfiguration : IEntityTypeConfiguration<Incident>
 
         builder.Property(x => x.ReportedBy).HasMaxLength(IncidentApiKey.NameMaxLength);
 
-        // Adım 27: the same external id finds the open incident instead of opening a second one.
+        // The same external id finds the open incident instead of opening a second one.
         // The check in the handler answers the common case; this is what holds when two requests
         // carrying the same alert arrive together. Partial: resolved incidents drop out of it, so
         // an alert that fires again after one was resolved opens a new incident.

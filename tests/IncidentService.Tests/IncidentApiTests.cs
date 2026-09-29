@@ -14,7 +14,7 @@ using NSubstitute.ExceptionExtensions;
 
 namespace IncidentService.Tests;
 
-// Adım 27: external systems open incidents with an organisation's API key. The key can do one
+// External systems open incidents with an organisation's API key. The key can do one
 // thing; an alert that is resent while its incident is open finds that incident instead of
 // opening another.
 public sealed class IncidentApiTests

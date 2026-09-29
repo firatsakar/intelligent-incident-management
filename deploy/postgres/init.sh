@@ -1,9 +1,9 @@
 #!/bin/bash
-# Runs once, when the Postgres volume is first created (Adım 26): one database and one owner per
+# Runs once, when the Postgres volume is first created: one database and one owner per
 # service. One server, but no service can read another's data — each connects as its own user and
 # owns only its own database, which is the database-per-service rule without five servers.
 #
-# The passwords are the ones the `secrets` container generated (Adım 31), read from the files
+# The passwords are the ones the `secrets` container generated, read from the files
 # docker-compose.yml points the *_PASSWORD_FILE variables at. They are set once: this script does
 # not run again on an existing volume.
 #

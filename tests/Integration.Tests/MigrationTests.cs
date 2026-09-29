@@ -11,7 +11,7 @@ using TelemetryIngestionService.Infrastructure.Persistence;
 
 namespace Integration.Tests;
 
-// Every service's migrations, applied the way an installation applies them (Adım 26) to an empty
+// Every service's migrations, applied the way an installation applies them to an empty
 // database, and checked against the model the code actually has. A model change without its
 // migration is found here rather than by the first service that starts on a new server.
 [Collection(PostgresCollection.Name)]

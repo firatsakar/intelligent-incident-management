@@ -10,7 +10,7 @@ using IdentityService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+// An installation's generated secrets, when docker-compose.yml provides them.
 builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.IdentityService);
@@ -29,7 +29,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddRabbitMqEventBus(builder.Configuration);
 
 // This service both mints and validates. Validating its own tokens is what lets /api/auth/me
-// answer, and it is the same call the other four services make in Parça 5.
+// answer, and it is the same call the other four services make.
 builder.Services.AddPlatformAuth(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -54,7 +54,7 @@ var app = builder.Build();
 await app.MigrateOnStartupAsync<IdentityDbContext>();
 
 // First, so everything after it — the session cookies' Secure flag above all — sees the scheme the
-// browser used rather than the gateway's plain-HTTP hop (Adım 26).
+// browser used rather than the gateway's plain-HTTP hop.
 app.UseForwardedHeaders(PlatformForwardedHeaders.BehindGateway());
 
 app.UseExceptionHandler();
@@ -65,11 +65,11 @@ if (app.Environment.IsDevelopment())
 }
 
 // No UseHttpsRedirection: this service is reached through the gateway, which is where TLS
-// terminates. The four older services still have the line and lose it in Parça 5.
+// terminates.
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Until Adım 16.5 nothing here was scoped to an organisation — sign-in comes before one is known.
+// Sign-in is not scoped to an organisation — it comes before one is known.
 // The members endpoints are, and they read it from the Admin's claim like every other service.
 app.UseOrganizationContext();
 

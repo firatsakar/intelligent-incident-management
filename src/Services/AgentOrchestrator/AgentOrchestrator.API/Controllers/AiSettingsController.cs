@@ -8,8 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace AgentOrchestrator.API.Controllers;
 
 /// <summary>
-/// How the organisation's analyses are written (Adım 20.6). An organisation setting, so its
-/// Admins' alone — reads included (Adım 16.5).
+/// How the organisation's analyses are written. An organisation setting, so its
+/// Admins' alone — reads included.
 /// </summary>
 [ApiController]
 [Route("api/ai-settings")]

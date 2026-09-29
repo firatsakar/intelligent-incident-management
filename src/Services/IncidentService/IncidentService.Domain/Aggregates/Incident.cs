@@ -25,8 +25,8 @@ public sealed class Incident : AggregateRoot
     public string? AiReasoning { get; private set; }
     public bool IsAiAnalyzed { get; private set; }
 
-    // How sure the analysis was, on its own calibration. IncidentAnalyzedEvent has carried this
-    // since Adım 12 and nothing stored it, so the number the product leans on hardest could not be
+    // How sure the analysis was, on its own calibration. IncidentAnalyzedEvent carried this
+    // long before anything stored it, so the number the product leans on hardest could not be
     // shown anywhere. Nullable because an analysis may decline to give one.
     public double? AiConfidence { get; private set; }
 
@@ -34,7 +34,7 @@ public sealed class Incident : AggregateRoot
     // means it has not run yet — one of those resolves itself and the other does not.
     public string? AiAnalysisError { get; private set; }
 
-    // Commits the analysis named as likely causes (Adım 17.5). Replaced by each analysis; empty
+    // Commits the analysis named as likely causes. Replaced by each analysis; empty
     // when it read no code or found nothing that explained the incident.
     private List<AiRelatedChange> _aiRelatedChanges = [];
 
@@ -54,8 +54,8 @@ public sealed class Incident : AggregateRoot
     // When it was closed out. Null while open; cleared when reopened.
     public DateTime? ResolvedAt { get; private set; }
 
-    // The sender's own name for the problem, for an incident opened through the incident API
-    // (Adım 27). While an incident with it is open, the same name finds that incident instead of
+    // The sender's own name for the problem, for an incident opened through the incident API.
+    // While an incident with it is open, the same name finds that incident instead of
     // opening another — alerting tools resend what is still firing.
     public string? ExternalId { get; private set; }
 
@@ -80,8 +80,8 @@ public sealed class Incident : AggregateRoot
     )
     {
         // No domain event. There was one — IncidentCreatedDomainEvent — and nothing ever listened:
-        // the service published IncidentDetectedEvent itself after saving. Once the outbox arrived
-        // (Adım 24) an event nobody handles would have become a row retried forever, so it went.
+        // the service published IncidentDetectedEvent itself after saving. Once the outbox arrived,
+        // an event nobody handles would have become a row retried forever, so it went.
         return new Incident
         {
             Id = id ?? Guid.NewGuid(),

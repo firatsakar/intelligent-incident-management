@@ -3,8 +3,7 @@ using BuildingBlocks.SharedKernel;
 namespace BuildingBlocks.Application;
 
 /// <summary>
-/// The credentials in a config bag, encrypted for the database and decrypted on the way back
-/// (Adım 30).
+/// The credentials in a config bag, encrypted for the database and decrypted on the way back.
 /// </summary>
 /// <remarks>
 /// Which values count as credentials is <see cref="ConfigMasking"/>'s rule, the one that masks them
@@ -25,7 +24,7 @@ public static class ConfigSecrets
             pair => ConfigMasking.IsSensitive(pair.Key) ? secrets.Unprotect(pair.Value) : pair.Value
         );
 
-    /// <summary>True while a credential in it is still stored in the clear — a row from before Adım 30.</summary>
+    /// <summary>True while a credential in it is still stored in the clear — a row saved before encryption at rest.</summary>
     public static bool HasPlaintextSecret(IReadOnlyDictionary<string, string> config) =>
         config.Any(pair =>
             ConfigMasking.IsSensitive(pair.Key) && pair.Value.Length > 0 && !SecretProtector.IsProtected(pair.Value)

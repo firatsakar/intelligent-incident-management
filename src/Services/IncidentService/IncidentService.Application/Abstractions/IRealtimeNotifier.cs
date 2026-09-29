@@ -25,7 +25,7 @@ public interface IRealtimeNotifier
     Task IncidentChangedAsync(IncidentDto incident, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// A row added to an incident's activity trail (Adım 14). Its own message rather than riding on
+    /// A row added to an incident's activity trail. Its own message rather than riding on
     /// <see cref="IncidentChangedAsync"/>, because a comment does not change the incident.
     /// </summary>
     Task ActivityRecordedAsync(IncidentActivityDto activity, CancellationToken cancellationToken = default);

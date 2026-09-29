@@ -7,7 +7,7 @@ namespace BuildingBlocks.Outbox;
 /// </summary>
 /// <remarks>
 /// <para>
-/// One worker per message, however many replicas run (Adım 30). <see cref="GetPendingAsync"/> opens
+/// One worker per message, however many replicas run. <see cref="GetPendingAsync"/> opens
 /// a transaction and claims the batch with <c>FOR UPDATE SKIP LOCKED</c>: the rows stay locked
 /// while they are dispatched, and a second replica's dispatcher skips them instead of publishing
 /// them again. <see cref="SaveChangesAsync"/> writes the stamps and commits, which releases them.

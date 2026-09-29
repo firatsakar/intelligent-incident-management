@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 namespace IncidentService.Application.Commands.DeleteIncidentApiKey;
 
 /// <summary>
-/// Stops an API key working, at once (Adım 27). Incidents it opened keep its name.
+/// Stops an API key working, at once. Incidents it opened keep its name.
 /// </summary>
 public sealed record DeleteIncidentApiKeyCommand(Guid Id) : IRequest;
 

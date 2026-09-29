@@ -9,8 +9,8 @@ import { cn } from '@/lib/utils'
  *
  * This exists so no screen has to get Base UI's composition right a second time. The primitive is
  * Base UI, not Radix: there is no `asChild`, the trigger composes through `render`, and it needs
- * the Provider that `app/providers.tsx` mounts. Getting that wrong in Adım 19 is why the console
- * spent a chunk using the native `title` attribute instead.
+ * the Provider that `app/providers.tsx` mounts. Getting that wrong once is why the console
+ * spent a while using the native `title` attribute instead.
  *
  * What belongs in one, and what does not: a tooltip is invisible to a touch user who never hovers
  * and to anyone reading the screen rather than driving it, so it may only ever carry the *second*
@@ -75,7 +75,7 @@ export function InfoHint({
           two of the places that use a hint are `uppercase` section labels — so a sentence written
           to be read was being transformed into one. Invisible either way; the transform is not
           reliably absent from what a screen reader is handed. Found on the incident detail's
-          detection strip during the Adım 20.5 acceptance run, in both languages. */}
+          detection strip during an acceptance run, in both languages. */}
       <span id={describedBy} className="sr-only normal-case">
         {children}
       </span>

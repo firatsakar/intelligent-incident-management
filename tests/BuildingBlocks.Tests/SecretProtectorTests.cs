@@ -4,7 +4,7 @@ using BuildingBlocks.SharedKernel;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 30: customer credentials are encrypted in the database. What goes in comes back out; what
+// Customer credentials are encrypted in the database. What goes in comes back out; what
 // is altered, or read with another key, does not come back as something else.
 public sealed class SecretProtectorTests
 {

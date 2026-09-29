@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IncidentService.API.Controllers;
 
 /// <summary>
-/// Where an external system opens an incident with one of the organisation's API keys (Adım 27).
+/// Where an external system opens an incident with one of the organisation's API keys.
 /// </summary>
 /// <remarks>
 /// <para>

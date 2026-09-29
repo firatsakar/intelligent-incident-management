@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 namespace IdentityService.Application.Commands.CompleteSetup;
 
 /// <summary>
-/// The first-run setup (Adım 25): an empty installation gets its organisation and its first Admin,
+/// The first-run setup: an empty installation gets its organisation and its first Admin,
 /// and the Admin is signed in. Runs once — after it, nothing opens it again.
 /// </summary>
 public sealed record CompleteSetupCommand(

@@ -3,7 +3,7 @@ using BuildingBlocks.SharedKernel;
 namespace BuildingBlocks.Tests;
 
 // The credential machines send instead of signing in — shared by the OTLP ingest key and the
-// incident API key since Adım 27.
+// incident API key.
 public sealed class AccessKeyTests
 {
     [Fact]

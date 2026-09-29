@@ -7,7 +7,7 @@ using Testcontainers.PostgreSql;
 namespace Integration.Tests;
 
 /// <summary>
-/// One Postgres for the whole run (Adım 23), the same major version the platform runs on, and an
+/// One Postgres for the whole run, the same major version the platform runs on, and an
 /// empty database of its own for every test that asks — so no test sees another's rows and none
 /// depends on the order they run in.
 /// </summary>

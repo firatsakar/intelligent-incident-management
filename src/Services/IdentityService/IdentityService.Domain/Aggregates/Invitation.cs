@@ -8,7 +8,7 @@ namespace IdentityService.Domain.Aggregates;
 /// </summary>
 /// <remarks>
 /// <para>
-/// How people join an organisation (Adım 16.5). There is no open sign-up: an open sign-up is anyone
+/// How people join an organisation. There is no open sign-up: an open sign-up is anyone
 /// opening an organisation, and every incident in one triggers a paid analysis. The Admin decides
 /// who comes in and as what; the invitee decides only their own name and password.
 /// </para>
