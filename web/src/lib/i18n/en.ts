@@ -488,6 +488,40 @@ export const en = {
       notYet: 'not yet',
     },
 
+    // Adım 14. Every row is "<who> <did what>", so each action below follows a name.
+    activity: {
+      title: 'History',
+      description: 'Every change and comment, who made it and when. Nothing here can be edited.',
+      loadError: 'The history could not be loaded.',
+      notRecordedBefore:
+        'Changes made before this incident’s history was kept are not listed.',
+
+      someone: 'A member',
+      apiKey: (name: string) => `API key ${name}`,
+      detector: 'Telemetry detector',
+      ai: 'AI analysis',
+
+      opened: 'opened the incident',
+      statusChanged: (from: string, to: string) => `changed the status: ${from} → ${to}`,
+      teamAssigned: (team: string) => `assigned it to ${team}`,
+      teamReassigned: (from: string, to: string) => `reassigned it: ${from} → ${to}`,
+      analysed: (category: string | null) =>
+        category ? `categorised it as ${category}` : 'analysed it',
+      priorityChanged: (from: string, to: string) => `priority ${from} → ${to}`,
+      priorityKept: (priority: string) => `priority stays ${priority}`,
+      analysisFailed: 'could not analyse it',
+      commented: 'commented',
+      withDetail: (action: string, detail: string) => `${action} · ${detail}`,
+
+      commentLabel: 'Comment',
+      commentPlaceholder: 'What you tried, what you found, what happens next',
+      commentHint: 'Comments cannot be edited or deleted afterwards.',
+      remaining: (count: number) =>
+        `${count} ${plural('en', count, { one: 'character', other: 'characters' })} left`,
+      send: 'Comment',
+      sending: 'Sending…',
+    },
+
     score: {
       // Not "Why this was raised": the detector writes that exact phrase as a heading inside the
       // evidence summary, which renders in the card immediately above this one.
@@ -1582,7 +1616,8 @@ export const en = {
     // is Admin and Engineer, and everything else reads.
     roleDetail: byKey<UserRole>({
       Admin: 'Everything, including the organisation’s members, integrations and telemetry sources.',
-      Engineer: 'Works incidents — status and assignment. Does not see the organisation’s settings.',
+      Engineer:
+        'Works incidents — status, assignment and comments. Does not see the organisation’s settings.',
       Viewer: 'Reads incidents, signals, evidence and dashboards, and changes nothing.',
     }),
 

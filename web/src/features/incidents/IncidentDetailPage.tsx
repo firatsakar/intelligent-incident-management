@@ -32,11 +32,18 @@ import {
   type IncidentStatus,
 } from '@/types/api'
 
+import { ActivityPanel } from './ActivityPanel'
 import { AiAnalysisPanel } from './AiAnalysisPanel'
 import { DeliveryStrip } from './DeliveryStrip'
 import { IncidentTimeline } from './IncidentTimeline'
 import { ScoreBreakdownPanel } from './ScoreBreakdownPanel'
-import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './queries'
+import {
+  useAssignTeam,
+  useDeliveries,
+  useIncident,
+  useIncidentActivity,
+  useUpdateStatus,
+} from './queries'
 import { VerdictDialog } from './VerdictDialog'
 
 /**
@@ -56,6 +63,7 @@ export function IncidentDetailPage() {
 
   const incident = useIncident(id)
   const deliveries = useDeliveries(id)
+  const activity = useIncidentActivity(id)
 
   const canOperate = useCanOperate()
   const updateStatus = useUpdateStatus(id)
@@ -261,7 +269,13 @@ export function IncidentDetailPage() {
 
           <ScoreBreakdownPanel incident={data} />
 
-          <IncidentTimeline incident={data} deliveries={deliveries.data ?? []} />
+          <IncidentTimeline
+            incident={data}
+            deliveries={deliveries.data ?? []}
+            activity={activity.data ?? []}
+          />
+
+          <ActivityPanel incidentId={data.id} canComment={canOperate} />
         </div>
 
         <div className="min-w-0 space-y-6">

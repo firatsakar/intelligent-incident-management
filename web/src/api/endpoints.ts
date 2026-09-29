@@ -5,6 +5,7 @@ import type {
   EvidenceWindow,
   GitHubConnection,
   Incident,
+  IncidentActivity,
   IncidentApiKey,
   IncidentPriority,
   IncidentStats,
@@ -63,6 +64,13 @@ export const incidentsApi = {
 
   assignTeam: (id: string, team: string) =>
     api.patch<void>(`/api/incidents/${id}/team`, { team }),
+
+  /** Oldest first; the newest 500 when there are more. */
+  activity: (id: string) => api.get<IncidentActivity[]>(`/api/incidents/${id}/activity`),
+
+  /** Admin and Engineer. Comments are not editable afterwards. */
+  addComment: (id: string, text: string) =>
+    api.post<IncidentActivity>(`/api/incidents/${id}/comments`, { text }),
 }
 
 export const telemetryApi = {
