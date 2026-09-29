@@ -1,11 +1,9 @@
 <Solution>
   <Folder Name="/Solution Items/">
-    <File Path=".env" />
-    <File Path="docker-compose.override.yml" />
     <File Path="docker-compose.yml" />
-  </Folder>
-  <Folder Name="/demo/">
-    <Project Path="demo/MonitoredShop/MonitoredShop.csproj" />
+    <File Path="docker-compose.dev.yml" />
+    <File Path="example.env" />
+    <File Path="README.md" />
   </Folder>
   <Folder Name="/src/" />
   <Folder Name="/src/BuildingBlocks/" />
