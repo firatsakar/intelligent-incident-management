@@ -10,11 +10,9 @@ Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20
 **20.8**, **23**, **24**, **25**, **26**, **27** ve **28** bitti; `develop` güncel ve push'lanmış,
 **594 test yeşil** (entegrasyon testleri Docker ister), prob **99/99**. Ürün **açık kaynak**.
 **`master` geride:** son sürüm noktası PR #20; Adım 26'dan beri her şey yalnız `develop`'ta —
-`develop` → `master` (PR ile) Fırat'ın kararı. **Kalan iki iş Fırat'la ayrıntılı konuşulacak:**
-**13.6 — hazır alarm adaptörleri** (Grafana / Alertmanager / Datadog / CloudWatch gövdeleri olay
-API'sine; alarm "çözüldü" gelince kapatma ayrı bir karar, çünkü kapatma insan kararı istiyor) ve
-**14 — yorumlar ve olay geçmişi** (denetim kaydı; basit tablo mu event sourcing mi). Sırayı sen
-önerme, sor; kapsamı belirsiz adımda önce ne işe yaradığını anlat, kararları sor, sonra plan.
+`develop` → `master` (PR ile) Fırat'ın kararı. **13.6 — hazır alarm adaptörleri iptal edildi**
+(`IIM-171`, 2026-09-29): elle olay açmak isteyene Adım 27'nin olay API'si yeter. Kalan iş
+**14 — yorumlar ve olay geçmişi**.
 
 ---
 
