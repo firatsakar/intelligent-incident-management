@@ -70,6 +70,10 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();
 
+        // Adım 30: log records are kept for Telemetry:LogRetentionDays (default 7), then dropped.
+        services.AddSingleton<LogRetentionService>();
+        services.AddHostedService(sp => sp.GetRequiredService<LogRetentionService>());
+
         return services;
     }
 }

@@ -236,6 +236,7 @@ services:
     environment:
       <<: *service-environment
       ConnectionStrings__TelemetryDb: Host=postgres;Database=telemetry_db;Username=telemetry_user;Password=${TELEMETRY_DB_PASSWORD:?Set TELEMETRY_DB_PASSWORD in deploy/.env (see deploy/example.env)}
+      Telemetry__LogRetentionDays: ${LOG_RETENTION_DAYS:-7}
 
   gateway:
     image: iim-gateway:local

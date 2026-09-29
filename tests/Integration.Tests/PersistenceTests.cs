@@ -399,6 +399,47 @@ public sealed class PersistenceTests(PostgresFixture postgres)
         Assert.Equal("github_pat_example_token_value", (await context.GitHubConnections.SingleAsync()).Token);
     }
 
+    // ---- Adım 30: log records are kept for the retention period, then dropped ----------------
+
+    [Fact]
+    public async Task TheRetentionSweepDropsOnlyLogRecordsOlderThanTheCutoff()
+    {
+        await using var provider = await Migrated<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>(
+            "TelemetryDb",
+            (services, configuration) =>
+                global::TelemetryIngestionService.Infrastructure.ServiceCollectionExtensions.AddInfrastructure(services, configuration)
+        );
+
+        var now = DateTime.UtcNow;
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>();
+            var source = Guid.NewGuid();
+
+            global::TelemetryIngestionService.Domain.Aggregates.LogRecord LogRecordAt(DateTime age) =>
+                global::TelemetryIngestionService.Domain.Aggregates.LogRecord.Create(
+                    OrgA, source, Guid.NewGuid().ToString(), "checkout", global::TelemetryIngestionService.Domain.Enums.LogSeverity.Error,
+                    "boom", "boom", null, null, "fp", age, TimeSpan.FromMinutes(5)
+                );
+
+            context.LogRecords.AddRange(LogRecordAt(now.AddDays(-9)), LogRecordAt(now.AddDays(-8)), LogRecordAt(now.AddHours(-1)));
+            await context.SaveChangesAsync();
+        }
+
+        var retention = provider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.LogRetentionService>();
+
+        // Swept with no organisation in scope: retention is the installation's, not a tenant's.
+        Assert.Equal(2, await retention.SweepAsync(now - retention.Retention));
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<global::TelemetryIngestionService.Infrastructure.Persistence.TelemetryDbContext>();
+            var left = Assert.Single(await context.LogRecords.ToListAsync());
+            Assert.True(left.Timestamp > now.AddDays(-1));
+        }
+    }
+
     // ---- Adım 17.5: an analysis with suspected changes reads back ----------------------------
 
     [Fact]
