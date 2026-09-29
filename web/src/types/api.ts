@@ -61,6 +61,37 @@ export interface Incident {
   updatedAt: string | null
 }
 
+/** What happened to an incident, as its activity trail records it (Adım 14). */
+export type IncidentActivityKind =
+  | 'Opened'
+  | 'StatusChanged'
+  | 'TeamAssigned'
+  | 'AnalysisApplied'
+  | 'AnalysisFailed'
+  | 'Commented'
+
+/** A person in the console, an incident API key, the telemetry detector, or the AI analysis. */
+export type ActivityActorKind = 'User' | 'ApiKey' | 'Detector' | 'Ai'
+
+/** One row of an incident's history. Written once and never changed. */
+export interface IncidentActivity {
+  id: string
+  incidentId: string
+  kind: IncidentActivityKind
+  at: string
+  actorKind: ActivityActorKind
+  actorId: string | null
+  /** As it was then — copied, so it outlives the person or the key. */
+  actorName: string | null
+  /** A status, a team or a priority, by kind; statuses and priorities as their enum names. */
+  from: string | null
+  to: string | null
+  /** Only on the change that closed the incident. */
+  verdict: IncidentVerdict | null
+  /** A comment's text, the category the analysis chose, or why it failed. */
+  text: string | null
+}
+
 /** A key an external system opens incidents with (Adım 27). Never the key itself. */
 export interface IncidentApiKey {
   id: string

@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using BuildingBlocks.Web;
 using IncidentService.API.Contracts;
+using IncidentService.Application.Commands.AddIncidentComment;
 using IncidentService.Application.Commands.AssignTeam;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
+using IncidentService.Application.Queries.GetIncidentActivity;
 using IncidentService.Application.Queries.GetIncidentById;
 using IncidentService.Application.Queries.GetIncidents;
 using IncidentService.Application.Queries.GetIncidentStats;
@@ -52,6 +54,36 @@ public sealed class IncidentsController : ControllerBase
         var result = await _sender.Send(new GetIncidentByIdQuery(id), cancellationToken);
         return Ok(result);
     }
+
+    /// <summary>
+    /// What the incident went through and who did it, oldest first (Adım 14). Every member reads
+    /// it; a Viewer sees who worked the incident as well as anyone.
+    /// </summary>
+    [HttpGet("{id:guid}/activity")]
+    public async Task<IActionResult> GetActivity(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GetIncidentActivityQuery(id), cancellationToken));
+
+    /// <summary>
+    /// A comment in the incident's activity trail. Whoever may work the incident may write one;
+    /// a Viewer reads them.
+    /// </summary>
+    [HttpPost("{id:guid}/comments")]
+    [Authorize(Policy = PlatformPolicies.Operate)]
+    public async Task<IActionResult> AddComment(
+        Guid id,
+        [FromBody] AddCommentRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var comment = await _sender.Send(
+            new AddIncidentCommentCommand(id, request.Text ?? string.Empty),
+            cancellationToken
+        );
+
+        return StatusCode(StatusCodes.Status201Created, comment);
+    }
+
+    public sealed record AddCommentRequest(string? Text);
 
     /// <summary>
     /// Arrival shape over time plus the current open picture, for the dashboard. The guid

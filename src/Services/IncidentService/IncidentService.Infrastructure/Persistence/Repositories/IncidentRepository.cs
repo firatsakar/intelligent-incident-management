@@ -49,9 +49,16 @@ public sealed class IncidentRepository : IIncidentRepository
                   })
         {
             // Out of the unit of work, or the next save in this scope would try the same insert
-            // again and fail the same way.
+            // again and fail the same way. The losing incident's "opened" row goes with it: left
+            // behind, the next save would insert a history row for an incident that never was.
+            var lost = ex.Entries.Select(entry => entry.Entity).OfType<Incident>().Select(x => x.Id).ToHashSet();
+
             foreach (var entry in ex.Entries)
                 entry.State = EntityState.Detached;
+
+            foreach (var entry in _context.ChangeTracker.Entries<IncidentActivity>().ToList())
+                if (entry.State == EntityState.Added && lost.Contains(entry.Entity.IncidentId))
+                    entry.State = EntityState.Detached;
 
             throw new DuplicateExternalIdException(ex);
         }

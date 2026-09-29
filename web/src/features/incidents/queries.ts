@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
 import { incidentsApi, notificationsApi, type IncidentListParams } from '@/api/endpoints'
+import { appendActivity } from '@/app/realtime'
 import { useT } from '@/lib/i18n'
 import type { Incident, IncidentStatus, IncidentVerdict } from '@/types/api'
 
@@ -11,6 +12,7 @@ export const incidentKeys = {
   list: (params: IncidentListParams) => ['incidents', params] as const,
   detail: (id: string) => ['incident', id] as const,
   deliveries: (id: string) => ['deliveries', id] as const,
+  activity: (id: string) => ['incident-activity', id] as const,
 }
 
 export function useIncidents(params: IncidentListParams) {
@@ -24,6 +26,23 @@ export function useIncident(id: string) {
   return useQuery({
     queryKey: incidentKeys.detail(id),
     queryFn: () => incidentsApi.byId(id),
+  })
+}
+
+export function useIncidentActivity(incidentId: string) {
+  return useQuery({
+    queryKey: incidentKeys.activity(incidentId),
+    queryFn: () => incidentsApi.activity(incidentId),
+  })
+}
+
+export function useAddComment(incidentId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (text: string) => incidentsApi.addComment(incidentId, text),
+    onSuccess: (row) => appendActivity(queryClient, row),
+    onError: (error: Error) => toast.error(error.message),
   })
 }
 

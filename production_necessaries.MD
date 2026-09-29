@@ -155,7 +155,9 @@ yalnız Admin'e açık, GET dahil. Kalanlar:
   SPF/DKIM'li bir gönderici gerekir, ve **`Console:BaseUrl` konsolun gerçek adresi olmalı** —
   yanlışsa e-postadaki bağlantılar `localhost`'u gösterir.
 - 🟡 **Kim kimi davet etti, kim sıfırladı** satırlarda duruyor (`InvitedByUserId`,
-  `IssuedByUserId`), ama görüntüleyen bir denetim ekranı yok (Adım 14).
+  `IssuedByUserId`), ama görüntüleyen bir denetim ekranı yok. Adım 14 yalnız **olay** geçmişini
+  getirdi; organizasyon düzeyinde denetim kaydı (davet, rol, kapatma, sıfırlama, anahtar ve ayar
+  değişiklikleri — kim, ne zaman) hâlâ yok.
 - SSO / SCIM / MFA → aşağıdaki "Kimlik doğrulama yalnızca yerel parola".
 
 ### 🟡 Oturum iptali yalnızca refresh tarafında
@@ -221,7 +223,23 @@ Organizasyona ait, adlandırılmış anahtarlar; yalnız **SHA-256 hash**'i sakl
 gösteriliyor. Yetkisi yalnız olay açmak — okuyamaz, değiştiremez, yanıt yalnız `{ id, created }`.
 Organizasyonu anahtar belirliyor; izolasyon probunda 15 kontrol. Kalanlar: anahtarların **son
 kullanma tarihi yok** (döndürme elle: yeni anahtar → göndericiyi geçir → eskisini sil) ve kimin
-hangi anahtarı ne zaman sildiği yalnız log'da (denetim ekranı Adım 14).
+hangi anahtarı ne zaman sildiği yalnız log'da (organizasyon düzeyinde denetim kaydı yok; Adım 14
+yalnız olay geçmişini getirdi — anahtarla açılan olayın açılışı orada anahtarın adıyla duruyor).
+
+### 🟢 Olay geçmişi ve yorumlar (Adım 14)
+
+Her değişiklik ekleme-only bir satır, değişiklikle aynı transaction'da; aktörün adı kopyalanıyor
+(kişi ayrılsa, anahtar silinse de kalıyor). Kalanlar, hiçbiri acil değil:
+- **Saklama süresi yok** — satırlar olayla birlikte yaşıyor (olay silinirse cascade); büyüme olay
+  başına birkaç satır, yorumlar hariç. Okuma olay başına en yeni **500** satır.
+- **Yorumlar düzenlenemez/silinemez** (bilinçli: kayıt). Yanlışlıkla yazılmış hassas bir bilgiyi
+  (parola, token) kaldırmanın yolu bugün yalnız veritabanı — üretimde bir "yorumu kaldır, izini
+  bırak" (redaction) gerekebilir.
+- **Yorum ucunda rate limit yok** (oturumlu ve yalnız Admin + Mühendis); yorum **bildirim
+  göndermiyor** ve mention yok.
+- **Adım 14'ten önce açılmış olaylar geriye doldurulmadı**; konsol bunu kartta söylüyor.
+- Analiz zamanı yalnız ilk uygulamada kaydediliyor; ikinci bir analiz (bugün yalnız yeniden teslim,
+  o da kayıt yazmıyor) geçmişte görünmez.
 
 - `dist/`'in gateway'e kopyalanması bir publish adımı olarak henüz yok (Adım 21/22).
 

@@ -1,22 +1,32 @@
 # Sonraki Session — Devir Notu
 
-> **2026-09-26 tarihli anlık görüntü.** Kalıcı doğruluk kaynakları `PROGRESS.md` (nerede
+> **2026-09-29 tarihli anlık görüntü.** Kalıcı doğruluk kaynakları `PROGRESS.md` (nerede
 > olduğumuz) ve `production_necessaries.MD` (neyin eksik olduğu). Bu dosya sadece hızlı
 > başlangıç içindir; ikisiyle çeliştiğinde **onlar geçerlidir**.
 
 ## Tek cümlelik durum
 
-Adım 1–13, **13.5**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, **20.6**, 20.7,
-**20.8**, **23**, **24**, **25**, **26**, **27** ve **28** bitti; `develop` güncel ve push'lanmış,
-**594 test yeşil** (entegrasyon testleri Docker ister), prob **99/99**. Ürün **açık kaynak**.
+Adım 1–13, **13.5**, **14**, 15, 16, **16.5**, **17**, **17.5**, 18, 19, 19.5, 20, 20.5, **20.6**,
+20.7, **20.8**, **23**, **24**, **25**, **26**, **27** ve **28** bitti; **13.6 iptal** (`IIM-171`:
+elle olay açmak isteyene Adım 27'nin olay API'si yeter). `develop` güncel ve push'lanmış,
+**618 test yeşil** (entegrasyon testleri Docker ister), prob **107/107**. Ürün **açık kaynak**.
 **`master` geride:** son sürüm noktası PR #20; Adım 26'dan beri her şey yalnız `develop`'ta —
-`develop` → `master` (PR ile) Fırat'ın kararı. **13.6 — hazır alarm adaptörleri iptal edildi**
-(`IIM-171`, 2026-09-29): elle olay açmak isteyene Adım 27'nin olay API'si yeter. Kalan iş
-**14 — yorumlar ve olay geçmişi**.
+`develop` → `master` (PR ile) Fırat'ın kararı. **Yol haritasında konuşulmuş açık iş yok**; sıradaki
+iş için `production_necessaries.MD` ve PROGRESS tech-debt listesi — sırayı sen önerme, sor.
 
 ---
 
 ## Nerede kaldık
+
+**Adım 14 — yorumlar ve olay geçmişi** (`IIM-172`, 2026-09-29). Fırat "tüm bekleyen adımları
+bitir" dedi; kararlar varsayılanlarla alındı ve PROGRESS'te yazılı (değiştirilebilir). IncidentService'te
+ekleme-only `incident_activities`: açılış (kişi / API anahtarı / dedektör), durum (+ karar), ekip,
+AI analizi (ilk uygulama; öncelik önce → sonra), AI hatası, yorum — her biri değişiklikle **aynı
+`SaveChanges`'te**, aktörün adı kopyalanarak. `GET /api/incidents/{id}/activity` (her üye),
+`POST /api/incidents/{id}/comments` (Admin + Mühendis; düzenleme/silme yok). Olay soketinde
+`activityRecorded`. Konsol: olay detayında **Olay geçmişi** kartı + yorum kutusu; zaman çizelgesinde
+analiz aşaması artık zamanlı. Eski olaylar geriye doldurulmadı. **Yok:** organizasyon düzeyinde
+denetim kaydı (davet, rol, sıfırlama, anahtar, ayar değişiklikleri) — ayrı bir iş.
 
 **2026-09-26, Fırat'ın sırasıyla dört adım** (13.6 ve 14 hariç kalanlar):
 - **Adım 28 — sessiz arızalar** (`IIM-159`): outbox başarısız satırı `min(5 sn × 2^(n−1), 15 dk)`

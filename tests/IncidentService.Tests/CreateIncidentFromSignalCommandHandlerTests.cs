@@ -41,7 +41,8 @@ public sealed class CreateIncidentFromSignalCommandHandlerTests
             _eventBus,
             _realtime,
             NullLogger<CreateIncidentFromSignalCommandHandler>.Instance,
-            _organization
+            _organization,
+            Substitute.For<IIncidentActivityRepository>()
         );
     }
 

@@ -1,5 +1,6 @@
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Exceptions;
 using MediatR;
 
@@ -15,14 +16,17 @@ public sealed class RecordAiAnalysisFailureCommandHandler
 {
     private readonly IIncidentRepository _repository;
     private readonly IRealtimeNotifier _realtime;
+    private readonly IIncidentActivityRepository _activity;
 
     public RecordAiAnalysisFailureCommandHandler(
         IIncidentRepository repository,
-        IRealtimeNotifier realtime
+        IRealtimeNotifier realtime,
+        IIncidentActivityRepository activity
     )
     {
         _repository = repository;
         _realtime = realtime;
+        _activity = activity;
     }
 
     public async Task Handle(
@@ -36,7 +40,15 @@ public sealed class RecordAiAnalysisFailureCommandHandler
 
         // A later success clears this, and the aggregate owns that rule. Nothing here decides
         // whether a failure is still current — redelivery would make that decision wrong.
+        var errorBefore = incident.AiAnalysisError;
+
         incident.RecordAiAnalysisFailure(request.Error);
+
+        // The same failure redelivered is the same failure, recorded once.
+        var recorded = incident.AiAnalysisError == errorBefore ? null : IncidentActivity.AnalysisFailed(incident);
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -45,5 +57,6 @@ public sealed class RecordAiAnalysisFailureCommandHandler
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

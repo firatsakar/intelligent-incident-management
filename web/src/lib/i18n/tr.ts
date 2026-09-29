@@ -428,6 +428,39 @@ export const tr: Dictionary = {
       notYet: 'henüz değil',
     },
 
+    activity: {
+      title: 'Olay geçmişi',
+      description:
+        'Her değişiklik ve yorum; kimin yaptığı ve ne zaman. Buradaki hiçbir şey düzenlenemez.',
+      loadError: 'Olay geçmişi yüklenemedi.',
+      notRecordedBefore:
+        'Bu olayın geçmişi tutulmaya başlamadan önceki değişiklikler listede yok.',
+
+      someone: 'Bir üye',
+      apiKey: (name: string) => `${name} API anahtarı`,
+      detector: 'Telemetri dedektörü',
+      ai: 'AI analizi',
+
+      opened: 'olayı açtı',
+      statusChanged: (from: string, to: string) => `durumu değiştirdi: ${from} → ${to}`,
+      teamAssigned: (team: string) => `${team} ekibine atadı`,
+      teamReassigned: (from: string, to: string) => `ekibi değiştirdi: ${from} → ${to}`,
+      analysed: (category: string | null) =>
+        category ? `${category} olarak sınıflandırdı` : 'analiz etti',
+      priorityChanged: (from: string, to: string) => `öncelik ${from} → ${to}`,
+      priorityKept: (priority: string) => `öncelik ${priority} kaldı`,
+      analysisFailed: 'analiz edemedi',
+      commented: 'yorum yazdı',
+      withDetail: (action: string, detail: string) => `${action} · ${detail}`,
+
+      commentLabel: 'Yorum',
+      commentPlaceholder: 'Ne denediniz, ne buldunuz, sırada ne var',
+      commentHint: 'Yorumlar sonradan düzenlenemez ve silinemez.',
+      remaining: (count: number) => `${count} karakter kaldı`,
+      send: 'Yorum ekle',
+      sending: 'Gönderiliyor…',
+    },
+
     score: {
       title: 'Kapı bunu nasıl puanladı',
       description: 'Bir yargı değil, belirlenimci bir puan.',
@@ -1395,7 +1428,7 @@ export const tr: Dictionary = {
 
     roleDetail: {
       Admin: 'Her şey; organizasyonun üyeleri, entegrasyonları ve telemetri kaynakları dahil.',
-      Engineer: 'Olayları işler — durum ve atama. Organizasyonun ayarlarını görmez.',
+      Engineer: 'Olayları işler — durum, atama ve yorum. Organizasyonun ayarlarını görmez.',
       Viewer: 'Olayları, sinyalleri, kanıtı ve genel bakışı okur; hiçbir şeyi değiştirmez.',
     },
 

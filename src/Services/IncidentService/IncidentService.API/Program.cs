@@ -5,6 +5,7 @@ using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using IncidentService.API.Realtime;
+using IncidentService.API.Security;
 using FluentValidation;
 using IncidentService.API.BackgroundServices;
 using IncidentService.Application.Abstractions;
@@ -67,6 +68,10 @@ builder.Services.AddSignalR();
 // Scoped rather than singleton, because who a push is addressed to depends on the scope it is
 // sent from. The hub context it wraps is a singleton either way.
 builder.Services.AddScoped<IRealtimeNotifier, SignalRIncidentNotifier>();
+
+// Who did it, for the activity trail (Adım 14). Null on the bus, where no person started anything.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 // The same call IdentityService makes. Every service validates the token on its own:
 // the gateway forwards it, it does not vouch for it.
