@@ -34,7 +34,8 @@ This project is built as a deep, hands-on exploration of **production-grade dist
 - **Portable Search Layer** — Similarity search runs on Elasticsearch, deliberately decoupled from the source-of-truth database, keeping the analysis engine independent of any specific storage backend (on-prem friendly).
 - **Clean Architecture** — Every service follows a strict layered design (Domain → Application → Infrastructure → API).
 - **CQRS** — Commands and queries are cleanly separated using MediatR.
-- **Smart Notifications** — Stakeholders are alerted automatically as incidents evolve. *(planned)*
+- **Smart Notifications** — Email, webhook and Jira alerts go out when an analysis completes, filtered by priority and category per integration.
+- **Incident History & Comments** — Every change on an incident is recorded with who made it — a person, an API key, the telemetry detector or the AI analysis — in the same transaction as the change, and the people working it comment in the same stream.
 - **Telemetry-Driven Detection** — Incidents are raised automatically from bursts in the customer's logs, pulled from Seq or pushed over OTLP by any OpenTelemetry Collector or SDK.
 
 ---
@@ -295,7 +296,7 @@ from their own webhook templates; built-in adapters for their formats are not th
 - [x] NotificationService — email/webhook/Jira alerts on incident lifecycle events
 - [x] TelemetryIngestionService — anomaly-based incident detection, Seq pull and OTLP push ingest
 - [x] Feedback loop — closing an incident records whether it was real or a false positive, and the detector scores that error's next burst accordingly
-- [ ] Comment & timeline (audit trail)
+- [x] Incident history & comments — who changed what and when, recorded with the change; comments from Admins and Engineers
 - [x] API Gateway (YARP) & JWT authentication, organisation-scoped data, roles
 - [x] Invitation-based user management — Admins invite by email, change roles, deactivate accounts and issue password resets; organisation settings are Admin-only
 - [x] Distributed tracing with OpenTelemetry — one trace from a pushed log line to the notification
@@ -303,8 +304,8 @@ from their own webhook templates; built-in adapters for their formats are not th
 - [x] Incident API — external systems open incidents with an organisation API key, deduplicated by their own external id
 - [x] **MCP integration, GitHub first** — the analysis reads the failing service's recent commits over GitHub's MCP server (read-only, the organisation's own token) and names a suspected change, linked on the incident
 - [ ] More MCP sources (Grafana, Kubernetes, PagerDuty) on the same client
-- [ ] Unit & integration tests
-- [ ] React frontend & analytics dashboard (MTTR, trends, model performance)
+- [x] Unit & integration tests (integration tests run real PostgreSQL and RabbitMQ in Docker)
+- [x] React frontend & analytics dashboard (time to resolution, detection accuracy, AI analysis, trends)
 - [x] One-command install — Dockerfiles and a Docker Compose file for the whole platform (CI/CD and Kubernetes are left to each installation)
 
 ---
