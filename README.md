@@ -130,6 +130,66 @@ The platform is composed of independent microservices coordinated through an eve
 
 ---
 
+## 🔍 Detection — How Logs Become Incidents
+
+Incidents are opened from logs by a deterministic gate, not by the AI. Every part of a signal's
+score is recorded on it and shown on the **Signals** screen, so any promotion can be explained. The
+AI comes in afterwards, to analyse the incident the gate opened.
+
+**1. Only errors count.** Severity is read from the log's own structured level, never by searching
+the text for "error". From Seq, the connector asks for `@Level in ['Error','Fatal']` and reads each
+event's `Level`; over OTLP it is the standard `SeverityNumber` (17–20 Error, 21–24 Fatal), or
+`SeverityText` when no number is set. Information and Warning records are kept as context for the
+evidence screen but never raise anything, and a plain-text line without a level counts as
+Information — so the platform expects structured logs (Serilog, OpenTelemetry and the like).
+
+**2. Errors are grouped into signatures.** Two errors are the same error when they come from the
+same service, throw the same exception type, and say the same thing once the volatile parts are
+removed: the log's message template is used when it has one; otherwise ids, email addresses, long
+hex strings and numbers are masked. The signature is a hash of those three. Repeats are folded — a
+signature keeps its count and a few sample lines, not every copy.
+
+**3. A burst raises a signal.** Each batch of logs is checked against the signatures it touched.
+The rule an organisation starts with is **3 errors of one signature within 5 minutes**; a fatal
+error does not wait for the count. A signature raises at most one signal per 5-minute window, so
+the count measures the error rather than how often the platform looked. A rule scoped to one
+service takes precedence over the catch-all.
+
+**4. The signal is scored.** Confidence starts at 0.55 and moves with the evidence, clamped to 0–1:
+
+| Component | Effect |
+|-----------|--------|
+| Burst over the threshold | 0.55 to start with |
+| Size of the burst | +0.10 for each doubling past the threshold, up to +0.30 |
+| Rate anomaly | +0.25 when the rate is unusual for this signature: a z-score of 2 or more against its previous 12 windows. An error never seen before counts as unusual. |
+| History | −0.25 to +0.15, from how this signature's earlier incidents were closed — real or false alarm. Discounted while there are few verdicts: with *n* of them it carries *n*/(*n*+2) of its value. |
+| Fatal | Scoring is skipped: confidence 1.0. |
+
+**5. The score decides.**
+
+| Confidence | Outcome |
+|------------|---------|
+| Below 0.60 | Recorded, nothing more. |
+| 0.60 up to 0.90 | **Weak** — shown to people, wakes nobody. |
+| 0.90 or more, with this signature's incident still open and the error seen within 24 hours | **Deduplicated** — counted into the open incident instead of opening another. |
+| 0.90 or more otherwise | **Promoted** — an incident opens with a title, an evidence summary and a sample stack trace, starting at Critical (fatal), High (ten times the threshold) or Medium. The AI analysis then sets the real priority. |
+
+A promotion leaves through the transactional outbox, in the same transaction as the signal.
+
+**6. Verdicts teach the gate.** Closing an incident asks whether it was a real problem. The answer
+releases the signature from its incident and is counted on it, and the history term uses those
+counts the next time the error bursts. It is asymmetric on purpose: a false alarm costs more
+(−0.25) than a confirmation earns (+0.15), because waking someone for nothing again is the worse
+mistake.
+
+**An example.** A new error starts firing six times every ten seconds. Detection runs as the logs
+arrive, so the third occurrence already raises a signal: 0.55 + 0.25 (never seen before) =
+**0.80, Weak**. Five minutes later the window holds about 180 occurrences: 0.55 + 0.30 (far past
+the threshold) + 0.25 (unusual rate) = 1.10, clamped to **1.00 — promoted**, and an incident opens.
+While it stays open, later bursts of the same error are counted into it.
+
+---
+
 ## 🧠 Root Cause Analysis — How It Works
 
 RCA turns the AI from a passive classifier into an evidence-driven investigator. Three technologies combine:
