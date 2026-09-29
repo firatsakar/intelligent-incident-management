@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IIncidentAnalysisRepository, IncidentAnalysisRepository>();
         services.AddScoped<IGitHubConnectionRepository, GitHubConnectionRepository>();
+        services.AddScoped<IAiSettingsRepository, AiSettingsRepository>();
 
         // The organisation's GitHub, read over GitHub's MCP server with the organisation's token.
         services.Configure<GitHubMcpOptions>(configuration.GetSection(GitHubMcpOptions.SectionName));
@@ -64,6 +65,10 @@ public static class ServiceCollectionExtensions
         // aggregate, and several of those are opened by a hosted service. TryAdd, so the two
         // registrations cannot become two different lifetimes.
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
+
+        // The key that encrypts customer credentials at rest. Resolved when the first
+        // context is built, so a service without it fails on its first query with the reason.
+        services.AddSingleton(_ => SecretProtector.FromConfiguration(configuration[SecretProtector.ConfigurationKey]));
 
         services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 

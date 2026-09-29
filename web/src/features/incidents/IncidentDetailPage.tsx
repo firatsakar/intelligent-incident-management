@@ -1,5 +1,5 @@
 ﻿import { useCanOperate } from '@/features/auth/AuthProvider'
-import { ArrowLeftIcon, ArrowRightIcon, HandIcon, UsersIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, HandIcon, KeyRoundIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
@@ -7,7 +7,7 @@ import { InfoHint } from '@/components/InfoHint'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -32,11 +32,18 @@ import {
   type IncidentStatus,
 } from '@/types/api'
 
+import { ActivityPanel } from './ActivityPanel'
 import { AiAnalysisPanel } from './AiAnalysisPanel'
 import { DeliveryStrip } from './DeliveryStrip'
 import { IncidentTimeline } from './IncidentTimeline'
 import { ScoreBreakdownPanel } from './ScoreBreakdownPanel'
-import { useAssignTeam, useDeliveries, useIncident, useUpdateStatus } from './queries'
+import {
+  useAssignTeam,
+  useDeliveries,
+  useIncident,
+  useIncidentActivity,
+  useUpdateStatus,
+} from './queries'
 import { VerdictDialog } from './VerdictDialog'
 
 /**
@@ -56,6 +63,7 @@ export function IncidentDetailPage() {
 
   const incident = useIncident(id)
   const deliveries = useDeliveries(id)
+  const activity = useIncidentActivity(id)
 
   const canOperate = useCanOperate()
   const updateStatus = useUpdateStatus(id)
@@ -117,6 +125,16 @@ export function IncidentDetailPage() {
                 </Badge>
               )}
               <Badge variant="secondary">{labels.incidentSource[data.source]}</Badge>
+
+              {data.reportedBy && (
+                <span
+                  className="text-muted-foreground flex min-w-0 items-center gap-1"
+                  title={data.externalId ?? undefined}
+                >
+                  <KeyRoundIcon className="size-3.5 shrink-0" aria-hidden />
+                  <span className="max-w-40 truncate">{t.sentWith(data.reportedBy)}</span>
+                </span>
+              )}
 
               {data.assignedTeam && (
                 <span className="text-muted-foreground flex min-w-0 items-center gap-1">
@@ -230,9 +248,6 @@ export function IncidentDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t.whatHappened}</CardTitle>
-              <CardDescription>
-                {data.source === 'Telemetry' ? t.fromDetector : t.fromOperator}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Telemetry writes a structured evidence summary in here, so the whitespace is
@@ -247,7 +262,13 @@ export function IncidentDetailPage() {
 
           <ScoreBreakdownPanel incident={data} />
 
-          <IncidentTimeline incident={data} deliveries={deliveries.data ?? []} />
+          <IncidentTimeline
+            incident={data}
+            deliveries={deliveries.data ?? []}
+            activity={activity.data ?? []}
+          />
+
+          <ActivityPanel incidentId={data.id} canComment={canOperate} />
         </div>
 
         <div className="min-w-0 space-y-6">
@@ -295,13 +316,15 @@ function DetectionStrip({ incident }: { incident: Incident }) {
       <Card>
         <CardContent className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-1">
           <span className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
-            <HandIcon className="size-4 shrink-0" aria-hidden />
-            {t.openedByHand}
+            {/* Sent by another system is not opened by hand, though neither was detected here. */}
+            {incident.reportedBy ? (
+              <KeyRoundIcon className="size-4 shrink-0" aria-hidden />
+            ) : (
+              <HandIcon className="size-4 shrink-0" aria-hidden />
+            )}
+            {incident.reportedBy ? t.sentWithKey(incident.reportedBy) : t.openedByHand}
           </span>
           <span className="text-sm tabular-nums">{formatDateTime(incident.createdAt)}</span>
-          <span className="text-muted-foreground basis-full text-xs leading-relaxed">
-            {t.openedByHandDetail}
-          </span>
         </CardContent>
       </Card>
     )
@@ -313,14 +336,14 @@ function DetectionStrip({ incident }: { incident: Incident }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:gap-6">
-        <Moment label={t.problemStarted} at={incident.detectedAt} note={t.sourceClock} />
+        <Moment label={t.problemStarted} at={incident.detectedAt} />
 
         <ArrowRightIcon
           className="text-muted-foreground hidden size-4 shrink-0 sm:block"
           aria-hidden
         />
 
-        <Moment label={t.incidentOpened} at={incident.createdAt} note={t.ourClock} />
+        <Moment label={t.incidentOpened} at={incident.createdAt} />
 
         <div className="sm:ml-auto sm:text-right">
           <p className="text-muted-foreground flex items-center gap-0.5 text-xs font-medium tracking-wider uppercase sm:justify-end">
@@ -346,23 +369,19 @@ function DetectionStrip({ incident }: { incident: Incident }) {
             {formatDuration(incident.detectedAt, incident.createdAt)}
           </p>
 
-          <p className="text-dim-foreground text-xs">
-            {latencyMs < 0 ? t.skewNote : t.noticed}
-          </p>
         </div>
       </CardContent>
     </Card>
   )
 }
 
-function Moment({ label, at, note }: { label: string; at: string; note: string }) {
+function Moment({ label, at }: { label: string; at: string }) {
   return (
     <div className="min-w-0">
       <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </p>
       <p className="text-sm tabular-nums">{formatDateTime(at)}</p>
-      <p className="text-dim-foreground text-xs">{note}</p>
     </div>
   )
 }

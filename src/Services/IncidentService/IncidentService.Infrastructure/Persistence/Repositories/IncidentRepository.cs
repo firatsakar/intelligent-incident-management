@@ -1,7 +1,9 @@
 ﻿using IncidentService.Application.Abstractions;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
+using IncidentService.Infrastructure.Persistence.Configurations;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace IncidentService.Infrastructure.Persistence.Repositories;
 
@@ -22,6 +24,12 @@ public sealed class IncidentRepository : IIncidentRepository
         return await _context.Incidents.FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
+    public Task<Incident?> GetOpenByExternalIdAsync(string externalId, CancellationToken cancellationToken = default) =>
+        _context.Incidents.FirstOrDefaultAsync(
+            x => x.ExternalId == externalId && (x.Status == IncidentStatus.Open || x.Status == IncidentStatus.InProgress),
+            cancellationToken
+        );
+
     public async Task AddAsync(Incident incident, CancellationToken cancellationToken = default)
     {
         await _context.Incidents.AddAsync(incident, cancellationToken);
@@ -29,7 +37,31 @@ public sealed class IncidentRepository : IIncidentRepository
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        await _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException ex)
+            when (ex.InnerException is PostgresException
+                  {
+                      SqlState: PostgresErrorCodes.UniqueViolation,
+                      ConstraintName: IncidentConfiguration.OpenExternalIdIndex,
+                  })
+        {
+            // Out of the unit of work, or the next save in this scope would try the same insert
+            // again and fail the same way. The losing incident's "opened" row goes with it: left
+            // behind, the next save would insert a history row for an incident that never was.
+            var lost = ex.Entries.Select(entry => entry.Entity).OfType<Incident>().Select(x => x.Id).ToHashSet();
+
+            foreach (var entry in ex.Entries)
+                entry.State = EntityState.Detached;
+
+            foreach (var entry in _context.ChangeTracker.Entries<IncidentActivity>().ToList())
+                if (entry.State == EntityState.Added && lost.Contains(entry.Entity.IncidentId))
+                    entry.State = EntityState.Detached;
+
+            throw new DuplicateExternalIdException(ex);
+        }
     }
 
     public async Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPagedAsync(
@@ -81,7 +113,33 @@ public sealed class IncidentRepository : IIncidentRepository
                 x.DetectedAt,
                 x.Priority,
                 x.Status,
-                x.Source
+                x.Source,
+                x.IsAiAnalyzed,
+                x.AiAnalysisError != null,
+                x.AiConfidence
+            ))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IncidentResolutionRow>> GetResolvedRowsAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    )
+    {
+        // Six scalars again. ResolvedAt is kept through Resolved -> Closed and cleared on a reopen,
+        // so this reads exactly the incidents that are closed and were closed in the window.
+        return await _context
+            .Incidents.AsNoTracking()
+            .Where(x => x.ResolvedAt != null && x.ResolvedAt >= from && x.ResolvedAt <= to)
+            .OrderBy(x => x.ResolvedAt)
+            .Select(x => new IncidentResolutionRow(
+                x.CreatedAt,
+                x.DetectedAt,
+                x.ResolvedAt!.Value,
+                x.Priority,
+                x.Source,
+                x.Verdict
             ))
             .ToListAsync(cancellationToken);
     }

@@ -10,7 +10,7 @@ using ModelContextProtocol.Protocol;
 namespace AgentOrchestrator.Infrastructure.Mcp;
 
 /// <summary>
-/// GitHub's own MCP server, reached with the organisation's token (Adım 17.5). MCP because this is
+/// GitHub's own MCP server, reached with the organisation's token. MCP because this is
 /// somebody else's system: the protocol is the one GitHub publishes and maintains, and the next
 /// source (Grafana, Kubernetes) plugs into the same client rather than into a second REST wrapper.
 /// </summary>
@@ -22,7 +22,7 @@ namespace AgentOrchestrator.Infrastructure.Mcp;
 /// never sees the MCP catalogue at all; it sees the two tools <c>ChangeTools</c> wraps.
 /// </para>
 /// <para>
-/// Discovery (Adım 17.5 Parça 3, against the live server with a real token): the
+/// Discovery (against the live server with a real token): the
 /// <c>X-MCP-Tools</c> header did not narrow the catalogue on the <c>/x/repos/readonly</c> path —
 /// the whole read-only repository toolset was listed. It is still sent, as intent; nothing relies
 /// on it.

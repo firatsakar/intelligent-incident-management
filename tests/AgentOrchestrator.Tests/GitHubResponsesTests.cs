@@ -4,7 +4,7 @@ namespace AgentOrchestrator.Tests;
 
 // What GitHub's MCP tools return, read into what the analysis is shown. The shapes are GitHub's
 // REST ones (list_commits → array of commits, get_commit → one commit with files), confirmed
-// against the live server in Adım 17.5 Parça 3.
+// against the live server.
 public sealed class GitHubResponsesTests
 {
     private const string CommitList = """

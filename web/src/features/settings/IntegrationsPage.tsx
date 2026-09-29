@@ -14,7 +14,7 @@ import { ObservabilitySection } from './ObservabilitySection'
  *
  * These were three tabs — Telemetry, AI sources, Integrations — which drew the product's plumbing
  * as navigation and made "where do I connect GitHub?" a question with three candidate answers.
- * Fırat's call (2026-09-25): one Integrations page, a heading per purpose. Each group keeps the
+ * Now one Integrations page, a heading per purpose. Each group keeps the
  * catalogue it had; only the page around them changed.
  */
 
@@ -42,8 +42,6 @@ export function IntegrationsPage() {
   return (
     <div className="space-y-8">
       <div className="max-w-2xl space-y-3">
-        <p className="text-muted-foreground text-sm">{t.intro}</p>
-
         {/* Plain anchors: the groups are parts of one page, not destinations of their own. */}
         <nav aria-label={t.jumpTo} className="flex flex-wrap gap-2">
           {groups.map((group) => (
@@ -72,7 +70,6 @@ export function IntegrationsPage() {
               <group.icon className="text-muted-foreground size-4.5" aria-hidden />
               {t.groups[group.id].title}
             </h2>
-            <p className="text-muted-foreground mt-1 text-sm">{t.groups[group.id].description}</p>
           </div>
 
           {group.content()}

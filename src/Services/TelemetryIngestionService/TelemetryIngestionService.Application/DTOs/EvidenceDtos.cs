@@ -3,7 +3,7 @@ using TelemetryIngestionService.Domain.Enums;
 
 namespace TelemetryIngestionService.Application.DTOs;
 
-// What happened in a window, for a human or the Adım 19 frontend to look at. Deliberately not an
+// What happened in a window, for a human or the console to look at. Deliberately not an
 // AI tool: shipping raw telemetry to a model is the expensive thing this design avoids — the AI
 // gets the compact evidence summary inside the incident description instead.
 public sealed record EvidenceWindowDto

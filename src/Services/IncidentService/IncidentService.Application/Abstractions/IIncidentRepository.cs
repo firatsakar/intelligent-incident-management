@@ -6,10 +6,19 @@ namespace IncidentService.Application.Abstractions;
 public interface IIncidentRepository
 {
     Task<Incident?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The open (Open or InProgress) incident carrying this external id, if there is one — at most
+    /// one can exist, by a unique index.
+    /// </summary>
+    Task<Incident?> GetOpenByExternalIdAsync(string externalId, CancellationToken cancellationToken = default);
     Task AddAsync(Incident incident, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Saves the unit of work. Throws <see cref="DuplicateExternalIdException"/> when an incident
+    /// being added lost the race for an open external id, and leaves the unit of work without it.
+    /// </summary>
     Task SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    // Yeni metodlar
     Task<(IReadOnlyList<Incident> Items, int TotalCount)> GetPagedAsync(
         IncidentStatus? status,
         IncidentPriority? priority,
@@ -26,6 +35,16 @@ public interface IIncidentRepository
     /// why the grouping is not pushed into SQL.
     /// </summary>
     Task<IReadOnlyList<IncidentStatsRow>> GetStatsRowsAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default
+    );
+
+    /// <summary>
+    /// Every incident closed inside the window, by <c>ResolvedAt</c>. See
+    /// <see cref="IncidentResolutionRow"/> for why this is a read of its own.
+    /// </summary>
+    Task<IReadOnlyList<IncidentResolutionRow>> GetResolvedRowsAsync(
         DateTime from,
         DateTime to,
         CancellationToken cancellationToken = default

@@ -1,5 +1,7 @@
 using System.Threading.RateLimiting;
 using BuildingBlocks.Observability;
+using BuildingBlocks.SharedKernel;
+using BuildingBlocks.Web;
 using Gateway.API;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +39,31 @@ builder.Services.AddRateLimiter(limiter =>
             )
     );
 
+    // Per key rather than per address: many senders can sit behind one address, and one sender's
+    // loop should not spend another's allowance. Partitioned by the key's hash, so the limiter never
+    // holds a key in the clear; a request without one falls back to its address.
+    limiter.AddPolicy(
+        GatewayRoutes.IncidentIntakeRateLimiterPolicy,
+        context =>
+        {
+            var key = context.Request.Headers[GatewayRoutes.IncidentApiKeyHeader].ToString().Trim();
+
+            var partition = key.Length > 0
+                ? "key:" + AccessKey.Hash(key)
+                : "address:" + (context.Connection.RemoteIpAddress?.ToString() ?? "unknown");
+
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partition,
+                _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }
+            );
+        }
+    );
+
     limiter.OnRejected = async (context, cancellationToken) =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
@@ -63,7 +90,22 @@ var app = builder.Build();
 
 var console = SpaHosting.TryResolve(app.Configuration, app.Logger);
 
-// No UseHttpsRedirection here, and it comes out of the four older services in Parça 5. TLS
+// First of all: the static files, the rate limiter and the proxied services all read the caller's
+// address and scheme, and behind the installer's TLS proxy those are what the proxy reports — but
+// only a proxy named in configuration is believed.
+var forwarded = PlatformForwardedHeaders.ForEdge(app.Configuration);
+
+if (forwarded is not null)
+{
+    app.UseForwardedHeaders(forwarded);
+
+    app.Logger.LogInformation(
+        "Believing X-Forwarded-For and X-Forwarded-Proto from {Proxies}.",
+        app.Configuration[PlatformForwardedHeaders.KnownProxiesConfigurationKey]
+    );
+}
+
+// No UseHttpsRedirection here or in the services behind it. TLS
 // terminates at this edge; a service behind it that redirects to https is redirecting a request
 // that already arrived over a private hop, and in development it redirects a plain-HTTP call to a
 // port nothing is listening on.

@@ -21,7 +21,7 @@ public sealed class TelemetryController : ControllerBase
     }
 
     // What happened in a window: logs, the signatures they rolled up into, and the signals those
-    // produced. For humans and the Adım 19 frontend — the AI reads the evidence summary carried
+    // produced. For humans and the console — the AI reads the evidence summary carried
     // on the incident instead.
     [HttpGet("evidence")]
     public async Task<IActionResult> GetEvidence(

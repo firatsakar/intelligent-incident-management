@@ -1,4 +1,4 @@
-import { DatabaseIcon, RadioTowerIcon, WebhookIcon } from 'lucide-react'
+import { DatabaseIcon, RadioTowerIcon } from 'lucide-react'
 
 import {
   telemetrySourceKinds,
@@ -8,7 +8,6 @@ import {
 
 import type { Dictionary } from '@/lib/i18n'
 
-import type { PlannedSourceId } from './plannedIds'
 import type { MarkComponent } from './SettingsCatalogue'
 
 /**
@@ -42,16 +41,6 @@ const entries: Record<TelemetrySourceKind, SourceCatalogueEntry> = {
 }
 
 export const connectable: SourceCatalogueEntry[] = telemetrySourceKinds.map((kind) => entries[kind])
-
-/**
- * What is planned but not built, listed for the same reason the integrations catalogue lists Slack
- * and PagerDuty. Inert, because a control that errors is worse than an absent one.
- */
-// Unlike the integrations catalogue, the name is descriptive rather than a trademark, so it lives
-// in the dictionary with its summary.
-export const planned: { id: PlannedSourceId; mark: MarkComponent }[] = [
-  { id: 'alerts', mark: WebhookIcon },
-]
 
 /**
  * A source with no filter still reads something specific, and the pair of blank form controls that

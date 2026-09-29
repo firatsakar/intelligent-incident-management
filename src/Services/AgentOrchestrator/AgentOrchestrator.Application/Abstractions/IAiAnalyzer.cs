@@ -1,4 +1,5 @@
 ﻿using AgentOrchestrator.Application.Changes;
+using AgentOrchestrator.Domain.Enums;
 using AgentOrchestrator.Domain.ValueObjects;
 
 namespace AgentOrchestrator.Application.Abstractions;
@@ -6,7 +7,7 @@ namespace AgentOrchestrator.Application.Abstractions;
 public interface IAiAnalyzer
 {
     /// <param name="code">
-    /// The organisation's code for the failing service (Adım 17.5), or null when there is none to
+    /// The organisation's code for the failing service, or null when there is none to
     /// read — no connection, no mapping, or no service named. Null is the normal case.
     /// </param>
     /// <param name="organizationId">
@@ -20,6 +21,9 @@ public interface IAiAnalyzer
         string title,
         string description,
         CodeContext? code,
+        // The organisation's response language: the reasoning and the steps are
+        // written in it; category and priority stay English keys.
+        AnalysisLanguage language,
         CancellationToken cancellationToken = default
     );
 }

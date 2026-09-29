@@ -8,11 +8,17 @@ namespace AgentOrchestrator.Infrastructure.Persistence;
 public sealed class AgentDbContext : DbContext
 {
     private readonly IOrganizationContext _organization;
+    private readonly SecretProtector _secrets;
 
-    public AgentDbContext(DbContextOptions<AgentDbContext> options, IOrganizationContext organization)
+    public AgentDbContext(
+        DbContextOptions<AgentDbContext> options,
+        IOrganizationContext organization,
+        SecretProtector secrets
+    )
         : base(options)
     {
         _organization = organization;
+        _secrets = secrets;
     }
 
     // Read per query rather than captured at construction; TelemetryDbContext has the reason.
@@ -22,9 +28,19 @@ public sealed class AgentDbContext : DbContext
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     public DbSet<GitHubConnection> GitHubConnections => Set<GitHubConnection>();
 
+    public DbSet<AiSettings> AiSettings => Set<AiSettings>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgentDbContext).Assembly);
+
+        // The organisation's GitHub token is encrypted in the column. A local rather than
+        // the field, so the cached model does not hold this context.
+        var secrets = _secrets;
+        modelBuilder
+            .Entity<GitHubConnection>()
+            .Property(x => x.Token)
+            .HasConversion(value => secrets.Protect(value), stored => secrets.Unprotect(stored));
 
         // The outbox mapping lives in BuildingBlocks now, so it is not picked up by the assembly
         // scan above and has to be applied explicitly.
@@ -39,6 +55,8 @@ public sealed class AgentDbContext : DbContext
         modelBuilder
             .Entity<GitHubConnection>()
             .HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
+
+        modelBuilder.Entity<AiSettings>().HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
 
         base.OnModelCreating(modelBuilder);
     }

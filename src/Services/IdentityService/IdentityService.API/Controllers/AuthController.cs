@@ -1,3 +1,5 @@
+using IdentityService.Application.Queries.GetSetupStatus;
+using IdentityService.Application.Commands.CompleteSetup;
 using System.Security.Claims;
 using BuildingBlocks.Web;
 using IdentityService.API.Contracts;
@@ -210,6 +212,49 @@ public sealed class AuthController : ControllerBase
         return Ok(session.User);
     }
 
+    // ---- first-run setup ---------------------------------------------------------------
+
+    /// <summary>Whether this installation still needs its first Admin. Nothing more.</summary>
+    [HttpGet("setup")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SetupStatus(CancellationToken cancellationToken) =>
+        Ok(new { required = await _sender.Send(new GetSetupStatusQuery(), cancellationToken) });
+
+    /// <summary>
+    /// Creates the organisation and its first Admin, with the one-time code from the service's
+    /// log, and signs the Admin in. Runs once; every refusal is the same 404.
+    /// </summary>
+    [HttpPost("setup/complete")]
+    [AllowAnonymous]
+    public async Task<IActionResult> CompleteSetup(
+        [FromBody] CompleteSetupRequest request,
+        CancellationToken cancellationToken
+    )
+    {
+        var session = await _sender.Send(
+            new CompleteSetupCommand(
+                request.SetupCode,
+                request.OrganizationName,
+                request.DisplayName,
+                request.Email,
+                request.Password
+            ),
+            cancellationToken
+        );
+
+        Issue(session);
+
+        return Ok(session.User);
+    }
+
+    public sealed record CompleteSetupRequest(
+        string SetupCode,
+        string OrganizationName,
+        string DisplayName,
+        string Email,
+        string Password
+    );
+
     public sealed record AcceptInvitationRequest(string DisplayName, string Password);
 
     public sealed record CompletePasswordResetRequest(string Password);
@@ -279,7 +324,10 @@ public sealed class AuthController : ControllerBase
             Expires = new DateTimeOffset(expiresAt, TimeSpan.Zero),
         };
 
-    // Secure would make these cookies invisible over plain HTTP, which is how the gateway is
-    // reached in development. In production TLS terminates at the gateway and the flag is on.
-    private bool Secure => !HttpContext.Request.Host.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase);
+    // Secure exactly when the browser used HTTPS. Behind the installer's TLS proxy and the gateway
+    // that arrives as X-Forwarded-Proto (PlatformForwardedHeaders); over plain HTTP — development,
+    // or trying an installation out on a LAN address — a Secure cookie would never be sent back
+    // and nobody could sign in. It used to be "not localhost", which inside a container network,
+    // where the gateway calls this service by its service name, meant always.
+    private bool Secure => Request.IsHttps;
 }

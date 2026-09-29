@@ -1,8 +1,12 @@
 ﻿import { api } from './client'
 import type {
+  AiResponseLanguage,
+  AiSettings,
   EvidenceWindow,
   GitHubConnection,
   Incident,
+  IncidentActivity,
+  IncidentApiKey,
   IncidentPriority,
   IncidentStats,
   IncidentStatus,
@@ -11,6 +15,7 @@ import type {
   Invitation,
   InvitationIssued,
   InvitationPreview,
+  IssuedIncidentApiKey,
   IssuedLink,
   Member,
   NotificationChannelType,
@@ -59,6 +64,13 @@ export const incidentsApi = {
 
   assignTeam: (id: string, team: string) =>
     api.patch<void>(`/api/incidents/${id}/team`, { team }),
+
+  /** Oldest first; the newest 500 when there are more. */
+  activity: (id: string) => api.get<IncidentActivity[]>(`/api/incidents/${id}/activity`),
+
+  /** Admin and Engineer. Comments are not editable afterwards. */
+  addComment: (id: string, text: string) =>
+    api.post<IncidentActivity>(`/api/incidents/${id}/comments`, { text }),
 }
 
 export const telemetryApi = {
@@ -109,6 +121,16 @@ export const telemetrySourcesApi = {
   /** Revokes the key in the same write. The response is the only place the new one appears. */
   rotateKey: (id: string) =>
     api.post<TelemetrySource>(`/api/telemetry-sources/${id}/rotate-key`),
+}
+
+/** The organisation's incident API keys. Admin only. */
+export const incidentApiKeysApi = {
+  list: () => api.get<IncidentApiKey[]>('/api/incident-api-keys'),
+
+  /** The response carries the key's value, once. */
+  create: (name: string) => api.post<IssuedIncidentApiKey>('/api/incident-api-keys', { name }),
+
+  remove: (id: string) => api.delete<void>(`/api/incident-api-keys/${id}`),
 }
 
 export const notificationsApi = {
@@ -182,13 +204,28 @@ export const authApi = {
       password,
     }),
 
+  /** Whether this installation still needs its first Admin. Nothing more. */
+  setupStatus: () => api.get<{ required: boolean }>('/api/auth/setup'),
+
+  /**
+   * Creates the organisation and its first Admin with the one-time code from the identity
+   * service's log, and signs the Admin in. Every refusal is the same 404.
+   */
+  completeSetup: (input: {
+    setupCode: string
+    organizationName: string
+    displayName: string
+    email: string
+    password: string
+  }) => api.post<SessionAccount>('/api/auth/setup/complete', input),
+
   /** One's own password. Other sessions end; this one is renewed. */
   changePassword: (currentPassword: string, newPassword: string) =>
     api.post<SessionAccount>('/api/auth/password', { currentPassword, newPassword }),
 }
 
 /**
- * The outside systems an analysis may read (Adım 17.5). Admin only, reads included.
+ * The outside systems an analysis may read. Admin only, reads included.
  */
 export const aiSourcesApi = {
   github: () => api.get<GitHubConnection>('/api/ai-sources/github'),
@@ -208,7 +245,18 @@ export const aiSourcesApi = {
  * The organisation's people. Admin only, reads included — everyone else is answered 403, and a
  * member or invitation of another organisation 404.
  */
+/** How the organisation's analyses are written. Admin only. */
+export const aiSettingsApi = {
+  get: () => api.get<AiSettings>('/api/ai-settings'),
+
+  save: (responseLanguage: AiResponseLanguage) =>
+    api.put<AiSettings>('/api/ai-settings', { responseLanguage }),
+}
+
 export const organizationApi = {
+  /** The caller's own organisation; there is no id to aim at another. */
+  rename: (name: string) => api.patch<{ id: string; name: string }>('/api/organization', { name }),
+
   members: () => api.get<Member[]>('/api/organization/members'),
 
   changeRole: (id: string, role: UserRole) =>

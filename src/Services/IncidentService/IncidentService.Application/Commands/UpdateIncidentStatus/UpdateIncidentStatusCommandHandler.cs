@@ -2,6 +2,7 @@
 using FluentValidation.Results;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Exceptions;
 using MediatR;
 
@@ -12,14 +13,20 @@ public sealed class UpdateIncidentStatusCommandHandler
 {
     private readonly IIncidentRepository _repository;
     private readonly IRealtimeNotifier _realtime;
+    private readonly IIncidentActivityRepository _activity;
+    private readonly ICurrentUser _user;
 
     public UpdateIncidentStatusCommandHandler(
         IIncidentRepository repository,
-        IRealtimeNotifier realtime
+        IRealtimeNotifier realtime,
+        IIncidentActivityRepository activity,
+        ICurrentUser user
     )
     {
         _repository = repository;
         _realtime = realtime;
+        _activity = activity;
+        _user = user;
     }
 
     public async Task Handle(
@@ -36,7 +43,17 @@ public sealed class UpdateIncidentStatusCommandHandler
         if (incident.StatusChangeProblem(request.NewStatus, request.Verdict) is { } problem)
             throw new ValidationException([new ValidationFailure(nameof(request.Verdict), problem)]);
 
+        var before = incident.Status;
+
         incident.UpdateStatus(request.NewStatus, request.Verdict);
+
+        // Setting the status it already has records nothing: the trail is of changes.
+        var recorded = incident.Status == before
+            ? null
+            : IncidentActivity.StatusChanged(incident, before, _user.AsActor());
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -46,5 +63,6 @@ public sealed class UpdateIncidentStatusCommandHandler
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

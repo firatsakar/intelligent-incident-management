@@ -1,8 +1,8 @@
-﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+﻿import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import type { Incident, NotificationDelivery } from '@/types/api'
+import type { Incident, IncidentActivity, NotificationDelivery } from '@/types/api'
 
 /**
  * Where a stage got to. A discriminator rather than a pair of booleans, because the four states are
@@ -34,12 +34,20 @@ interface Stage {
 export function IncidentTimeline({
   incident,
   deliveries,
+  activity,
 }: {
   incident: Incident
   deliveries: NotificationDelivery[]
+  activity: IncidentActivity[]
 }) {
   const { incidents, labels } = useT()
   const t = incidents.timeline
+
+  // When the analysis landed or failed, from the incident's history. The first
+  // application is the one recorded; a failure can repeat with a different reason, and the last
+  // one is the one that stands.
+  const analysedAt = activity.find((row) => row.kind === 'AnalysisApplied')?.at ?? null
+  const failedAt = activity.findLast((row) => row.kind === 'AnalysisFailed')?.at ?? null
 
   const sent = deliveries
     .filter((delivery) => delivery.sentAt)
@@ -53,13 +61,11 @@ export function IncidentTimeline({
           label: t.problemStarted,
           at: incident.detectedAt,
           state: 'reached',
-          detail: t.onSourceClock,
         }
       : {
           label: t.problemStarted,
           at: null,
           state: 'absent',
-          detail: t.notRecorded,
         },
     {
       label: t.incidentOpened,
@@ -68,19 +74,19 @@ export function IncidentTimeline({
       since: incident.detectedAt
         ? t.toDetect(formatDuration(incident.detectedAt, incident.createdAt))
         : undefined,
-      detail: incident.detectedAt ? t.ourClockGap : undefined,
     },
-    // No timestamp, and deliberately so. The incident record does not store when the analysis
-    // landed, and updatedAt moves on every change — a status transition an hour later would make
-    // this stage claim the analysis happened then. A missing time is better than a wrong one.
+    // The time comes from the history, never from updatedAt, which moves on every change — a
+    // status transition an hour later would make this stage claim the analysis happened then.
+    // Incidents opened before the history was kept have no time for it, and say so: a missing
+    // time is better than a wrong one.
     incident.isAiAnalyzed
       ? {
           label: t.analysisApplied,
-          at: null,
-          state: 'untimed',
+          at: analysedAt,
+          state: analysedAt ? 'reached' : 'untimed',
           detail: incident.aiSuggestedCategory
             ? t.categorised(incident.aiSuggestedCategory, labels.priority[incident.priority])
-            : t.applied,
+            : undefined,
         }
       : incident.aiAnalysisError
         ? {
@@ -88,15 +94,13 @@ export function IncidentTimeline({
             // whose whole argument is that the timestamps are real, a stage that will never
             // happen must not sit there looking like one that still might.
             label: t.analysisApplied,
-            at: null,
+            at: failedAt,
             state: 'failed',
-            detail: t.analysisFailed,
           }
         : {
             label: t.analysisApplied,
             at: null,
             state: 'pending',
-            detail: t.analysisWaiting,
           },
     firstSentAt
       ? {
@@ -110,7 +114,7 @@ export function IncidentTimeline({
           label: t.peopleNotified,
           at: null,
           state: deliveries.length === 0 ? 'pending' : 'absent',
-          detail: deliveries.length === 0 ? t.noDeliveryYet : t.everyChannelFailed,
+          detail: deliveries.length === 0 ? undefined : t.everyChannelFailed,
         },
   ]
 
@@ -123,7 +127,6 @@ export function IncidentTimeline({
       label: t.lastChanged,
       at: incident.updatedAt,
       state: 'reached',
-      detail: t.anyEdit,
     })
   }
 
@@ -131,7 +134,6 @@ export function IncidentTimeline({
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent>

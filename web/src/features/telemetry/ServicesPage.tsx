@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/table'
 import { WindowSelect } from '@/components/WindowSelect'
 import { formatCount, formatDateTime, formatRelative } from '@/lib/format'
-import { T, useT, type Dictionary } from '@/lib/i18n'
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { resolveWindowPreset } from '@/lib/window'
 import type { ServiceHealth } from '@/types/api'
@@ -152,12 +152,6 @@ export function ServicesPage() {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            {/* The count only once there is one. "0 services produced something" is a sentence
-                nobody writes, and the empty row below says the same thing properly — which is
-                also why there is no longer a fallback line here. */}
-            {query.data && rows.length > 0 && t.produced(formatCount(rows.length), rows.length)}
-          </p>
         </div>
 
         <WindowSelect value={preset} />
@@ -228,7 +222,6 @@ export function ServicesPage() {
               <TableRow>
                 <TableCell colSpan={columns.length} className="px-4 py-10 text-center">
                   <p className="text-sm font-medium">{t.emptyTitle}</p>
-                  <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">{t.empty}</p>
                 </TableCell>
               </TableRow>
             )}
@@ -239,15 +232,6 @@ export function ServicesPage() {
           </TableBody>
         </Table>
       </Card>
-
-      <p className="text-muted-foreground max-w-3xl text-xs">
-        <T
-          text={t.footnote}
-          values={{
-            incidents: <strong className="font-medium">{t.columnIncidents}</strong>,
-          }}
-        />
-      </p>
     </div>
   )
 }

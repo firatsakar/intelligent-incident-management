@@ -11,8 +11,12 @@ using NotificationService.Application.Abstractions;
 using NotificationService.Application.Commands.SendTestNotification;
 using NotificationService.Application.EventHandlers;
 using NotificationService.Infrastructure;
+using NotificationService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// An installation's generated secrets, when docker-compose.yml provides them.
+builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.NotificationService);
 builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.NotificationService);
@@ -64,6 +68,11 @@ builder.Services.AddPlatformAuth(builder.Configuration);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<NotificationDbContext>();
+
+// Credentials saved before they were encrypted at rest are encrypted now, once.
+await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
 
 app.UseExceptionHandler();
 

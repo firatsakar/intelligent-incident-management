@@ -2,7 +2,7 @@
 //
 // Not generated: the four OpenAPI documents are only served while the services are running, so
 // codegen would tie `npm run build` to a live backend. The surface is about a dozen records and
-// has been stable since Adım 13.
+// has been stable.
 //
 // Every enum is serialised as a string by JsonStringEnumConverter, so each one is a string union
 // here. Declaration order matters for IncidentPriority — Critical is the most severe.
@@ -17,7 +17,7 @@ export const incidentStatuses: IncidentStatus[] = ['Open', 'InProgress', 'Resolv
 export const isClosedStatus = (status: IncidentStatus): boolean =>
   status === 'Resolved' || status === 'Closed'
 
-/** What the people who worked an incident concluded when they closed it (Adım 24). */
+/** What the people who worked an incident concluded when they closed it. */
 export type IncidentVerdict = 'Real' | 'FalsePositive'
 
 export const incidentVerdicts: IncidentVerdict[] = ['Real', 'FalsePositive']
@@ -45,7 +45,7 @@ export interface Incident {
    */
   aiAnalysisError: string | null
   /**
-   * Commits the analysis named as likely causes (Adım 17.5). Every field — the URL included — was
+   * Commits the analysis named as likely causes. Every field — the URL included — was
    * written by the platform from what GitHub returned, never by the model.
    */
   aiRelatedChanges: AiRelatedChange[]
@@ -53,8 +53,58 @@ export interface Incident {
   verdict: IncidentVerdict | null
   /** When it was closed out; cleared if it is reopened. */
   resolvedAt: string | null
+  /** Only for an incident sent through the incident API: the sender's own name for the problem. */
+  externalId: string | null
+  /** The API key it was sent with, by the name it had then. */
+  reportedBy: string | null
   createdAt: string
   updatedAt: string | null
+}
+
+/** What happened to an incident, as its activity trail records it. */
+export type IncidentActivityKind =
+  | 'Opened'
+  | 'StatusChanged'
+  | 'TeamAssigned'
+  | 'AnalysisApplied'
+  | 'AnalysisFailed'
+  | 'Commented'
+
+/** A person in the console, an incident API key, the telemetry detector, or the AI analysis. */
+export type ActivityActorKind = 'User' | 'ApiKey' | 'Detector' | 'Ai'
+
+/** One row of an incident's history. Written once and never changed. */
+export interface IncidentActivity {
+  id: string
+  incidentId: string
+  kind: IncidentActivityKind
+  at: string
+  actorKind: ActivityActorKind
+  actorId: string | null
+  /** As it was then — copied, so it outlives the person or the key. */
+  actorName: string | null
+  /** A status, a team or a priority, by kind; statuses and priorities as their enum names. */
+  from: string | null
+  to: string | null
+  /** Only on the change that closed the incident. */
+  verdict: IncidentVerdict | null
+  /** A comment's text, the category the analysis chose, or why it failed. */
+  text: string | null
+}
+
+/** A key an external system opens incidents with. Never the key itself. */
+export interface IncidentApiKey {
+  id: string
+  name: string
+  keyPrefix: string
+  createdBy: string
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** The response to creating one — the only place its value appears. */
+export interface IssuedIncidentApiKey extends IncidentApiKey {
+  key: string
 }
 
 export interface AiRelatedChange {
@@ -262,7 +312,7 @@ export const maskedValue = '***'
 
 // ---- aggregates -------------------------------------------------------------------------------
 //
-// Added in Adım 20. Day buckets are UTC on the server, and the screens that draw them say so
+// Day buckets are UTC on the server, and the screens that draw them say so
 // rather than leaving a reader to assume their own zone.
 
 /** Counts keyed by enum name. The server fills every member, including the zeroes. */
@@ -273,6 +323,33 @@ export interface IncidentDayBucket {
   day: string
   total: number
   byPriority: CountsByKey
+  /** Closed that day, whenever they were opened. */
+  resolved: number
+}
+
+/** Incidents closed in the window: how long they took. */
+export interface ResolutionStats {
+  resolvedCount: number
+  /** From detectedAt (or createdAt when nothing detected it) to resolvedAt. Null when none closed. */
+  medianSeconds: number | null
+  p95Seconds: number | null
+  /** Every priority present; null where none of that priority closed. */
+  medianSecondsByPriority: Record<string, number | null>
+}
+
+export interface VerdictCounts {
+  real: number
+  falsePositive: number
+  /** Closed before a verdict was asked for. */
+  unknown: number
+}
+
+/** What the analysis did with the incidents opened in the window. */
+export interface AiAnalysisStats {
+  analysed: number
+  failed: number
+  pending: number
+  medianConfidence: number | null
 }
 
 export interface DetectionLatency {
@@ -297,6 +374,10 @@ export interface IncidentStats {
   total: number
   openTotal: number
   detection: DetectionLatency
+  resolution: ResolutionStats
+  /** By source, every source present. */
+  verdicts: Record<string, VerdictCounts>
+  ai: AiAnalysisStats
 }
 
 export interface Funnel {
@@ -384,6 +465,13 @@ export interface IngestionTick {
 /** The three roles the platform has. The wire values are the enum names, never translated. */
 export type UserRole = 'Admin' | 'Engineer' | 'Viewer'
 
+/** The language analyses are written in. An organisation setting. */
+export type AiResponseLanguage = 'English' | 'Turkish'
+
+export interface AiSettings {
+  responseLanguage: AiResponseLanguage
+}
+
 export const userRoles: UserRole[] = ['Admin', 'Engineer', 'Viewer']
 
 /**
@@ -401,7 +489,7 @@ export interface SessionAccount {
   organizationName: string
 }
 
-// ---- what the analysis may read (Adım 17.5) --------------------------------------------------
+// ---- what the analysis may read --------------------------------------------------
 
 /** Where one service's code lives. `service` is the telemetry's service name, or `*` for the rest. */
 export interface RepositoryMapping {
@@ -432,7 +520,7 @@ export interface GitHubConnection {
   updatedAt: string | null
 }
 
-// ---- the organisation's people (Adım 16.5) ---------------------------------------------------
+// ---- the organisation's people ---------------------------------------------------
 
 export interface Member {
   id: string

@@ -2,13 +2,21 @@ import { ChevronRight } from 'lucide-react'
 import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { T, useT } from '@/lib/i18n'
 import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
 
-import { cellKey, intensityBounds, intensityOf, otherKey, type HeatCell, type HeatMap } from './heatmap'
+import {
+  cellKey,
+  intensityBounds,
+  intensityOf,
+  otherKey,
+  tileWeight,
+  type HeatCell,
+  type HeatMap,
+} from './heatmap'
 import { layoutGroups, type Rect } from './treemap'
 import { useHeatChanges } from './useHeatChanges'
 
@@ -18,7 +26,8 @@ import { useHeatChanges } from './useHeatChanges'
 //
 // Three channels, deliberately independent:
 //
-//   area + colour   how many times it fired
+//   area + colour   how many times it fired — area on a compressed scale (tileWeight), so a new
+//                   error stays visible next to a storm; colour on its own ramp
 //   corner mark     how far the detection gate took it
 //   edge            it was written to just now
 //
@@ -81,13 +90,12 @@ type TileDetail = 'full' | 'compact' | 'count' | 'bare'
  * being that a tile never shows half a word. Same order here, except the band mark outlives the
  * text: it is the second channel, and the text is recoverable from the panel and the label.
  *
- * A signature worth 1% of the window gets 1% of the area, which on a wide map can be a strip a few
- * pixels thick — under the 24px hit target the rest of this console holds itself to. That is
- * deliberate and it is not fixable from here: inflating the small tiles would make area stop
- * meaning magnitude, which is the one thing a treemap cannot lie about. Every tile is instead a
- * real button in descending order, so the tail is reachable by keyboard whatever size it drew at,
- * it carries its whole description in `title` and `aria-label`, and the signal list below the map
- * is the same data at full size.
+ * Area is not linear in the count: a signature worth 1% of the window used to get 1% of the area,
+ * which next to a storm is a strip a few pixels thick — and the new error is the one an operator
+ * most needs to see. `tileWeight` takes the square root and floors every tile at an eighth of the
+ * largest, so the order and the difference survive and nothing vanishes; the exact count is on
+ * the tile. Every tile is also a real button in descending order, it carries its whole description
+ * in `title` and `aria-label`, and the signal list below the map is the same data at full size.
  */
 function detailFor(rect: Rect): TileDetail {
   if (rect.width >= 132 && rect.height >= 64) return 'full'
@@ -117,16 +125,9 @@ function toStyle(rect: Rect, box: { width: number; height: number }): CSSPropert
   }
 }
 
-/** What the map was built from, when that is less than the window holds. */
-export interface HeatCoverage {
-  loaded: number
-  total: number
-}
-
 export function SignalHeatMap({
   map,
   scope,
-  coverage,
   selected,
   onSelect,
 }: {
@@ -134,7 +135,6 @@ export function SignalHeatMap({
   /** The window the map is drawn over. Only used to tell "the data moved" from "the question
    *  changed", so that switching window does not light up every tile at once. */
   scope: string
-  coverage?: HeatCoverage
   selected: { service: string; errorKey: string } | null
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
@@ -146,9 +146,6 @@ export function SignalHeatMap({
   const changes = useHeatChanges(map, scope)
 
   const cells = [...map.cells.values()]
-
-  /** The coverage, but only when it is worth saying — a map built from everything says nothing. */
-  const partial = coverage && coverage.loaded < coverage.total ? coverage : null
 
   const byService = new Map<string, HeatCell[]>()
 
@@ -168,7 +165,7 @@ export function SignalHeatMap({
       ? layoutGroups(
           [...byService.entries()].map(([service, group]) => ({
             key: service,
-            items: group.map((cell) => ({ value: cell.occurrences, data: cell })),
+            items: group.map((cell) => ({ value: tileWeight(cell.occurrences, map.max), data: cell })),
           })),
           { x: 0, y: 0, width: size.width, height: size.height },
           groupHeader,
@@ -181,17 +178,6 @@ export function SignalHeatMap({
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>
-          {t.description}{' '}
-          {partial && (
-            // Said on the map rather than only on the list below it. A treemap that claims to
-            // show where the errors are while covering a third of the window is the kind of quiet
-            // lie this screen exists not to tell.
-            <span className="text-foreground tabular-nums">
-              {t.partial(partial.loaded, partial.total)}
-            </span>
-          )}
-        </CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -249,7 +235,7 @@ export function SignalHeatMap({
                         {group.key}
                       </span>
                       <span className="text-dim-foreground shrink-0 tabular-nums">
-                        {group.tiles.reduce((sum, tile) => sum + tile.value, 0)}
+                        {group.tiles.reduce((sum, tile) => sum + tile.data.occurrences, 0)}
                       </span>
                     </div>
                   )}

@@ -159,7 +159,7 @@ public sealed class DispatchNotificationsCommandHandlerTests
     [Fact]
     public async Task TheDeliveryRecordsWhereItWentByNameAndChannel()
     {
-        // The integration list is Admin-only (Adım 16.5); the incident screen every role opens
+        // The integration list is Admin-only; the incident screen every role opens
         // still has to say where a notification went, so the row carries it.
         GivenEnabled(AnIntegration("ops webhook", NotificationChannelType.Webhook));
         GivenChannel(NotificationChannelType.Webhook);

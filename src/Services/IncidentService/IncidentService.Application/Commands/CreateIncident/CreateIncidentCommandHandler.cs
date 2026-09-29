@@ -4,6 +4,7 @@ using BuildingBlocks.SharedKernel;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
 using IncidentService.Domain.Aggregates;
+using IncidentService.Domain.ValueObjects;
 using MediatR;
 
 namespace IncidentService.Application.Commands.CreateIncident;
@@ -15,17 +16,23 @@ public sealed class CreateIncidentCommandHandler
     private readonly IEventBus _eventBus;
     private readonly IRealtimeNotifier _realtime;
     private readonly IOrganizationContext _organization;
+    private readonly IIncidentActivityRepository _activity;
+    private readonly ICurrentUser _user;
 
     public CreateIncidentCommandHandler(
         IIncidentRepository repository,
         IEventBus eventBus,
         IRealtimeNotifier realtime,
-        IOrganizationContext organization)
+        IOrganizationContext organization,
+        IIncidentActivityRepository activity,
+        ICurrentUser user)
     {
         _repository = repository;
         _eventBus = eventBus;
         _realtime = realtime;
         _organization = organization;
+        _activity = activity;
+        _user = user;
     }
 
     public async Task<IncidentDto> Handle(
@@ -39,9 +46,17 @@ public sealed class CreateIncidentCommandHandler
             request.Priority,
             request.Source,
             request.AssignedTeam,
-            detectedAt: request.DetectedAt);
+            detectedAt: request.DetectedAt,
+            externalId: request.ExternalId,
+            reportedBy: request.ReportedBy);
 
         await _repository.AddAsync(incident, cancellationToken);
+
+        // Opened by the key that sent it, or else by whoever is signed in.
+        _activity.Add(IncidentActivity.Opened(
+            incident,
+            request.ReportedBy is { } key ? ActivityActor.ApiKey(key) : _user.AsActor()));
+
         await _repository.SaveChangesAsync(cancellationToken);
 
         // IncidentService has no outbox, so this publish is direct and the scope has to be read

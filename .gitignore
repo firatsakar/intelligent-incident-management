@@ -136,3 +136,15 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# =========================
+# Working notes and local tooling
+# Kept on the developer's disk, not in the repository.
+# =========================
+/CLAUDE.md
+/NEXT_SESSION.md
+/PROGRESS.md
+/production_necessaries.MD
+/.claude/
+/tools/dev/
+/demo/

@@ -1,5 +1,6 @@
 ﻿using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
 using IncidentService.Domain.Exceptions;
 using MediatR;
@@ -10,14 +11,17 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
 {
     private readonly IIncidentRepository _repository;
     private readonly IRealtimeNotifier _realtime;
+    private readonly IIncidentActivityRepository _activity;
 
     public ApplyAiAnalysisCommandHandler(
         IIncidentRepository repository,
-        IRealtimeNotifier realtime
+        IRealtimeNotifier realtime,
+        IIncidentActivityRepository activity
     )
     {
         _repository = repository;
         _realtime = realtime;
+        _activity = activity;
     }
 
     public async Task Handle(ApplyAiAnalysisCommand request, CancellationToken cancellationToken)
@@ -31,6 +35,9 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
             priority = incident.Priority;
         }
 
+        var firstAnalysis = !incident.IsAiAnalyzed;
+        var priorityBefore = incident.Priority;
+
         incident.ApplyAiAnalysis(
             priority,
             request.SuggestedCategory,
@@ -38,6 +45,13 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
             request.Confidence,
             request.RelatedChanges
         );
+
+        // Delivery is at-least-once: a redelivered result is applied again, harmlessly, and must
+        // not appear in the trail twice.
+        var recorded = firstAnalysis ? IncidentActivity.AnalysisApplied(incident, priorityBefore) : null;
+
+        if (recorded is not null)
+            _activity.Add(recorded);
 
         _repository.Update(incident);
         await _repository.SaveChangesAsync(cancellationToken);
@@ -48,5 +62,6 @@ public sealed class ApplyAiAnalysisCommandHandler : IRequestHandler<ApplyAiAnaly
             IncidentDto.FromDomain(incident),
             cancellationToken
         );
+        await _realtime.ActivityRecordedAsync(recorded, cancellationToken);
     }
 }

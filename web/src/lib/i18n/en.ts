@@ -1,12 +1,7 @@
 ﻿import type { WindowPreset } from '@/lib/window'
 import type { RealtimeStatus } from '@/app/RealtimeProvider'
 import type { ConfigFieldId } from '@/features/settings/configSchema'
-import type {
-  PlannedIntegrationId,
-  PlannedSourceId,
-} from '@/features/settings/plannedIds'
 
-import type { Language } from './locale'
 import { plural } from './translate'
 
 /**
@@ -14,7 +9,7 @@ import { plural } from './translate'
  * open and `scoreTerm()` falls back to splitting the camel case — but these must have words in
  * every language, so they go through `byKey`.
  *
- * `precedent` and `falsePositivePrecedent` are no longer emitted: Adım 24 folded them into
+ * `precedent` and `falsePositivePrecedent` are no longer emitted: the feedback loop folded them into
  * `history`. They stay because signals recorded before then carry them in their breakdown, and an
  * old record should keep reading as what it was.
  */
@@ -70,9 +65,6 @@ import type {
  * values to their English literals, which is the opposite of what a translation file needs.
  */
 const byKey = <K extends string>(labels: Record<K, string>): Record<K, string> => labels
-
-/** The same, for an entry that is more than one string. */
-const byKeyOf = <K extends string, V>(entries: Record<K, V>): Record<K, V> => entries
 
 export const en = {
   common: {
@@ -145,7 +137,7 @@ export const en = {
     sections: 'Settings sections',
     pages: {
       profile: 'Profile',
-      members: 'Members',
+      organization: 'Organization',
       integrations: 'Integrations',
     },
   },
@@ -174,9 +166,6 @@ export const en = {
     },
 
     heading: 'Sign in',
-    subheading: 'Your organisation is the one your account belongs to.',
-    ownership:
-      'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them, so what you see here is your team’s.',
     emailLabel: 'Email address',
     passwordLabel: 'Password',
     // An empty field, not a rejected credential — the reader can see which one is blank, so this
@@ -197,7 +186,33 @@ export const en = {
     forgot: 'Forgot your password? An Admin of your organisation can send you a link to set a new one.',
   },
 
-  // ---- the account's own screens (Adım 16.5) ---------------------------------------------
+  // ---- the account's own screens ---------------------------------------------
+
+  // A fresh installation's first screen.
+  setup: {
+    title: 'Set up this installation',
+    subtitle: 'Nobody has signed in here yet. Create the organisation and its first Admin — you.',
+    code: 'Setup code',
+    codeHint:
+      'Printed once in the identity service’s log when it started, on a line beginning “First-run setup”. Only someone who runs this server can read it — that is what it proves.',
+    codeRequired: 'Enter the setup code from the log.',
+    organization: 'Organization name',
+    organizationHint: 'Your team or company. An Admin can change it later under Settings → Organization.',
+    organizationRequired: 'Give the organisation a name.',
+    name: 'Your name',
+    nameRequired: 'Enter your name.',
+    email: 'Email address',
+    emailInvalid: 'That does not look like an email address.',
+    password: 'Password',
+    repeat: 'Repeat the password',
+    submit: 'Create the organisation',
+    submitting: 'Setting up…',
+    rejected:
+      'That code does not open the setup. If the service restarted, use the new code from its log; if the setup is already done, sign in.',
+    doneTitle: 'This installation is already set up',
+    done: 'Sign in with your account. New people join by invitation from an Admin.',
+    toSignIn: 'Go to sign in',
+  },
 
   /** The rule is the server's (`PasswordRules`); these say it before and after it is broken. */
   passwordRules: {
@@ -251,48 +266,28 @@ export const en = {
   language: {
     change: 'Change language',
     title: 'Language',
-    description:
-      'Stored in this browser, not against your name — a second machine reads it from the browser again.',
     legend: 'Language',
-    // Each option is titled with its own endonym from `languageName`; this says what choosing it
-    // actually changes, which is more than the words — the dates and the thousands separators
-    // move with it.
-    options: byKey<Language>({
-      en: 'The console’s own text, dates and numbers in English.',
-      tr: 'The console’s own text, dates and numbers in Turkish.',
-    }),
-    // Said once, here, rather than as a footnote on every screen that shows a server message.
-    passthrough:
-      'The console’s own text is translated. Text that arrives from the services — an analysis’s reasoning, a detection’s reason, a provider’s error — is passed through exactly as it was written, in English.',
   },
 
   theme: {
     change: 'Change theme',
     title: 'Appearance',
-    description:
-      'Stored in this browser, not against your name — a second machine starts on System again.',
     legend: 'Theme',
     options: {
-      light: { label: 'Light', detail: 'Always the light palette.' },
-      dark: { label: 'Dark', detail: 'Always the dark palette.' },
-      system: { label: 'System', detail: 'Follows your operating system.' },
+      light: { label: 'Light' },
+      dark: { label: 'Dark' },
+      system: { label: 'System' },
     },
-    palette: { light: 'light', dark: 'dark' },
-    resolved: (palette: string) => `Your system is currently asking for the ${palette} palette.`,
   },
 
   profile: {
     title: 'Profile',
     identity: {
       title: 'Identity',
-      ownership:
-        'Incidents, signals, sources and integrations belong to the organisation rather than to the person who opened them. Its Admins decide who is a member and what each member may do.',
     },
 
     password: {
       title: 'Password',
-      description:
-        'Changing it signs out every other session of this account. This one stays signed in.',
       current: 'Current password',
       currentRequired: 'Enter your current password.',
       wrongCurrent: 'That is not your current password.',
@@ -309,10 +304,6 @@ export const en = {
   incidents: {
     list: {
       title: 'Incidents',
-      // Says which count this is. "8 on record" next to an active filter is a claim about the
-      // whole table that the table is not showing.
-      matching: (count: number) => `${count} match these filters`,
-      onRecord: (count: number) => `${count} on record`,
 
       filterStatus: 'Filter by status',
       filterPriority: 'Filter by priority',
@@ -336,17 +327,7 @@ export const en = {
 
       // Two different situations, and only one of them is fixable by touching the filters.
       emptyFilteredTitle: 'Nothing matches these filters.',
-      // One sentence per filter combination rather than one sentence with two holes. Spliced,
-      // the unset half read "none of them is both Open and any priority" — which says every
-      // incident has no priority, and the Turkish said it more explicitly still.
-      emptyFiltered: (status: string, priority: string) =>
-        `There are incidents on record; none of them is both ${status} and ${priority} priority.`,
-      emptyFilteredStatus: (status: string) =>
-        `There are incidents on record; none of them is ${status}.`,
-      emptyFilteredPriority: (priority: string) =>
-        `There are incidents on record; none of them is ${priority} priority.`,
       emptyTitle: 'No incidents on record.',
-      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
 
       page: (current: number, total: number) => `Page ${current} of ${total}`,
       previous: 'Previous',
@@ -359,6 +340,7 @@ export const en = {
       // Opened by hand: there is no detection to have been slow. A zero would claim the platform
       // found it instantly.
       openedByHand: 'Opened by hand — nothing detected it',
+      sentThroughApi: 'Sent through the incident API — nothing detected it here',
     },
 
     detail: {
@@ -375,17 +357,12 @@ export const en = {
       assigning: 'Assigning…',
 
       whatHappened: 'What happened',
-      fromDetector:
-        'Written by the detector from the log records themselves — this is the same text the analysis read.',
-      fromOperator: 'As entered when the incident was opened.',
+      sentWith: (key: string) => `via ${key}`,
 
       openedByHand: 'Opened by hand',
-      openedByHandDetail:
-        'Nothing detected this, so there is no detection latency to measure — the platform was told rather than noticing. The score breakdown below is absent for the same reason.',
+      sentWithKey: (key: string) => `Sent with the ${key} key`,
       problemStarted: 'Problem started',
-      sourceClock: 'on the source’s clock',
       incidentOpened: 'Incident opened',
-      ourClock: 'on ours',
       detectionLatency: 'Detection latency',
       clockDisagreement: 'Clock disagreement',
       latencyHintLabel: 'What detection latency measures',
@@ -393,14 +370,12 @@ export const en = {
         'From the first log line the source stamped to the moment this record was filed — the log store’s clock to ours. It covers the poll interval, the detection pass and the scoring, and it is the whole of what the platform spent noticing this by itself.',
       skewHint:
         'The source reported this as starting after we filed the record, which can only mean the two clocks disagree. The figure is the size of that disagreement, not a latency.',
-      noticed: 'noticed without being told',
-      skewNote: 'source clock is ahead of ours',
 
       closed: (relative: string) => `closed ${relative}`,
       statusUpdated: 'Status updated',
       assignedTo: (team: string) => `Assigned to ${team}`,
 
-      // Asked when an open incident is closed (Adım 24). Each option says what it does to the
+      // Asked when an open incident is closed. Each option says what it does to the
       // detector, so the choice is made knowing its effect.
       verdictDialog: {
         title: 'Was this a real problem?',
@@ -418,33 +393,23 @@ export const en = {
 
     timeline: {
       title: 'Timeline',
-      description:
-        'Where a time is missing, it is missing from the record rather than from this screen.',
 
       problemStarted: 'Problem started',
-      onSourceClock: 'On the source clock, not ours.',
-      notRecorded: 'Not recorded — this incident was opened by hand.',
 
       incidentOpened: 'Incident opened',
       toDetect: (duration: string) => `+${duration} to detect`,
-      ourClockGap: 'Our clock. The gap above is what detection cost.',
 
       analysisApplied: 'Analysis applied',
       categorised: (category: string, priority: string) =>
         `Categorised as ${category}, priority set to ${priority}`,
-      applied: 'Applied — the analysis returned no category.',
-      analysisFailed: 'The analysis ran and returned nothing. See the panel for the reason.',
-      analysisWaiting: 'Waiting on the analysis service.',
 
       peopleNotified: 'People notified',
       afterOpening: (duration: string) => `+${duration} after opening`,
       channelsDelivered: (sent: number, total: number) =>
         `${sent} of ${total} ${plural('en', total, { one: 'channel', other: 'channels' })} delivered`,
-      noDeliveryYet: 'No delivery recorded yet.',
-      everyChannelFailed: 'Every configured channel failed — see the notifications panel.',
+      everyChannelFailed: 'Every channel failed.',
 
       lastChanged: 'Last changed',
-      anyEdit: 'Any edit — status, team, or the analysis landing.',
 
       // "done" rather than a time, and said as a word so nobody reads an em dash as "never
       // happened".
@@ -452,14 +417,43 @@ export const en = {
       notYet: 'not yet',
     },
 
+    // Every row is "<who> <did what>", so each action below follows a name.
+    activity: {
+      title: 'History',
+      loadError: 'The history could not be loaded.',
+
+      someone: 'A member',
+      apiKey: (name: string) => `API key ${name}`,
+      detector: 'Telemetry detector',
+      ai: 'AI analysis',
+
+      opened: 'opened the incident',
+      statusChanged: (from: string, to: string) => `changed the status: ${from} → ${to}`,
+      teamAssigned: (team: string) => `assigned it to ${team}`,
+      teamReassigned: (from: string, to: string) => `reassigned it: ${from} → ${to}`,
+      analysed: (category: string | null) =>
+        category ? `categorised it as ${category}` : 'analysed it',
+      priorityChanged: (from: string, to: string) => `priority ${from} → ${to}`,
+      priorityKept: (priority: string) => `priority stays ${priority}`,
+      analysisFailed: 'could not analyse it',
+      commented: 'commented',
+      withDetail: (action: string, detail: string) => `${action} · ${detail}`,
+
+      commentLabel: 'Comment',
+      commentPlaceholder: 'What you tried, what you found, what happens next',
+      commentHint: 'Comments cannot be edited or deleted afterwards.',
+      remaining: (count: number) =>
+        `${count} ${plural('en', count, { one: 'character', other: 'characters' })} left`,
+      send: 'Comment',
+      sending: 'Sending…',
+    },
+
     score: {
       // Not "Why this was raised": the detector writes that exact phrase as a heading inside the
       // evidence summary, which renders in the card immediately above this one.
       title: 'How the gate scored it',
-      description: 'A deterministic score, not a judgement call.',
 
       total: 'Total',
-      totalNote: 'sum of the terms above, clamped to 1.00',
       confidence: 'Confidence',
       confidenceNote: 'scoring was bypassed',
 
@@ -479,8 +473,7 @@ export const en = {
       title: 'Notifications',
       summary: (sent: number, total: number) => `${sent} of ${total} delivered`,
       failed: (count: number) => `${count} failed`,
-      empty:
-        'Nothing sent yet. Notifications go out once the analysis completes, to every enabled integration whose filters match.',
+      empty: 'Nothing sent yet.',
       // An integration deleted after the fact leaves its deliveries behind, which is correct: the
       // notification did happen, and the row is the only proof of it.
       deletedIntegration: 'deleted integration',
@@ -493,29 +486,19 @@ export const en = {
 
     analysis: {
       title: 'AI analysis',
-      description:
-        'Enrichment on top of the deterministic gate — it set the category and the priority, not whether this was raised.',
 
-      failedDescription:
-        'The analysis ran and did not produce a result. Nothing further is coming on its own — the priority and category below are the ones detection set.',
       failedTitle: 'Analysis failed',
-      failedFooter: 'A later attempt that succeeds clears this and fills the panel in.',
 
-      waiting:
-        'Waiting for the analysis service. This resolves itself — a failure would say so here instead.',
+      waiting: 'Waiting for the analysis service.',
 
       confidence: 'Confidence',
       confidenceHintLabel: 'What the confidence figure means',
       confidenceHint:
         'How sure the analysis was of its own category and priority — not how severe the incident is, and not how certain the gate was that something broke. Those are the score on the left.',
-      // Null is a missing measurement, not a zero. An empty bar would read as "certain this is
-      // nothing", which is the opposite of what it means.
-      noConfidence:
-        'The analysis did not put a number on it. That is not the same as being unsure — it declined to quantify, so there is nothing to draw.',
 
       reasoning: 'Reasoning',
 
-      // Adım 17.5: commits the analysis read in the service's repository and named as causes.
+      // Commits the analysis read in the service's repository and named as causes.
       suspectedChanges: 'Suspected changes',
       suspectedChangesHintLabel: 'Where suspected changes come from',
       suspectedChangesHint:
@@ -577,31 +560,18 @@ export const en = {
 
     signals: {
       title: 'Signals',
-      intro: 'Everything the gate looked at, including what it did not raise.',
       loadError: 'Could not load signals',
 
       allSignals: 'All signals',
-      shown: (count: number) => `${count} shown`,
-      inWindow: (total: number) => `${total} in this window`,
-      loaded: (loaded: number, total: number) => `${loaded} of ${total} loaded`,
-      chips:
-        'the chips are the gate’s score components, and the confidence is what they add up to',
       clearFilter: 'Clear filter',
 
       emptyTileTitle: 'No signals for this tile.',
-      // Two causes, and from here they are indistinguishable: the link may carry a tile from
-      // another window, or the signatures may have been re-ranked since.
-      emptyTile:
-        'Nothing in the current window matches this tile. The link may have been made against a different window, or the signatures may have been re-ranked since.',
       emptyWindowTitle: 'No signals in this window.',
-      emptyWindow:
-        'Nothing has crossed a detection rule yet. A quiet window and a source that is not being read look the same from here — Settings › Telemetry says which.',
 
       loadMore: (count: number) => `Load ${count} more`,
       notLoaded: (count: number) =>
-        `${count} older ${plural('en', count, { one: 'signal', other: 'signals' })} in this window ${plural('en', count, { one: 'is', other: 'are' })} not loaded, so the map above does not count them.`,
-      ceiling: (max: number, total: number, remaining: number) =>
-        `${max} is as much as this endpoint will hand over at once, and this window holds ${total}. A shorter window is the way to see the rest — the remaining ${remaining} are older than everything above.`,
+        `${count} older ${plural('en', count, { one: 'signal', other: 'signals' })} not loaded`,
+      ceiling: (max: number, total: number) => `Showing the most recent ${max} of ${total}.`,
 
       occurrences: (count: number) =>
         `${count} ${plural('en', count, { one: 'occurrence', other: 'occurrences' })}`,
@@ -610,13 +580,7 @@ export const en = {
 
     heatmap: {
       title: 'Where the errors are',
-      description:
-        'One tile per error signature. Size and colour are both how often it fired — biggest and reddest top-left.',
-      // Said on the map rather than only on the list below it. A treemap that claims to show
-      // where the errors are while covering a third of the window is a quiet lie.
-      partial: (loaded: number, total: number) =>
-        `Built from the ${loaded} most recent of ${total} signals in this window — Load more below widens it.`,
-      empty: 'No signals in this window. Nothing has crossed a detection rule yet.',
+      empty: 'No signals in this window.',
 
       allServices: 'All services',
       counts: (services: number, tiles: number, occurrences: number) =>
@@ -664,36 +628,16 @@ export const en = {
       clearService: 'Clear the service filter',
 
       logRecords: 'Log records',
-      // The endpoint caps at 200 but reports the true total, so a truncated view is shown as
-      // truncated rather than quietly lying about the volume.
-      showingRecent: (shown: number, total: number) =>
-        `Showing the most recent ${shown} of ${total}`,
-      inWindow: (total: number) => `${total} in this window`,
       logListLabel: 'Log records in this window',
       emptyLogTitle: 'Nothing logged in this window.',
-      emptyLogForService: (service: string) =>
-        `No record from "${service}" in the window. Either it was quiet, or nothing by that name is being read — the name has to match what the source reports.`,
-      emptyLog:
-        'A quiet window and a source that is not being read look the same from here — Settings › Telemetry says which.',
 
       signatures: 'Signatures',
-      signaturesCount: (count: number) =>
-        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals below.`,
-      signaturesCountTruncated: (count: number) =>
-        `${count} distinct ${plural('en', count, { one: 'error', other: 'errors' })} behind the signals shown — not behind the whole window.`,
-      signaturesAllTime: 'The counters on each span all time, not this window.',
       signaturesListLabel: 'Signatures behind the signals in this window',
       emptySignaturesTitle: 'No signatures here.',
-      emptySignatures:
-        'A signature is created the first time an error is normalised, so an empty list means nothing in the window was an error.',
 
       signals: 'Signals',
-      signalsDescription: 'What the gate made of those signatures',
-      signalsRecent: (shown: number, total: number) => `the most recent ${shown} of ${total}`,
       signalsListLabel: 'Signals in this window',
       emptySignalsTitle: 'No signals here.',
-      emptySignals:
-        'Errors were logged but no burst cleared a detection rule, so the gate had nothing to decide.',
 
       arrived: (records: number) =>
         `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested since this window was read.`,
@@ -702,9 +646,6 @@ export const en = {
       // already punctuated.
       arrivedAcrossPolls: (records: number, polls: number) =>
         `${records} new log ${plural('en', records, { one: 'record', other: 'records' })} ingested across ${polls} polls since this window was read.`,
-      // The tick counts records, not records matching a filter: the summary is per source, and
-      // the service a record belongs to is not in it.
-      allServicesNote: ' Counted across all services, not just the one filtered here.',
       reread: 'Re-read the window',
       rereading: 'Re-reading…',
 
@@ -732,7 +673,6 @@ export const en = {
       loadError: 'Could not load the funnel',
 
       notRaised: 'Not raised',
-      notRaisedDescription: (scope: string) => `${scope}.`,
       // The denominator travels with the numerator. It is the whole defence against a zero here
       // being read as an empty window, so it cannot be somewhere the eye can skip.
       ofScored: (signals: number) =>
@@ -740,82 +680,27 @@ export const en = {
       heldBack: 'held back',
       actedOn: 'acted on',
 
-      zeroHeldBack:
-        'Everything the gate scored in this window, it acted on — all {count} crossed the threshold, so there was nothing left to hold back. {emphasis} What it looked at is the number beside it, and the stages below.',
-      zeroEmphasis: 'A zero here means the gate refused nothing, not that it looked at nothing.',
-      someHeldBack: (notRaised: string, signals: string) =>
-        `${notRaised} of ${signals} were scored and left where they were: no incident, no page, no email. That is the thing an alerting rule cannot do — decide, on arithmetic you can read back, that this one was not worth a human.`,
-      // The exclusion is deliberate on the server and is worth showing rather than hiding: it is
-      // the difference between restraint and a claim of restraint.
-      deduplicated: (count: number) =>
-        `${count} deduplicated ${plural('en', count, { one: 'signal', other: 'signals' })} count as acted on, not as held back. Each was folded into an incident that was already open, so somebody was woken — just earlier.`,
-
       nothingScored: 'Nothing was scored in this window.',
-      nothingScoredRecords: (records: string, count: number) =>
-        `${records} log ${plural('en', count, { one: 'record', other: 'records' })} arrived and none of them crossed a detection rule, so no burst ever reached the score. The filtering here happened a stage earlier than this number measures — the stages below are where to read it.`,
-      nothingArrived:
-        'No telemetry arrived in this window at all, so the gate had nothing to look at. A quiet window and a source that is not being read look the same from here — Settings › Telemetry says which.',
+      nothingArrived: 'No telemetry arrived in this window.',
 
       stagesTitle: 'From log records to signals',
-      stagesDescription: (scope: string) =>
-        `On one scale — ${scope}. They count different things: records are lines of log, signatures are distinct fingerprints cut from them, and signals are bursts the gate was asked to score.`,
       stageLogRecords: 'Log records',
       stageSignatures: 'Signatures',
       stageSignals: 'Signals',
       stagesChartLabel: (records: string, signatures: string, signals: string) =>
         `Pipeline stages. ${records} log records, ${signatures} signatures, ${signals} signals.`,
 
-      nothingToFingerprint: 'Nothing arrived, so there was nothing to fingerprint.',
-      nothingFingerprinted:
-        'Nothing in this window was fingerprinted, which should not happen — the records arrived without one.',
-      // The drop fingerprinting bought, stated as a ratio rather than left to be inferred from a
-      // bar that is two pixels wide.
-      folding: (perSignature: string, signatures: string, records: string, count: number) =>
-        `About ${perSignature} records per signature. That fold is what fingerprinting bought: the gate reasons about ${signatures} ${plural('en', count, { one: 'thing', other: 'things' })}, not ${records}.`,
-
-      neverScored: 'No burst crossed a detection rule, so the gate was never asked to score anything.',
-      bursting: (signatures: string, signatureCount: number, signals: string, signalCount: number) =>
-        `${signatures} ${plural('en', signatureCount, { one: 'signature', other: 'signatures' })} produced ${signals} ${plural('en', signalCount, { one: 'burst', other: 'bursts' })} for the gate to score.`,
-      /** The one stage that can widen, which a funnel drawn without saying so would misreport. */
-      burstingWider:
-        ' A signature can fire more than once, which is why this stage is wider than the one above it rather than narrower.',
-
       whatArrived: 'What arrived',
       noLogRecord: 'No log record arrived in this window.',
 
       verdictsTitle: 'How the gate ruled',
-      verdictsDescription: (scope: string) =>
-        `Every verdict the gate can reach, and how many landed on each — ${scope}.`,
-      noVerdicts: 'The gate scored nothing in this window, so it reached none of these.',
 
       wokenHeading: 'Somebody was woken',
-      wokenNote: 'Not counted as held back.',
       notWokenHeading: 'Nobody was woken',
-      notWokenNote: 'These three are what "not raised" counts.',
-
-      /**
-       * What each verdict means, in the operator's language rather than the enum's. Says what the
-       * gate *did*, not how it scored: the weights live in SignalScoring and a number copied into
-       * the frontend is a number that goes stale without anyone noticing.
-       */
-      verdict: byKey<SignalStatus>({
-        Promoted: 'Cleared the threshold, and the gate opened an incident for it.',
-        Deduplicated:
-          'Folded into an incident that was already open. Somebody was woken — earlier.',
-        Weak:
-          'Scored, and scored under the threshold. Kept where you can see it; nobody was called.',
-        Recorded: 'Kept for the record and nothing more.',
-        Suppressed:
-          'The signature is muted, so the gate scored it and then silenced it on purpose.',
-      }),
     },
 
     services: {
       title: 'Service health',
-      // The count only once there is one: "0 services produced something" is a sentence nobody
-      // writes, and the empty row says the same thing properly.
-      produced: (count: string, raw: number) =>
-        `${count} ${plural('en', raw, { one: 'service', other: 'services' })} produced something in this window.`,
       loadError: 'Could not load service health',
 
       caption: (scope: string) =>
@@ -830,8 +715,6 @@ export const en = {
       columnLastSignal: 'Last signal',
 
       emptyTitle: 'Nothing arrived in this window.',
-      empty:
-        'No service wrote a log record and nothing crossed a detection rule. A genuinely quiet window and a telemetry source that is not being read look the same from here — Settings › Telemetry says which.',
 
       goneHintLabel: 'What (signature gone) means',
       goneHint:
@@ -850,8 +733,6 @@ export const en = {
       signatureGone: 'signature no longer on record',
       nothingCrossed: 'nothing crossed a detection rule in this window',
 
-      footnote:
-        'Counted from the signal and signature side. {incidents} is the number of distinct incidents this service’s signals reached, so an incident somebody opened by hand is attributed to no service — an incident record does not carry one, and reading it out of the title would be a guess.',
     },
   },
 
@@ -863,55 +744,32 @@ export const en = {
 
     open: {
       title: 'Open right now',
-      description:
-        'Every incident still Open or In progress, however old — which is why this count ignores the window.',
-      // On the card, not in a tooltip. Which numbers move with the picker is the kind of thing a
-      // reader has to be able to check at a glance rather than by hovering.
-      notWindowed: 'not windowed',
       open: 'open',
     },
 
     byDate: {
       title: 'Incidents by date',
-      description:
-        'Stacked by priority — {scope}. Days are cut in {utc} on the server, not in your zone, and the last column is today, still filling.',
     },
 
     detection: {
       title: 'Detection',
-      description: (scope: string) => `${scope}, UTC.`,
-      empty: 'No incidents in this window, so there is nothing to have noticed. Try a longer window.',
+      empty: 'No incidents in this window.',
       share: 'noticed by the platform itself',
       noticed: 'Noticed',
       filed: 'Filed by hand',
       median: 'Median latency',
       p95: '95th percentile',
-      // An em dash with no explanation invites the reader to supply one, and the one they supply
-      // is "zero". These are opposite facts, so the reason is spelled out.
-      nothingNoticed:
-        'Nothing in this window was noticed automatically, so there is no latency to measure. That is not a latency of zero — it is the absence of one.',
-      allSkewed:
-        'Every detection in this window came back with the record filed before the problem started, which is two clocks disagreeing rather than a latency. Those rows sit out of the percentiles.',
     },
 
     sources: {
       title: 'Where incidents come from',
-      description: (scope: string) => `${scope}, UTC.`,
-      empty: 'No incidents in this window, from any source.',
-      // Fixed order, most autonomous first, because the order is the point being made.
-      meaning: byKey<IncidentSource>({
-        Telemetry: 'the platform found it in your log store',
-        Alert: 'an external alert raised it',
-        Manual: 'somebody opened it by hand',
-      }),
+      empty: 'No incidents in this window.',
     },
 
     latest: {
       title: 'Latest incidents',
-      description: (rows: number) => `The ${rows} most recent, whatever the window. Updates live.`,
       loadError: 'Could not load incidents',
       emptyTitle: 'No incidents on record.',
-      empty: 'Nothing has been opened by hand, and nothing has crossed a detection rule yet.',
       all: (total: number) => `All ${total} incidents`,
     },
 
@@ -919,7 +777,6 @@ export const en = {
       summary: (total: number, days: number) =>
         `${total} opened across ${days} ${plural('en', days, { one: 'day', other: 'days' })}`,
       busiest: (count: number) => ` · busiest day ${count}`,
-      hint: ' · hover or focus the chart for one day',
       dayTotal: (total: number) =>
         `${total} ${plural('en', total, { one: 'incident', other: 'incidents' })}`,
       ariaLabel: (days: number) =>
@@ -934,14 +791,44 @@ export const en = {
       caption: 'Incidents opened per UTC day, by priority.',
       columnDay: 'Day (UTC)',
       columnTotal: 'Total',
-      legendNote: 'Critical at the base of each bar',
+      // What closed each day, drawn as a line over the bars.
+      dayResolved: (count: number) => ` · ${count} closed`,
+      resolvedSummary: (count: number) => ` · ${count} closed`,
+      legendResolved: 'Closed',
+      columnResolved: 'Closed',
+    },
+
+    resolution: {
+      title: 'Time to resolution',
+      empty: 'Nothing was closed in this window.',
+      median: 'median, problem start to close',
+      p95: '95th percentile',
+      closed: 'Closed',
+    },
+
+    accuracy: {
+      title: 'Detection accuracy',
+      empty: 'No incident was closed with a verdict in this window.',
+      real: 'real',
+      none: 'no verdicts',
+      counts: (real: number, falsePositive: number) => `${real} real · ${falsePositive} false alarms`,
+      unknown: (count: number) => ` · ${count} closed before verdicts were asked`,
+    },
+
+    ai: {
+      title: 'AI analysis',
+      empty: 'No incidents in this window.',
+      share: 'analysed',
+      analysed: 'Analysed',
+      failed: 'Failed',
+      pending: 'Waiting',
+      confidence: 'Median confidence',
     },
   },
 
 
   deliveries: {
     title: 'Delivery health',
-    intro: 'Across the whole window, not one incident at a time.',
     loadError: 'Could not load delivery health',
 
     /** The name a deleted integration has left. Its deliveries are kept on purpose. */
@@ -949,10 +836,7 @@ export const en = {
 
     totals: {
       title: 'Deliveries',
-      description: (scope: string) => `${scope}.`,
-      emptyLead: 'Nothing was sent in this window. ',
-      empty:
-        'Notifications go out when an analysis finishes, so a window with no incidents in it and a dispatcher that has stopped look identical from here. The incidents screen says which of the two this is.',
+      empty: 'Nothing was sent in this window.',
 
       // Same shape as the funnel's headline, and for the same reason: the denominator is on the
       // line, so a zero cannot be read as "nothing was attempted".
@@ -963,33 +847,19 @@ export const en = {
       sent: 'sent',
       pending: 'pending',
 
-      someFailing: (failing: string, count: number) =>
-        `${failing} ${plural('en', count, { one: 'integration', other: 'integrations' })} recorded a failure in this window. The rows below say which, when, and what the channel said back.`,
-      allThrough: 'Every delivery in this window got through. ',
-      stillQueued: (pending: string, count: number) =>
-        count === 1
-          ? `${pending} delivery is still queued and has not been attempted yet — queued is not sent.`
-          : `${pending} deliveries are still queued and have not been attempted yet — queued is not sent.`,
-      nothingQueued: 'Nothing is queued and nothing is outstanding.',
     },
 
     dispatch: {
       title: 'Dispatch time',
-      description: (scope: string) =>
-        `Median, ${scope} — measured from the delivery being written to the channel acknowledging it.`,
-      empty: 'Nothing was dispatched in this window, so there is nothing to have timed.',
+      empty: 'Nothing was dispatched in this window.',
       // One sentence with the muted half as a slot. Split across two entries, the connector
       // straddled the seam and the order was the component's.
-      noneSucceeded:
-        '{lead} so there is no dispatch time to draw. That is not a dispatch time of zero — it is the absence of one.',
-      noneSucceededLead: 'Nothing succeeded in this window,',
+      noneSucceeded: 'Nothing succeeded in this window.',
       chartLabel: (scope: string, detail: string) =>
         `Median dispatch time per integration, ${scope}. ${detail}.`,
       /** One row of that label. It is screen-reader text and was being built outside the
        *  dictionary, where `check:i18n` cannot see it. */
       chartRow: (name: string, value: string) => `${name} ${value}`,
-      dashNote:
-        'An em dash is an integration that had nothing succeed in this window, so it has no median. It is not a dispatch time of zero.',
     },
 
     /**
@@ -1009,16 +879,11 @@ export const en = {
 
     byIntegration: {
       title: 'By integration',
-      description: (scope: string) => `Worst first — ${scope}.`,
       emptyTitle: 'No integration attempted a delivery.',
-      empty:
-        'An integration only appears here once it has something to report. One configured and enabled but never reached in this window is not on this list — Settings › Integrations is the roll of what exists.',
 
       // Only for an integration that still exists. A deleted one reads as disabled through the
       // same field, and saying "disabled" about something that is gone is two wrong words.
       disabled: 'Paused',
-      deletedNote:
-        'This integration has been deleted. Its deliveries are kept on purpose — they are the record that somebody was told — so the counts below are still true, and the name and channel they belonged to are gone.',
       id: (short: string) => `id ${short}`,
       lastFailure: 'Last failure',
 
@@ -1033,6 +898,42 @@ export const en = {
 
   settings: {
     /** The vocabulary the two catalogue screens share — they are one pattern shown twice. */
+    // How systems that already know they have a problem report it.
+    incidentApi: {
+      heading: 'Incident API',
+      count: (n: number) => `${n} ${n === 1 ? 'key' : 'keys'}`,
+      title: 'Open incidents from your own systems',
+      endpointLabel: 'Endpoint (POST)',
+      endpointHint: (header: string) => `JSON body; send the key in the ${header} header.`,
+      loadError: 'The keys could not be loaded.',
+      empty: 'No keys yet.',
+      create: 'New key',
+      createTitle: 'New API key',
+      createBody:
+        'Name it after the system that will use it. The name is shown on every incident the key opens.',
+      namePlaceholder: 'Grafana, CI pipeline…',
+      nameHint: 'Up to 64 characters, unique in this organisation.',
+      nameRequired: 'Give the key a name.',
+      nameTaken: 'A key with this name already exists.',
+      creating: 'Creating…',
+      createConfirm: 'Create key',
+      issuedTitle: (name: string) => `Key “${name}”`,
+      once: 'This key is shown once. Only its hash is stored, so it cannot be shown again — if it is lost, make a new one.',
+      keyLabel: 'API key',
+      curlLabel: 'Example request',
+      curlHint:
+        'externalId is optional: while an incident with it is open, sending it again returns that incident instead of opening another.',
+      done: 'Done',
+      createdBy: (name: string, when: string) => `created by ${name} ${when}`,
+      lastUsed: (when: string) => `used ${when}`,
+      neverUsed: 'never used',
+      deleteAria: (name: string) => `Delete ${name}`,
+      deleteBody:
+        'Systems sending with this key get 401 from now on. Incidents it already opened keep its name.',
+      deleteConfirm: 'Delete key',
+      deleted: 'Key deleted.',
+    },
+
     shared: {
       availableNow: 'Available now',
       comingSoon: 'Coming soon',
@@ -1115,9 +1016,6 @@ export const en = {
       silenceMany: (total: number) =>
         `All ${total} integrations are paused. When an analysis completes, no one is told.`,
 
-      comingSoonNote:
-        'Until these land, a custom endpoint is reachable through Webhook, which posts this platform’s own JSON rather than any vendor’s payload format.',
-
       addAnother: (name: string) => `Add another ${name}`,
       connectOne: (name: string) => `Connect ${name}`,
 
@@ -1125,13 +1023,6 @@ export const en = {
         Email: 'SMTP to a mailbox or a distribution list.',
         Webhook: 'An HTTP POST of the incident and its analysis to an endpoint you control.',
         Jira: 'Opens an issue in a project, with the reasoning in the description.',
-      }),
-
-      planned: byKey<PlannedIntegrationId>({
-        slack: 'Post to a channel.',
-        teams: 'Post to a team channel.',
-        pagerduty: 'Page whoever is on call.',
-        discord: 'Post to a channel.',
       }),
 
       deleted: 'Integration deleted',
@@ -1183,22 +1074,12 @@ export const en = {
       blindnessMany: (total: number) =>
         `All ${total} sources are paused. Nothing is being read, so nothing will be detected.`,
 
-      comingSoonNote:
-        'Not built yet. For logs, OTLP above is the general answer: one standard wire format, and everything else handled by the shipper you already run.',
-
       addAnother: (name: string) => `Add another ${name} source`,
       connectOne: (name: string) => `Connect ${name}`,
 
       summary: byKey<TelemetrySourceKind>({
         Seq: 'Pulls from a Seq instance’s query API on a schedule.',
         Otlp: 'Your collector or SDK pushes logs in OpenTelemetry’s wire format — whatever log store you run.',
-      }),
-
-      planned: byKeyOf<PlannedSourceId, { name: string; summary: string }>({
-        alerts: {
-          name: 'Alert webhook ingest',
-          summary: 'Alerts from your monitoring, not logs.',
-        },
       }),
 
       deleted: 'Source deleted',
@@ -1273,33 +1154,21 @@ export const en = {
         `— nothing is read from here. When resumed it polls every ${seconds}s for ${what}.`,
     },
 
-    // What the analysis may read besides the incident (Adım 17.5). The page asks an Admin for a
+    // What the analysis may read besides the incident. The page asks an Admin for a
     // credential to their code, so it says what the credential is and is not used for, in place.
     // Everything the organisation connects the platform to, grouped by what the connection is for,
-    // in the order data moves through them (Fırat, 2026-09-25).
+    // in the order data moves through them.
     hub: {
-      intro:
-        'Everything this organisation connects the platform to, in the order data moves: where errors are read from, what the analysis may consult, and who is told.',
       jumpTo: 'Groups on this page',
       groups: {
         observability: {
           title: 'Observability',
-          // Not a description of the group. Operators assume an observability product monitors
-          // its own services; this one does not, and nothing else in the product corrects that.
-          description:
-            'Where errors are read from. Detection never watches this platform itself — nothing reaches it that you have not connected here.',
         },
         analysis: {
           title: 'Analysis',
-          description:
-            'Outside systems the analysis may read while it works out a cause. Read-only, and only for this organisation’s incidents.',
         },
         notifications: {
           title: 'Notifications',
-          // The second sentence is the only thing that explains the "Add another Email" button —
-          // without it the tile grid reads as one integration per channel.
-          description:
-            'Who is told when an analysis completes. One channel can hold several integrations — two Email entries with different filters is a normal setup.',
         },
       },
     },
@@ -1309,8 +1178,6 @@ export const en = {
 
       github: {
         name: 'GitHub',
-        description:
-          'When an incident’s service is mapped to a repository, the analysis looks at what changed there in the 48 hours before the problem started, and names a change it believes caused it.',
         status: {
           notConnected: 'Not connected',
           connected: 'Connected',
@@ -1333,8 +1200,6 @@ export const en = {
         removeRow: (row: number) => `Remove repository ${row}`,
         addRow: 'Add repository',
         enabled: 'Let the analysis read GitHub',
-        readOnly:
-          'Read-only. The analysis lists recent commits and reads what they changed; it never writes to GitHub — no issues, comments or pull requests. The token is sent to GitHub and nowhere else, and is never written to logs or traces.',
         save: 'Save',
         saving: 'Saving…',
         saved: 'GitHub connection saved.',
@@ -1357,10 +1222,31 @@ export const en = {
       },
     },
 
+    // The organisation's own settings: its name here; its members below it.
+    organization: {
+      title: 'Organization name',
+      label: 'Name',
+      required: 'The organisation needs a name.',
+      save: 'Save',
+      saving: 'Saving…',
+      saved: 'Organization renamed.',
+    },
+
+    // The language the analyses write their prose in.
+    aiLanguage: {
+      title: 'AI response language',
+      options: {
+        English: 'English',
+        Turkish: 'Türkçe',
+      },
+      save: 'Save',
+      saving: 'Saving…',
+      saved: 'AI response language saved.',
+      loadError: 'The setting could not be loaded.',
+    },
+
     members: {
       title: 'Members',
-      description:
-        'Who can sign in to this organisation, and what each of them may do. Accounts are opened by invitation only.',
       invite: 'Invite',
       loadError: 'Could not load members',
       you: 'You',
@@ -1389,8 +1275,6 @@ export const en = {
 
       pending: {
         title: 'Pending invitations',
-        description:
-          'Each link works once and expires on its own. Inviting the same address again replaces the earlier link.',
         empty: 'No invitations are waiting.',
         expires: (when: string) => `expires ${when}`,
         revoke: 'Revoke',
@@ -1441,7 +1325,8 @@ export const en = {
     // is Admin and Engineer, and everything else reads.
     roleDetail: byKey<UserRole>({
       Admin: 'Everything, including the organisation’s members, integrations and telemetry sources.',
-      Engineer: 'Works incidents — status and assignment. Does not see the organisation’s settings.',
+      Engineer:
+        'Works incidents — status, assignment and comments. Does not see the organisation’s settings.',
       Viewer: 'Reads incidents, signals, evidence and dashboards, and changes nothing.',
     }),
 
@@ -1542,24 +1427,6 @@ export const en = {
     }),
 
     dayScope: (days: number) => `last ${days} days`,
-
-    /**
-     * The same two, capitalised, for a card description that is now *only* the scope.
-     *
-     * Written out rather than capitalised in code, for the reason `scope` is written out rather
-     * than lower-cased: changing a letter's case in a translated string is a language operation
-     * with its own rules, not a display transform, and a component has no business performing
-     * one. Four descriptions were reduced to their scope in the Adım 20.7 audit and each was
-     * starting a line in lower case.
-     */
-    scopeCap: byKey<WindowPreset>({
-      '30m': 'Last 30 minutes',
-      '2h': 'Last 2 hours',
-      '24h': 'Last 24 hours',
-      '7d': 'Last 7 days',
-    }),
-
-    dayScopeCap: (days: number) => `Last ${days} days`,
   },
 
   format: {

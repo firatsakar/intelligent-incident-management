@@ -1,4 +1,5 @@
-﻿using BuildingBlocks.Outbox;
+﻿using IdentityService.Application.Setup;
+using BuildingBlocks.Outbox;
 using IdentityService.Application.Abstractions;
 using IdentityService.Application.Sessions;
 using IdentityService.Infrastructure.Outbox;
@@ -69,6 +70,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();
 
+        // One per process: the seeder issues it on an empty database, the setup command spends it.
+        services.AddSingleton<SetupCode>();
         services.AddHostedService<IdentitySeeder>();
         services.AddHostedService<RefreshTokenCleanupService>();
 

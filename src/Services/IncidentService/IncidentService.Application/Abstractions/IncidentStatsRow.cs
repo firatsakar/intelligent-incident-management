@@ -19,5 +19,23 @@ public sealed record IncidentStatsRow(
     DateTime? DetectedAt,
     IncidentPriority Priority,
     IncidentStatus Status,
-    IncidentSource Source
+    IncidentSource Source,
+    // What the analysis made of it: three more scalars, still no prose.
+    bool IsAiAnalyzed = false,
+    bool AiFailed = false,
+    double? AiConfidence = null
+);
+
+/// <summary>
+/// One incident closed inside the window, read by when it was closed rather than when
+/// it was opened: an incident opened last month and closed today belongs to today's resolution
+/// time, and would be missing from it if the window were applied to CreatedAt.
+/// </summary>
+public sealed record IncidentResolutionRow(
+    DateTime CreatedAt,
+    DateTime? DetectedAt,
+    DateTime ResolvedAt,
+    IncidentPriority Priority,
+    IncidentSource Source,
+    IncidentVerdict? Verdict
 );

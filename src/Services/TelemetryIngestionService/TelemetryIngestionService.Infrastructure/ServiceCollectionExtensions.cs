@@ -29,6 +29,10 @@ public static class ServiceCollectionExtensions
         // registrations cannot become two different lifetimes.
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
+        // The key that encrypts customer credentials at rest. Resolved when the first
+        // context is built, so a service without it fails on its first query with the reason.
+        services.AddSingleton(_ => SecretProtector.FromConfiguration(configuration[SecretProtector.ConfigurationKey]));
+
         services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 
         services.AddDbContext<TelemetryDbContext>(
@@ -65,6 +69,10 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<TelemetryPollingService>();
         services.AddHostedService<OutboxDispatcher>();
         services.AddHostedService<OutboxCleanupService>();
+
+        // Log records are kept for Telemetry:LogRetentionDays (default 7), then dropped.
+        services.AddSingleton<LogRetentionService>();
+        services.AddHostedService(sp => sp.GetRequiredService<LogRetentionService>());
 
         return services;
     }

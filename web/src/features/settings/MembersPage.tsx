@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -55,7 +54,7 @@ import { OneTimeLinkDialog } from './OneTimeLinkDialog'
 
 /**
  * Who can sign in to this organisation and what each of them may do. Admins only, like everything
- * else that belongs to the organisation rather than to a person (Adım 16.5).
+ * else that belongs to the organisation rather than to a person.
  *
  * The server refuses the two changes that would lock an organisation out — anyone acting on their
  * own account, and the last active Admin being demoted or switched off. This page knows both rules
@@ -135,7 +134,6 @@ export function MembersPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="max-w-xl">
           <h2 className="text-lg font-medium tracking-tight">{t.title}</h2>
-          <p className="text-muted-foreground mt-1 text-sm">{t.description}</p>
         </div>
 
         <Button onClick={() => setInviting(true)}>
@@ -185,7 +183,6 @@ export function MembersPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t.pending.title}</CardTitle>
-          <CardDescription>{t.pending.description}</CardDescription>
         </CardHeader>
 
         <CardContent>

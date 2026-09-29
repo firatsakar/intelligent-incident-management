@@ -1,4 +1,5 @@
 using IncidentService.Application.DTOs;
+using IncidentService.Domain.Aggregates;
 
 namespace IncidentService.Application.Abstractions;
 
@@ -22,4 +23,23 @@ public interface IRealtimeNotifier
     Task IncidentCreatedAsync(IncidentDto incident, CancellationToken cancellationToken = default);
 
     Task IncidentChangedAsync(IncidentDto incident, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A row added to an incident's activity trail. Its own message rather than riding on
+    /// <see cref="IncidentChangedAsync"/>, because a comment does not change the incident.
+    /// </summary>
+    Task ActivityRecordedAsync(IncidentActivityDto activity, CancellationToken cancellationToken = default);
+}
+
+public static class RealtimeNotifierExtensions
+{
+    /// <summary>Announces the row a handler recorded, if it recorded one.</summary>
+    public static Task ActivityRecordedAsync(
+        this IRealtimeNotifier realtime,
+        IncidentActivity? activity,
+        CancellationToken cancellationToken = default
+    ) =>
+        activity is null
+            ? Task.CompletedTask
+            : realtime.ActivityRecordedAsync(IncidentActivityDto.FromDomain(activity), cancellationToken);
 }

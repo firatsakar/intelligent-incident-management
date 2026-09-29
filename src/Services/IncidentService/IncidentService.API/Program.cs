@@ -5,14 +5,19 @@ using BuildingBlocks.EventBus;
 using BuildingBlocks.Observability;
 using BuildingBlocks.Web;
 using IncidentService.API.Realtime;
+using IncidentService.API.Security;
 using FluentValidation;
 using IncidentService.API.BackgroundServices;
 using IncidentService.Application.Abstractions;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.EventHandlers;
 using IncidentService.Infrastructure;
+using IncidentService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// An installation's generated secrets, when docker-compose.yml provides them.
+builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.IncidentService);
 builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.IncidentService);
@@ -67,6 +72,10 @@ builder.Services.AddSignalR();
 // sent from. The hub context it wraps is a singleton either way.
 builder.Services.AddScoped<IRealtimeNotifier, SignalRIncidentNotifier>();
 
+// Who did it, for the activity trail. Null on the bus, where no person started anything.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+
 // The same call IdentityService makes. Every service validates the token on its own:
 // the gateway forwards it, it does not vouch for it.
 builder.Services.AddPlatformAuth(builder.Configuration);
@@ -74,6 +83,8 @@ builder.Services.AddPlatformAuth(builder.Configuration);
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+await app.MigrateOnStartupAsync<IncidentDbContext>();
 
 app.UseExceptionHandler();
 

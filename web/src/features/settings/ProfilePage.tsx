@@ -18,7 +18,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -36,8 +35,8 @@ import { cn } from '@/lib/utils'
  * The account, and the things on this console that are the reader's own.
  *
  * The identity card used to say that it was not an account — a name the browser made up, with no
- * password behind it. Since Adım 16 it is one, checked by the server on every request, and since
- * Adım 16.5 its password can be changed here. What the reader cannot change here is their role:
+ * password behind it. Now it is one, checked by the server on every request, and its
+ * password can be changed here. What the reader cannot change here is their role:
  * that belongs to the organisation's Admins, and the card says so rather than offering a control
  * that would be refused.
  */
@@ -137,11 +136,9 @@ function Identity({
           </Button>
         </div>
 
-        <p className="text-muted-foreground text-xs leading-relaxed">{labels.roleDetail[role]}</p>
 
         {/* Not repeated with the organisation's name, which is already on the row above — what is
             missing there is what membership means. */}
-        <p className="text-muted-foreground text-xs leading-relaxed">{identity.ownership}</p>
       </CardContent>
     </Card>
   )
@@ -203,7 +200,6 @@ function PasswordCard({ email }: { email: string }) {
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-4">
         <CardHeader>
           <CardTitle>{text.title}</CardTitle>
-          <CardDescription>{text.description}</CardDescription>
         </CardHeader>
 
         <CardContent className="max-w-sm space-y-4">
@@ -282,7 +278,7 @@ function Choice<T extends string>({
   name: string
   legend: string
   value: T | undefined
-  options: { value: T; label: string; detail: string; icon?: ReactNode }[]
+  options: { value: T; label: string; icon?: ReactNode }[]
   onChange: (value: T) => void
 }) {
   const { common } = useT()
@@ -323,7 +319,6 @@ function Choice<T extends string>({
                 )}
               </span>
 
-              <span className="text-muted-foreground text-xs">{option.detail}</span>
             </label>
           )
         })}
@@ -333,14 +328,13 @@ function Choice<T extends string>({
 }
 
 function Appearance() {
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
   const text = useT().theme
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{text.title}</CardTitle>
-        <CardDescription>{text.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-2">
@@ -352,33 +346,15 @@ function Appearance() {
           options={themeOptions.map((option) => ({
             value: option.value,
             label: text.options[option.value].label,
-            detail: text.options[option.value].detail,
             icon: <option.icon className="size-4 shrink-0" aria-hidden />,
           }))}
         />
 
-        {/* "System" is the default, and on its own it does not tell the operator which palette
-            they are actually going to get. resolvedTheme does, and is only read once it exists —
-            narrowed to the two it can be, because the word it supplies has to be translated and
-            a raw value would come out in English on a Turkish screen. */}
-        {theme === 'system' && (resolvedTheme === 'light' || resolvedTheme === 'dark') && (
-          <p className="text-muted-foreground text-xs" aria-live="polite">
-            {text.resolved(text.palette[resolvedTheme])}
-          </p>
-        )}
       </CardContent>
     </Card>
   )
 }
 
-/**
- * The same tiles, plus one sentence the appearance card has no equivalent of.
- *
- * Where the translation stops is a fact about the product rather than a caveat to bury. An
- * analysis's reasoning and a provider's error message arrive in the language they were written
- * in, and are shown that way. Said here, once, on the screen where the choice is made — rather
- * than as a footnote beside every English paragraph on an otherwise Turkish screen.
- */
 function LanguageCard() {
   const { language, setLanguage } = useLanguage()
   const text = useT().language
@@ -387,7 +363,6 @@ function LanguageCard() {
     <Card>
       <CardHeader>
         <CardTitle>{text.title}</CardTitle>
-        <CardDescription>{text.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -399,11 +374,8 @@ function LanguageCard() {
           options={languages.map((option) => ({
             value: option,
             label: languageName[option],
-            detail: text.options[option],
           }))}
         />
-
-        <p className="text-muted-foreground text-xs leading-relaxed">{text.passthrough}</p>
       </CardContent>
     </Card>
   )

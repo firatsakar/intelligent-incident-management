@@ -5,6 +5,7 @@ using IncidentService.Application.Abstractions;
 using IncidentService.Application.DTOs;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
+using IncidentService.Domain.ValueObjects;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -18,13 +19,15 @@ public sealed class CreateIncidentFromSignalCommandHandler
     private readonly IRealtimeNotifier _realtime;
     private readonly ILogger<CreateIncidentFromSignalCommandHandler> _logger;
     private readonly IOrganizationContext _organization;
+    private readonly IIncidentActivityRepository _activity;
 
     public CreateIncidentFromSignalCommandHandler(
         IIncidentRepository repository,
         IEventBus eventBus,
         IRealtimeNotifier realtime,
         ILogger<CreateIncidentFromSignalCommandHandler> logger,
-        IOrganizationContext organization
+        IOrganizationContext organization,
+        IIncidentActivityRepository activity
     )
     {
         _repository = repository;
@@ -32,6 +35,7 @@ public sealed class CreateIncidentFromSignalCommandHandler
         _realtime = realtime;
         _logger = logger;
         _organization = organization;
+        _activity = activity;
     }
 
     public async Task Handle(
@@ -65,6 +69,7 @@ public sealed class CreateIncidentFromSignalCommandHandler
         );
 
         await _repository.AddAsync(incident, cancellationToken);
+        _activity.Add(IncidentActivity.Opened(incident, ActivityActor.Detector));
         await _repository.SaveChangesAsync(cancellationToken);
 
         // From here the existing chain takes over unchanged: analysis, then notifications.

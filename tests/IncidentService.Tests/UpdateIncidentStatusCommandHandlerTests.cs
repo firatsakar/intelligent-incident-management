@@ -26,7 +26,12 @@ public sealed class UpdateIncidentStatusCommandHandlerTests
     public UpdateIncidentStatusCommandHandlerTests()
     {
         _repository.GetByIdAsync(_incident.Id, Arg.Any<CancellationToken>()).Returns(_incident);
-        _handler = new UpdateIncidentStatusCommandHandler(_repository, _realtime);
+        _handler = new UpdateIncidentStatusCommandHandler(
+            _repository,
+            _realtime,
+            Substitute.For<IIncidentActivityRepository>(),
+            Substitute.For<ICurrentUser>()
+        );
     }
 
     private Task Handle(IncidentStatus status, IncidentVerdict? verdict) =>

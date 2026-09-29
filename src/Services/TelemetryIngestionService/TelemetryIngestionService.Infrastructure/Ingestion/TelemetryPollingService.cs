@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging;
 using TelemetryIngestionService.Application.Abstractions;
 using TelemetryIngestionService.Application.Commands.PollTelemetrySource;
 using TelemetryIngestionService.Domain.Aggregates;
+using TelemetryIngestionService.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace TelemetryIngestionService.Infrastructure.Ingestion;
 
@@ -62,6 +64,7 @@ public sealed class TelemetryPollingService : BackgroundService
         var sources = scope.ServiceProvider.GetRequiredService<ITelemetrySourceRepository>();
         var cursors = scope.ServiceProvider.GetRequiredService<ISourceCursorRepository>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+        var connectionString = scope.ServiceProvider.GetRequiredService<TelemetryDbContext>().Database.GetConnectionString()!;
 
         var enabled = await sources.GetEnabledForPollingAsync(cancellationToken);
 
@@ -84,6 +87,17 @@ public sealed class TelemetryPollingService : BackgroundService
             var cursor = await cursors.GetForPollingAsync(source.Id, cancellationToken);
 
             if (!IsDue(source, cursor))
+                continue;
+
+            // One replica per source. Asked only once the source is due, so an idle tick
+            // costs no connection; and the cursor is read again once held, because the replica
+            // that held it last may have just polled.
+            await using var claim = await SourcePollLock.TryAcquireAsync(connectionString, source.Id, cancellationToken);
+
+            if (claim is null)
+                continue;
+
+            if (!IsDue(source, await cursors.GetForPollingAsync(source.Id, cancellationToken)))
                 continue;
 
             // One trace per poll, and the root of everything the poll sets off. Nothing is in

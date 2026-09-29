@@ -11,6 +11,6 @@ public sealed record IncidentAnalysisCompletedDomainEvent(
     string SuggestedPriority,
     string Reasoning,
     double? Confidence,
-    // Null on rows written before Adım 17.5, still in the outbox when it deployed.
+    // Null on outbox rows written before related changes existed.
     IReadOnlyList<RelatedChange>? RelatedChanges = null
 ) : DomainEvent;

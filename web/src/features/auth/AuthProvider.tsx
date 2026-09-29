@@ -35,6 +35,9 @@ interface AuthValue {
   signIn: (email: string, password: string) => Promise<void>
   /** Takes over a session the server has already opened — an accepted invitation, a reset. */
   adopt: (account: SessionAccount) => void
+  /** Asks the server again who this is — after something about the account changed, like its
+   *  organisation's name. */
+  refresh: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -155,6 +158,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         queryClient.clear()
         setSession(adoptSession(account))
         setStatus('authenticated')
+      },
+
+      refresh: async () => {
+        const next = await readSession()
+
+        setSession(next)
+        setStatus(next ? 'authenticated' : 'anonymous')
       },
 
       signOut: async () => {

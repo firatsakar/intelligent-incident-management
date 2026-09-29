@@ -39,7 +39,7 @@ public sealed class AnalysesController : ControllerBase
     }
 
     // Absolute, and outside /api on purpose: the gateway routes /api, /hubs and /otlp and nothing
-    // else, so this is reachable only from inside, against the service itself. Until Adım 16.5 it
+    // else, so this is reachable only from inside, against the service itself. It once
     // was /api/analyses/reindex — anonymous and routed, so anyone on the internet could make the
     // platform rebuild every organisation's index. Not an Admin endpoint either: an organisation's
     // Admin has no business rebuilding all of them.

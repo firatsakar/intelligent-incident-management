@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Constants;
 
 namespace IncidentService.Application.Commands.CreateIncident;
@@ -31,5 +32,14 @@ public sealed class CreateIncidentCommandValidator : AbstractValidator<CreateInc
                 $"Assigned team must not exceed {IncidentConstants.TeamMaxLength} characters."
             )
             .When(x => x.AssignedTeam is not null);
+
+        RuleFor(x => x.ExternalId)
+            .MaximumLength(IncidentConstants.ExternalIdMaxLength)
+            .WithMessage($"External id must not exceed {IncidentConstants.ExternalIdMaxLength} characters.")
+            .When(x => x.ExternalId is not null);
+
+        RuleFor(x => x.ReportedBy)
+            .MaximumLength(IncidentApiKey.NameMaxLength)
+            .When(x => x.ReportedBy is not null);
     }
 }

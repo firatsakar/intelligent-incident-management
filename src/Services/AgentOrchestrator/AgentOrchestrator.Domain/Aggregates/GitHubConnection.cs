@@ -4,7 +4,7 @@ using BuildingBlocks.SharedKernel;
 namespace AgentOrchestrator.Domain.Aggregates;
 
 /// <summary>
-/// An organisation's GitHub, as the analysis may read it (Adım 17.5): a read-only token and which
+/// An organisation's GitHub, as the analysis may read it: a read-only token and which
 /// repository each service's code lives in. One per organisation, configured by its Admins.
 /// </summary>
 /// <remarks>

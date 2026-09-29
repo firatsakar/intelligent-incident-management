@@ -6,7 +6,7 @@ namespace TelemetryIngestionService.Domain.Services;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The decision recorded for Adım 13.5: a signature's count and a few sample lines are kept, not
+/// The storage decision: a signature's count and a few sample lines are kept, not
 /// every line. Three hundred copies of one error are one fact and a number; the ids that differ
 /// between them are exactly what the fingerprint already masks.
 /// </para>

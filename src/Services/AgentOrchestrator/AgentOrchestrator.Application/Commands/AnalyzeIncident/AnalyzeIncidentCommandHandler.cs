@@ -2,6 +2,7 @@
 using BuildingBlocks.SharedKernel;
 using AgentOrchestrator.Application.Abstractions;
 using AgentOrchestrator.Domain.Aggregates;
+using AgentOrchestrator.Domain.Enums;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -14,15 +15,18 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
     private readonly ILogger<AnalyzeIncidentCommandHandler> _logger;
     private readonly IOrganizationContext _organization;
     private readonly IGitHubConnectionRepository _connections;
+    private readonly IAiSettingsRepository _settings;
 
     public AnalyzeIncidentCommandHandler(
         IAiAnalyzer aiAnalyzer,
         IIncidentAnalysisRepository repository,
         ILogger<AnalyzeIncidentCommandHandler> logger,
         IOrganizationContext organization,
-        IGitHubConnectionRepository connections
+        IGitHubConnectionRepository connections,
+        IAiSettingsRepository settings
     )
     {
+        _settings = settings;
         _aiAnalyzer = aiAnalyzer;
         _repository = repository;
         _logger = logger;
@@ -54,12 +58,17 @@ public sealed class AnalyzeIncidentCommandHandler : IRequestHandler<AnalyzeIncid
         {
             var code = await CodeFor(request, cancellationToken);
 
+            // Through the organisation filter, like the connection above: this organisation's
+            // choice, English when it has made none.
+            var language = (await _settings.GetAsync(cancellationToken))?.ResponseLanguage ?? AnalysisLanguage.English;
+
             var result = await _aiAnalyzer.AnalyzeAsync(
                 organizationId,
                 request.IncidentId,
                 request.Title,
                 request.Description,
                 code,
+                language,
                 cancellationToken
             );
 

@@ -1,6 +1,9 @@
 ﻿using BuildingBlocks.Outbox;
+using System.Text.Json;
+using BuildingBlocks.Application;
 using BuildingBlocks.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TelemetryIngestionService.Domain.Aggregates;
 
 namespace TelemetryIngestionService.Infrastructure.Persistence;
@@ -8,14 +11,17 @@ namespace TelemetryIngestionService.Infrastructure.Persistence;
 public sealed class TelemetryDbContext : DbContext
 {
     private readonly IOrganizationContext _organization;
+    private readonly SecretProtector _secrets;
 
     public TelemetryDbContext(
         DbContextOptions<TelemetryDbContext> options,
-        IOrganizationContext organization
+        IOrganizationContext organization,
+        SecretProtector secrets
     )
         : base(options)
     {
         _organization = organization;
+        _secrets = secrets;
     }
 
     /// <summary>
@@ -57,6 +63,24 @@ public sealed class TelemetryDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TelemetryDbContext).Assembly);
+
+        // A source's credentials (a Seq API key) are encrypted in the column and
+        // decrypted on the way back. A local rather than the field, so the cached model does not
+        // hold this context.
+        var secrets = _secrets;
+        var config = modelBuilder.Entity<TelemetrySource>().Property<Dictionary<string, string>>("_config");
+        config.HasConversion(
+            new ValueConverter<Dictionary<string, string>, string>(
+                value => JsonSerializer.Serialize(ConfigSecrets.Protect(value, secrets), (JsonSerializerOptions?)null),
+                json =>
+                    ConfigSecrets.Unprotect(
+                        JsonSerializer.Deserialize<Dictionary<string, string>>(json, (JsonSerializerOptions?)null)
+                            ?? new Dictionary<string, string>(),
+                        secrets
+                    )
+            ),
+            config.Metadata.GetValueComparer()
+        );
 
         // The outbox mapping lives in BuildingBlocks, so the assembly scan above does not see it.
         modelBuilder.ApplyConfiguration(new OutboxMessageConfiguration());

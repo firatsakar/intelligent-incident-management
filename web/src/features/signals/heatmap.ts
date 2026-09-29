@@ -181,3 +181,22 @@ export function intensityBounds(max: number): number[] {
 
   return [1, 2, 3, 4, 5].map((step) => Math.floor(max * (step / 5) ** 2))
 }
+
+/** The smallest tile's area as a share of the largest's, at the least. */
+export const minTileAreaShare = 1 / 8
+
+/**
+ * How much area a tile gets: the square root of its count, and never less than an eighth of the
+ * largest tile.
+ *
+ * Linear area made the map useless at the moment it matters most. Next to a signature that has
+ * fired 723 times, three errors that had just started with 9 each were slivers a few pixels wide —
+ * the new problem was the one thing on screen nobody could see (found in the live test,
+ * 2026-09-29). The root keeps the order and a visible difference; the floor keeps the tail
+ * readable. The exact count is still on the tile and in its colour, which keeps its own ramp.
+ */
+export function tileWeight(occurrences: number, max: number): number {
+  if (occurrences <= 0 || max <= 0) return 0
+
+  return Math.max(Math.sqrt(occurrences), Math.sqrt(max) * minTileAreaShare)
+}

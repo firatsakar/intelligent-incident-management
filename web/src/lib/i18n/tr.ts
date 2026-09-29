@@ -117,7 +117,7 @@ export const tr: Dictionary = {
     sections: 'Ayar bölümleri',
     pages: {
       profile: 'Profil',
-      members: 'Üyeler',
+      organization: 'Organizasyon',
       integrations: 'Entegrasyonlar',
     },
   },
@@ -146,9 +146,6 @@ export const tr: Dictionary = {
     },
 
     heading: 'Oturum aç',
-    subheading: 'Organizasyonunuz, hesabınızın bağlı olduğu organizasyondur.',
-    ownership:
-      'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait; yani burada gördükleriniz ekibinizin.',
     emailLabel: 'E-posta adresi',
     passwordLabel: 'Parola',
     required: 'E-posta adresinizi ve parolanızı girin.',
@@ -159,6 +156,31 @@ export const tr: Dictionary = {
     submit: 'Konsola gir',
     submitting: 'Giriş yapılıyor…',
     forgot: 'Parolanızı mı unuttunuz? Organizasyonunuzun bir Yöneticisi size yeni parola belirleme bağlantısı gönderebilir.',
+  },
+
+  setup: {
+    title: 'Bu kurulumu hazırlayın',
+    subtitle: 'Burada henüz kimse oturum açmadı. Organizasyonu ve ilk Yöneticisini — sizi — oluşturun.',
+    code: 'Kurulum kodu',
+    codeHint:
+      'Kimlik servisi başlarken log’una bir kez yazdı; “First-run setup” ile başlayan satırda. Yalnız bu sunucuyu çalıştıran okuyabilir — kanıtladığı da bu.',
+    codeRequired: 'Log’daki kurulum kodunu girin.',
+    organization: 'Organizasyon adı',
+    organizationHint: 'Ekibiniz ya da şirketiniz. Bir Yönetici sonradan Ayarlar → Organizasyon’dan değiştirebilir.',
+    organizationRequired: 'Organizasyona bir ad verin.',
+    name: 'Adınız',
+    nameRequired: 'Adınızı girin.',
+    email: 'E-posta adresi',
+    emailInvalid: 'Bu bir e-posta adresine benzemiyor.',
+    password: 'Parola',
+    repeat: 'Parolayı tekrar girin',
+    submit: 'Organizasyonu oluştur',
+    submitting: 'Kuruluyor…',
+    rejected:
+      'Bu kod kurulumu açmıyor. Servis yeniden başladıysa log’daki yeni kodu kullanın; kurulum zaten yapıldıysa oturum açın.',
+    doneTitle: 'Bu kurulum zaten hazır',
+    done: 'Hesabınızla oturum açın. Yeni kişiler bir Yöneticinin davetiyle katılır.',
+    toSignIn: 'Oturum açmaya git',
   },
 
   passwordRules: {
@@ -209,44 +231,28 @@ export const tr: Dictionary = {
   language: {
     change: 'Dili değiştir',
     title: 'Dil',
-    description:
-      'Bu tarayıcıda saklanıyor, adınızın altında değil — ikinci bir makine dili yine tarayıcıdan okur.',
     legend: 'Dil',
-    options: {
-      en: 'Konsolun kendi metni, tarihleri ve sayıları İngilizce.',
-      tr: 'Konsolun kendi metni, tarihleri ve sayıları Türkçe.',
-    },
-    passthrough:
-      'Konsolun kendi metni çevrildi. Servislerden gelen metin — bir analizin gerekçesi, bir tespitin nedeni, sağlayıcının hata mesajı — yazıldığı gibi, İngilizce aktarılıyor.',
   },
 
   theme: {
     change: 'Temayı değiştir',
     title: 'Görünüm',
-    description:
-      'Bu tarayıcıda saklanıyor, adınızın altında değil — ikinci bir makine yine Sistem ile açılır.',
     legend: 'Tema',
     options: {
-      light: { label: 'Açık', detail: 'Her zaman açık palet.' },
-      dark: { label: 'Koyu', detail: 'Her zaman koyu palet.' },
-      system: { label: 'Sistem', detail: 'İşletim sisteminizi izler.' },
+      light: { label: 'Açık' },
+      dark: { label: 'Koyu' },
+      system: { label: 'Sistem' },
     },
-    palette: { light: 'açık', dark: 'koyu' },
-    resolved: (palette: string) => `Sisteminiz şu anda ${palette} paleti istiyor.`,
   },
 
   profile: {
     title: 'Profil',
     identity: {
       title: 'Kimlik',
-      ownership:
-        'Olaylar, sinyaller, kaynaklar ve entegrasyonlar onları açan kişiye değil organizasyona ait. Kimin üye olduğuna ve her üyenin ne yapabileceğine organizasyonun Yöneticileri karar verir.',
     },
 
     password: {
       title: 'Parola',
-      description:
-        'Değiştirmek, bu hesabın diğer bütün oturumlarını kapatır. Bu oturum açık kalır.',
       current: 'Mevcut parola',
       currentRequired: 'Mevcut parolanızı girin.',
       wrongCurrent: 'Bu, mevcut parolanız değil.',
@@ -263,8 +269,6 @@ export const tr: Dictionary = {
   incidents: {
     list: {
       title: 'Olaylar',
-      matching: (count: number) => `${count} olay bu filtrelere uyuyor`,
-      onRecord: (count: number) => `Kayıtta ${count} olay`,
 
       filterStatus: 'Durum filtresi',
       filterPriority: 'Öncelik filtresi',
@@ -287,13 +291,7 @@ export const tr: Dictionary = {
       loadError: 'Olaylar yüklenemedi',
 
       emptyFilteredTitle: 'Bu filtrelere uyan bir şey yok.',
-      emptyFiltered: (status: string, priority: string) =>
-        `Kayıtta olaylar var; hiçbiri aynı anda hem ${status} hem ${priority} öncelikli değil.`,
-      emptyFilteredStatus: (status: string) => `Kayıtta olaylar var; hiçbiri ${status} değil.`,
-      emptyFilteredPriority: (priority: string) =>
-        `Kayıtta olaylar var; hiçbiri ${priority} öncelikli değil.`,
       emptyTitle: 'Kayıtta hiç olay yok.',
-      empty: 'Elle açılmış bir şey yok ve henüz hiçbir şey bir tespit kuralını aşmadı.',
 
       page: (current: number, total: number) => `Sayfa ${current} / ${total}`,
       previous: 'Önceki',
@@ -304,6 +302,7 @@ export const tr: Dictionary = {
       analysed: 'analiz edildi',
       toOpen: (duration: string) => `açılışa +${duration}`,
       openedByHand: 'Elle açıldı — bunu hiçbir şey tespit etmedi',
+      sentThroughApi: 'Olay API’si üzerinden gönderildi — burada hiçbir şey tespit etmedi',
     },
 
     detail: {
@@ -320,17 +319,12 @@ export const tr: Dictionary = {
       assigning: 'Atanıyor…',
 
       whatHappened: 'Ne oldu',
-      fromDetector:
-        'Doğrudan log kayıtlarından üretildi — analizin okuduğu metnin aynısı.',
-      fromOperator: 'Olay açılırken girildiği gibi.',
+      sentWith: (key) => `${key} anahtarıyla`,
 
       openedByHand: 'Elle açıldı',
-      openedByHandDetail:
-        'Bunu hiçbir şey tespit etmedi, yani ölçülecek bir tespit gecikmesi de yok — platform fark etmedi, kendisine söylendi. Aşağıdaki puan dökümünün olmamasının sebebi de aynı.',
+      sentWithKey: (key) => `${key} anahtarıyla gönderildi`,
       problemStarted: 'Sorunun başlangıcı',
-      sourceClock: 'kaynağın saatiyle',
       incidentOpened: 'Olayın açılışı',
-      ourClock: 'bizimkiyle',
       detectionLatency: 'Tespit gecikmesi',
       clockDisagreement: 'Saat uyuşmazlığı',
       latencyHintLabel: 'Tespit gecikmesi neyi ölçüyor',
@@ -338,8 +332,6 @@ export const tr: Dictionary = {
         'Kaynağın damgaladığı ilk log satırından bu kaydın açıldığı ana kadar — log deposunun saatinden bizimkine. İçinde sorgulama aralığı, tespit geçişi ve puanlama var; platformun bunu kendi başına fark etmek için harcadığı sürenin tamamı bu.',
       skewHint:
         'Kaynak, bunun biz kaydı açtıktan sonra başladığını bildiriyor; bu ancak iki saatin uyuşmadığı anlamına gelir. Gördüğünüz rakam bir gecikme değil, o uyuşmazlığın büyüklüğü.',
-      noticed: 'söylenmeden fark edildi',
-      skewNote: 'kaynağın saati bizimkinin ilerisinde',
 
       closed: (relative: string) => `${relative} kapandı`,
       statusUpdated: 'Durum güncellendi',
@@ -361,44 +353,61 @@ export const tr: Dictionary = {
 
     timeline: {
       title: 'Zaman çizelgesi',
-      description: 'Bir zaman eksikse, bu ekrandan değil kayıttan eksiktir.',
 
       problemStarted: 'Sorunun başlangıcı',
-      onSourceClock: 'Kaynağın saatiyle, bizimkiyle değil.',
-      notRecorded: 'Kaydedilmedi — bu olay elle açıldı.',
 
       incidentOpened: 'Olayın açılışı',
       toDetect: (duration: string) => `tespit için +${duration}`,
-      ourClockGap: 'Bizim saatimiz. Yukarıdaki aralık tespitin maliyeti.',
 
       analysisApplied: 'Analizin işlenmesi',
       categorised: (category: string, priority: string) =>
         `${category} olarak sınıflandı, öncelik ${priority} yapıldı`,
-      applied: 'İşlendi — analiz kategori döndürmedi.',
-      analysisFailed: 'Analiz çalıştı ve hiçbir şey döndürmedi. Sebebi için panele bakın.',
-      analysisWaiting: 'Analiz servisi bekleniyor.',
 
       peopleNotified: 'Bildirim gönderimi',
       afterOpening: (duration: string) => `açılıştan +${duration} sonra`,
       channelsDelivered: (sent: number, total: number) =>
         `${total} kanaldan ${sent} tanesi ulaştı`,
-      noDeliveryYet: 'Henüz kayıtlı teslimat yok.',
-      everyChannelFailed:
-        'Yapılandırılmış her kanal başarısız oldu — bildirimler paneline bakın.',
+      everyChannelFailed: 'Her kanal başarısız oldu.',
 
       lastChanged: 'Son değişiklik',
-      anyEdit: 'Herhangi bir değişiklik — durum, ekip, ya da analizin inmesi.',
 
       doneUntimed: 'yapıldı · zamanı kaydedilmedi',
       notYet: 'henüz değil',
     },
 
+    activity: {
+      title: 'Olay geçmişi',
+      loadError: 'Olay geçmişi yüklenemedi.',
+
+      someone: 'Bir üye',
+      apiKey: (name: string) => `${name} API anahtarı`,
+      detector: 'Telemetri dedektörü',
+      ai: 'AI analizi',
+
+      opened: 'olayı açtı',
+      statusChanged: (from: string, to: string) => `durumu değiştirdi: ${from} → ${to}`,
+      teamAssigned: (team: string) => `${team} ekibine atadı`,
+      teamReassigned: (from: string, to: string) => `ekibi değiştirdi: ${from} → ${to}`,
+      analysed: (category: string | null) =>
+        category ? `${category} olarak sınıflandırdı` : 'analiz etti',
+      priorityChanged: (from: string, to: string) => `öncelik ${from} → ${to}`,
+      priorityKept: (priority: string) => `öncelik ${priority} kaldı`,
+      analysisFailed: 'analiz edemedi',
+      commented: 'yorum yazdı',
+      withDetail: (action: string, detail: string) => `${action} · ${detail}`,
+
+      commentLabel: 'Yorum',
+      commentPlaceholder: 'Ne denediniz, ne buldunuz, sırada ne var',
+      commentHint: 'Yorumlar sonradan düzenlenemez ve silinemez.',
+      remaining: (count: number) => `${count} karakter kaldı`,
+      send: 'Yorum ekle',
+      sending: 'Gönderiliyor…',
+    },
+
     score: {
       title: 'Kapı bunu nasıl puanladı',
-      description: 'Bir yargı değil, belirlenimci bir puan.',
 
       total: 'Toplam',
-      totalNote: 'yukarıdaki terimlerin toplamı, 1,00 ile sınırlı',
       confidence: 'Güven',
       confidenceNote: 'puanlama atlandı',
 
@@ -416,8 +425,7 @@ export const tr: Dictionary = {
       title: 'Bildirimler',
       summary: (sent: number, total: number) => `${total} teslimattan ${sent} tanesi ulaştı`,
       failed: (count: number) => `${count} başarısız`,
-      empty:
-        'Henüz bir şey gönderilmedi. Bildirimler analiz tamamlanınca, filtreleri uyan her etkin entegrasyona gidiyor.',
+      empty: 'Henüz bir şey gönderilmedi.',
       deletedIntegration: 'silinmiş entegrasyon',
       took: (duration: string) => `${duration} sürdü`,
       queued: (when: string) => `${when} kuyruğa girdi`,
@@ -426,23 +434,15 @@ export const tr: Dictionary = {
 
     analysis: {
       title: 'AI analizi',
-      description:
-        'Belirlenimci kapının üstüne eklenen zenginleştirme — kategoriyi ve önceliği bu belirledi, olayın açılmasını değil.',
 
-      failedDescription:
-        'Analiz çalıştı ve bir sonuç üretmedi. Kendiliğinden gelecek başka bir şey yok — aşağıdaki öncelik ve kategori tespitin koyduğu değerler.',
       failedTitle: 'Analiz başarısız',
-      failedFooter: 'Sonraki başarılı bir deneme bunu temizler ve paneli doldurur.',
 
-      waiting:
-        'Analiz servisi bekleniyor. Bu kendiliğinden çözülür — başarısız olsaydı burada öyle yazardı.',
+      waiting: 'Analiz servisi bekleniyor.',
 
       confidence: 'Güven',
       confidenceHintLabel: 'Güven rakamı ne anlama geliyor',
       confidenceHint:
         'Analizin kendi kategorisinden ve önceliğinden ne kadar emin olduğu — olayın ne kadar ciddi olduğu değil; kapının bir şeyin bozulduğundan ne kadar emin olduğu da değil. O ikincisi soldaki puan.',
-      noConfidence:
-        'Analiz buna bir sayı koymadı. Bu emin olmamakla aynı şey değil — sayısallaştırmayı reddetti, yani çizilecek bir şey yok.',
 
       reasoning: 'Gerekçe',
 
@@ -494,28 +494,17 @@ export const tr: Dictionary = {
 
     signals: {
       title: 'Sinyaller',
-      intro: 'Kapının baktığı her şey, yükseltmedikleri dahil.',
       loadError: 'Sinyaller yüklenemedi',
 
       allSignals: 'Tüm sinyaller',
-      shown: (count: number) => `${count} gösteriliyor`,
-      inWindow: (total: number) => `bu pencerede ${total} tane`,
-      loaded: (loaded: number, total: number) => `${total} sinyalden ${loaded} tanesi yüklü`,
-      chips: 'çipler kapının puan bileşenleri, güven ise onların toplamı',
       clearFilter: 'Filtreyi temizle',
 
       emptyTileTitle: 'Bu kutucuk için sinyal yok.',
-      emptyTile:
-        'Mevcut pencerede bu kutucuğa uyan bir şey yok. Bağlantı başka bir pencereye göre üretilmiş olabilir, ya da imzalar o zamandan beri yeniden sıralanmış olabilir.',
       emptyWindowTitle: 'Bu pencerede sinyal yok.',
-      emptyWindow:
-        'Henüz hiçbir şey bir tespit kuralını aşmadı. Sakin bir pencere ile okunmayan bir kaynak buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
 
       loadMore: (count: number) => `${count} tane daha yükle`,
-      notLoaded: (count: number) =>
-        `Bu pencerede ${count} daha eski sinyal yüklü değil, yani yukarıdaki harita onları saymıyor.`,
-      ceiling: (max: number, total: number, remaining: number) =>
-        `Bu uç bir seferde en fazla ${max} tane veriyor, bu pencerede ise ${total} var. Geri kalanı görmenin yolu daha kısa bir pencere — kalan ${remaining} tanesi yukarıdaki her şeyden daha eski.`,
+      notLoaded: (count: number) => `${count} eski sinyal yüklenmedi`,
+      ceiling: (max: number, total: number) => `${total} sinyalin en yeni ${max} tanesi gösteriliyor.`,
 
       occurrences: (count: number) => `${count} kez`,
       viewIncident: 'Olaya git',
@@ -523,11 +512,7 @@ export const tr: Dictionary = {
 
     heatmap: {
       title: 'Hatalar nerede',
-      description:
-        'Kutucuk başına bir hata imzası. Boyut da renk de ne sıklıkta tetiklendiği — en büyük ve en kırmızı sol üstte.',
-      partial: (loaded: number, total: number) =>
-        `Bu pencerenin ${total} sinyalinden en yeni ${loaded} tanesiyle kuruldu — aşağıdaki Daha fazla yükle bunu genişletir.`,
-      empty: 'Bu pencerede sinyal yok. Henüz hiçbir şey bir tespit kuralını aşmadı.',
+      empty: 'Bu pencerede sinyal yok.',
 
       allServices: 'Tüm servisler',
       counts: (services: number, tiles: number, occurrences: number) =>
@@ -568,40 +553,21 @@ export const tr: Dictionary = {
       clearService: 'Servis filtresini temizle',
 
       logRecords: 'Log kayıtları',
-      showingRecent: (shown: number, total: number) =>
-        `${total} kayıttan en yeni ${shown} tanesi gösteriliyor`,
-      inWindow: (total: number) => `bu pencerede ${total} tane`,
       logListLabel: 'Bu penceredeki log kayıtları',
       emptyLogTitle: 'Bu pencerede loglanan bir şey yok.',
-      emptyLogForService: (service: string) =>
-        `Pencerede "${service}" kaynağından kayıt yok. Ya sessizdi, ya da bu adla hiçbir şey okunmuyor — adın kaynağın bildirdiğiyle birebir eşleşmesi gerekiyor.`,
-      emptyLog:
-        'Sakin bir pencere ile okunmayan bir kaynak buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
 
       signatures: 'İmzalar',
-      signaturesCount: (count: number) =>
-        `Aşağıdaki sinyallerin arkasındaki ${count} ayrı hata.`,
-      signaturesCountTruncated: (count: number) =>
-        `Gösterilen sinyallerin arkasındaki ${count} ayrı hata — pencerenin tamamının değil.`,
-      signaturesAllTime: 'Her birinin sayaçları bu pencereyi değil tüm zamanı kapsıyor.',
       signaturesListLabel: 'Bu penceredeki sinyallerin arkasındaki imzalar',
       emptySignaturesTitle: 'Burada imza yok.',
-      emptySignatures:
-        'Bir imza, bir hata ilk kez normalize edildiğinde oluşur; yani boş bir liste penceredeki hiçbir şeyin hata olmadığı anlamına gelir.',
 
       signals: 'Sinyaller',
-      signalsDescription: 'Kapının o imzalardan çıkardığı sonuç',
-      signalsRecent: (shown: number, total: number) => `${total} taneden en yeni ${shown} tanesi`,
       signalsListLabel: 'Bu penceredeki sinyaller',
       emptySignalsTitle: 'Burada sinyal yok.',
-      emptySignals:
-        'Hatalar loglandı ama hiçbir patlama bir tespit kuralını aşmadı, yani kapının karar verecek bir şeyi olmadı.',
 
       arrived: (records: number) =>
         `Bu pencere okunduğundan beri ${records} yeni log kaydı alındı.`,
       arrivedAcrossPolls: (records: number, polls: number) =>
         `Bu pencere okunduğundan beri ${polls} sorgulamada ${records} yeni log kaydı alındı.`,
-      allServicesNote: ' Yalnızca burada süzülen servis için değil, tüm servisler için sayıldı.',
       reread: 'Pencereyi yeniden oku',
       rereading: 'Yeniden okunuyor…',
 
@@ -627,80 +593,31 @@ export const tr: Dictionary = {
       loadError: 'Huni yüklenemedi',
 
       notRaised: 'Yükseltilmedi',
-      notRaisedDescription: (scope: string) => `${scope}.`,
       ofScored: (signals: number) => `/ kapının puanladığı ${signals} sinyal`,
       heldBack: 'geri tutulan',
       actedOn: 'işlem yapılan',
 
-      zeroHeldBack:
-        'Kapı bu pencerede puanladığı her şeye işlem yaptı — {count} tanesinin hepsi eşiği aştı, yani geri tutulacak bir şey kalmadı. {emphasis} Neye baktığı yanındaki sayı ve aşağıdaki aşamalar.',
-      zeroEmphasis:
-        'Buradaki sıfır, kapının hiçbir şeyi reddetmediği anlamına gelir — hiçbir şeye bakmadığı değil.',
-      someHeldBack: (notRaised: string, signals: string) =>
-        `${signals} sinyalden ${notRaised} tanesi puanlandı ve olduğu yerde bırakıldı: olay yok, çağrı yok, e-posta yok. Bir alerting kuralının yapamayacağı şey tam olarak bu — geri okuyabileceğiniz bir aritmetiğe dayanarak, bunun bir insana değmediğine karar vermek.`,
-      deduplicated: (count: number) =>
-        `${count} tekilleştirilmiş sinyal, geri tutulmuş değil işlem yapılmış sayılıyor. Her biri zaten açık olan bir olayın içine katlandı, yani biri uyandırıldı — sadece daha önce.`,
-
       nothingScored: 'Bu pencerede hiçbir şey puanlanmadı.',
-      nothingScoredRecords: (records: string, _count: number) =>
-        `${records} log kaydı geldi ve hiçbiri bir tespit kuralını aşmadı, yani hiçbir patlama puanlamaya ulaşmadı. Buradaki süzme, bu sayının ölçtüğünden bir aşama önce oldu — onu okuyacağınız yer aşağıdaki aşamalar.`,
-      nothingArrived:
-        'Bu pencerede hiç telemetri gelmedi, yani kapının bakacak bir şeyi olmadı. Sakin bir pencere ile okunmayan bir kaynak buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
+      nothingArrived: 'Bu pencerede telemetri gelmedi.',
 
       stagesTitle: 'Log kayıtlarından sinyallere',
-      stagesDescription: (scope: string) =>
-        `Tek ölçekte — ${scope}. Farklı şeyler sayıyorlar: kayıtlar log satırları, imzalar onlardan kesilmiş ayrı parmak izleri, sinyaller ise kapıdan puanlaması istenen patlamalar.`,
       stageLogRecords: 'Log kayıtları',
       stageSignatures: 'İmzalar',
       stageSignals: 'Sinyaller',
       stagesChartLabel: (records: string, signatures: string, signals: string) =>
         `İşleme hattı aşamaları. ${records} log kaydı, ${signatures} imza, ${signals} sinyal.`,
 
-      nothingToFingerprint: 'Hiçbir şey gelmedi, yani parmak izi çıkarılacak bir şey de yoktu.',
-      nothingFingerprinted:
-        'Bu pencerede hiçbir şeyin parmak izi çıkarılmamış, ki bu olmamalı — kayıtlar imzasız gelmiş.',
-      folding: (perSignature: string, signatures: string, records: string, _count: number) =>
-        `İmza başına yaklaşık ${perSignature} kayıt. Parmak izinin kazandırdığı katlama bu: kapı ${records} şey üzerine değil, ${signatures} şey üzerine akıl yürütüyor.`,
-
-      neverScored:
-        'Hiçbir patlama bir tespit kuralını aşmadı, yani kapıdan hiçbir zaman puanlama istenmedi.',
-      bursting: (
-        signatures: string,
-        _signatureCount: number,
-        signals: string,
-        _signalCount: number,
-      ) =>
-        `${signatures} imza, kapının puanlaması için ${signals} patlama üretti.`,
-      burstingWider:
-        ' Bir imza birden fazla kez tetiklenebilir; bu aşamanın üstündekinden dar değil geniş olmasının sebebi bu.',
-
       whatArrived: 'Gelenler',
       noLogRecord: 'Bu pencereye hiç log kaydı gelmedi.',
 
       verdictsTitle: 'Kapı nasıl karar verdi',
-      verdictsDescription: (scope: string) =>
-        `Kapının verebileceği her karar ve her birine kaç tanesinin düştüğü — ${scope}.`,
-      noVerdicts: 'Kapı bu pencerede hiçbir şey puanlamadı, yani bunların hiçbirine ulaşmadı.',
 
       wokenHeading: 'Biri uyandırıldı',
-      wokenNote: 'Geri tutulmuş sayılmıyor.',
       notWokenHeading: 'Kimse uyandırılmadı',
-      notWokenNote: '"Yükseltilmedi" tam olarak bu üçünü sayıyor.',
-
-      verdict: {
-        Promoted: 'Eşiği aştı ve kapı onun için bir olay açtı.',
-        Deduplicated: 'Zaten açık olan bir olaya katlandı. Biri uyandırıldı — daha önce.',
-        Weak:
-          'Puanlandı — ve eşiğin altında puanlandı. Görebileceğiniz yerde tutuldu; kimse aranmadı.',
-        Recorded: 'Kayıt için tutuldu, fazlası değil.',
-        Suppressed: 'İmza susturulmuş, yani kapı onu puanladı ve sonra bilerek susturdu.',
-      },
     },
 
     services: {
       title: 'Servis sağlığı',
-      produced: (count: string, _raw: number) =>
-        `Bu pencerede ${count} servis bir şey üretti.`,
       loadError: 'Servis sağlığı yüklenemedi',
 
       caption: (scope: string) =>
@@ -715,8 +632,6 @@ export const tr: Dictionary = {
       columnLastSignal: 'Son sinyal',
 
       emptyTitle: 'Bu pencereye hiçbir şey gelmedi.',
-      empty:
-        'Hiçbir servis log kaydı yazmadı ve hiçbir şey bir tespit kuralını aşmadı. Gerçekten sakin bir pencere ile okunmayan bir telemetri kaynağı buradan aynı görünür — hangisi olduğunu Ayarlar › Telemetri söyler.',
 
       goneHintLabel: '(imza silinmiş) ne demek',
       goneHint:
@@ -731,8 +646,6 @@ export const tr: Dictionary = {
       signatureGone: 'imza artık kayıtta değil',
       nothingCrossed: 'bu pencerede hiçbir şey bir tespit kuralını aşmadı',
 
-      footnote:
-        'Sinyal ve imza tarafından sayıldı. {incidents}, bu servisin sinyallerinin ulaştığı ayrı olay sayısı; yani elle açılmış bir olay hiçbir servise atfedilmiyor — bir olay kaydı servis taşımıyor ve başlıktan okumaya çalışmak tahmin olurdu.',
     },
   },
 
@@ -744,59 +657,38 @@ export const tr: Dictionary = {
 
     open: {
       title: 'Şu anda açık',
-      description:
-        'Ne kadar eski olursa olsun hâlâ Açık ya da Devam ediyor olan her olay — bu sayımın pencereyi yok saymasının sebebi de bu.',
-      notWindowed: 'pencereden bağımsız',
       open: 'açık',
     },
 
     byDate: {
       title: 'Tarihe göre olaylar',
-      description:
-        'Önceliğe göre yığılmış — {scope}. Günler sunucuda sizin diliminizde değil {utc} olarak kesiliyor ve son kolon bugün — hâlâ doluyor.',
     },
 
     detection: {
       title: 'Tespit',
-      description: (scope: string) => `${scope}, UTC.`,
-      empty:
-        'Bu pencerede olay yok, yani fark edilmiş olacak bir şey de yok. Daha uzun bir pencere deneyin.',
+      empty: 'Bu pencerede olay yok.',
       share: 'platformun kendi fark ettiği olaylar',
       noticed: 'Fark edilen',
       filed: 'Elle açılan',
       median: 'Medyan gecikme',
       p95: '95. yüzdelik',
-      nothingNoticed:
-        'Bu pencerede hiçbir şey otomatik olarak fark edilmedi, yani ölçülecek bir gecikme yok. Bu sıfır gecikme değil — gecikmenin yokluğu.',
-      allSkewed:
-        'Bu penceredeki her tespit, kayıt sorun başlamadan önce açılmış olarak döndü; bu bir gecikme değil, iki saatin uyuşmaması. O satırlar yüzdeliklerin dışında kalıyor.',
     },
 
     sources: {
       title: 'Olaylar nereden geliyor',
-      description: (scope: string) => `${scope}, UTC.`,
-      empty: 'Bu pencerede hiçbir kaynaktan olay yok.',
-      meaning: {
-        Telemetry: 'platform onu log deponuzda buldu',
-        Alert: 'dışarıdan bir alarm onu yükseltti',
-        Manual: 'birisi onu elle açtı',
-      },
+      empty: 'Bu pencerede olay yok.',
     },
 
     latest: {
       title: 'Son olaylar',
-      description: (rows: number) =>
-        `Pencere ne olursa olsun en yeni ${rows} tanesi. Canlı güncelleniyor.`,
       loadError: 'Olaylar yüklenemedi',
       emptyTitle: 'Kayıtta hiç olay yok.',
-      empty: 'Elle açılmış bir şey yok ve henüz hiçbir şey bir tespit kuralını aşmadı.',
       all: (total: number) => `${total} olayın tamamı`,
     },
 
     chart: {
       summary: (total: number, days: number) => `${days} günde ${total} olay açıldı`,
       busiest: (count: number) => ` · en yoğun gün ${count}`,
-      hint: ' · tek bir gün için grafiğin üstüne gelin ya da odaklayın',
       dayTotal: (total: number) => `${total} olay`,
       ariaLabel: (days: number) =>
         `${days} gün boyunca UTC günü başına açılan olaylar. Günleri tek tek okumak için ok tuşlarını kullanın.`,
@@ -807,24 +699,50 @@ export const tr: Dictionary = {
       caption: 'UTC günü başına açılan olaylar, önceliğe göre.',
       columnDay: 'Gün (UTC)',
       columnTotal: 'Toplam',
-      legendNote: 'Kritik, her çubuğun tabanında',
+      dayResolved: (count: number) => ` · ${count} kapatıldı`,
+      resolvedSummary: (count: number) => ` · ${count} kapatıldı`,
+      legendResolved: 'Kapatılan',
+      columnResolved: 'Kapatılan',
+    },
+
+    resolution: {
+      title: 'Çözüm süresi',
+      empty: 'Bu pencerede kapatılan olay yok.',
+      median: 'medyan, sorunun başlangıcından kapanışa',
+      p95: '95. yüzdelik',
+      closed: 'Kapatılan',
+    },
+
+    accuracy: {
+      title: 'Tespit doğruluğu',
+      empty: 'Bu pencerede kararla kapatılan olay yok.',
+      real: 'gerçek',
+      none: 'karar yok',
+      counts: (real: number, falsePositive: number) => `${real} gerçek · ${falsePositive} yanlış alarm`,
+      unknown: (count: number) => ` · ${count} olay karar sorulmadan önce kapandı`,
+    },
+
+    ai: {
+      title: 'AI analizi',
+      empty: 'Bu pencerede olay yok.',
+      share: 'analiz edildi',
+      analysed: 'Analiz edilen',
+      failed: 'Başarısız',
+      pending: 'Bekleyen',
+      confidence: 'Medyan güven',
     },
   },
 
 
   deliveries: {
     title: 'Teslimat sağlığı',
-    intro: 'Tek bir olay üzerinden değil, pencerenin tamamında.',
     loadError: 'Teslimat sağlığı yüklenemedi',
 
     deleted: 'Silinmiş entegrasyon',
 
     totals: {
       title: 'Teslimatlar',
-      description: (scope: string) => `${scope}.`,
-      emptyLead: 'Bu pencerede hiçbir şey gönderilmedi. ',
-      empty:
-        'Bildirimler bir analiz bittiğinde çıkıyor; yani içinde hiç olay olmayan bir pencere ile durmuş bir dağıtıcı buradan birebir aynı görünür. Hangisi olduğunu olaylar ekranı söyler.',
+      empty: 'Bu pencerede hiçbir şey gönderilmedi.',
 
       failedOf: (total: string, _totalCount: number, channels: string, _channelCount: number) =>
         `/ ${channels} entegrasyonda denenen ${total} teslimattan başarısız`,
@@ -833,27 +751,15 @@ export const tr: Dictionary = {
       sent: 'gönderilen',
       pending: 'bekleyen',
 
-      someFailing: (failing: string, _count: number) =>
-        `Bu pencerede ${failing} entegrasyon bir başarısızlık kaydetti. Hangisi, ne zaman ve kanalın ne cevap verdiği aşağıdaki satırlarda.`,
-      allThrough: 'Bu penceredeki her teslimat ulaştı. ',
-      stillQueued: (pending: string, _count: number) =>
-        `${pending} teslimat hâlâ kuyrukta ve henüz denenmedi — kuyrukta olmak gönderilmiş olmak değil.`,
-      nothingQueued: 'Kuyrukta bir şey yok, bekleyen bir şey de yok.',
     },
 
     dispatch: {
       title: 'Gönderim süresi',
-      description: (scope: string) =>
-        `Medyan, ${scope} — teslimatın yazılmasından kanalın onu onaylamasına kadar ölçülüyor.`,
-      empty: 'Bu pencerede hiçbir şey gönderilmedi, yani süresi ölçülecek bir şey de yok.',
-      noneSucceeded:
-        '{lead} yani çizilecek bir gönderim süresi yok. Bu sıfır gönderim süresi değil — sürenin yokluğu.',
-      noneSucceededLead: 'Bu pencerede hiçbiri başarılı olmadı,',
+      empty: 'Bu pencerede hiçbir şey gönderilmedi.',
+      noneSucceeded: 'Bu pencerede hiçbir teslimat başarılı olmadı.',
       chartLabel: (scope: string, detail: string) =>
         `Entegrasyon başına medyan gönderim süresi, ${scope}. ${detail}.`,
       chartRow: (name: string, value: string) => `${name} ${value}`,
-      dashNote:
-        'Uzun tire, o entegrasyon için bu pencerede hiçbir şeyin başarılı olmadığı anlamına gelir, yani medyanı yok. Bu sıfır gönderim süresi değil.',
     },
 
     verdict: {
@@ -866,14 +772,9 @@ export const tr: Dictionary = {
 
     byIntegration: {
       title: 'Entegrasyona göre',
-      description: (scope: string) => `En kötüsü başta — ${scope}.`,
       emptyTitle: 'Hiçbir entegrasyon teslimat denemedi.',
-      empty:
-        'Bir entegrasyon burada ancak raporlayacak bir şeyi olduğunda görünür. Yapılandırılmış ve etkin ama bu pencerede hiç ulaşılmamış olan bu listede değildir — neyin var olduğunun listesi Ayarlar › Entegrasyonlar.',
 
       disabled: 'Duraklatıldı',
-      deletedNote:
-        'Bu entegrasyon silindi. Teslimatları bilerek saklanıyor — birine haber verildiğinin kaydı onlar — yani aşağıdaki sayılar hâlâ doğru, ait oldukları ad ve kanal ise yok.',
       id: (short: string) => `id ${short}`,
       lastFailure: 'Son başarısızlık',
 
@@ -889,6 +790,41 @@ export const tr: Dictionary = {
 
 
   settings: {
+    incidentApi: {
+      heading: 'Olay API’si',
+      count: (n) => `${n} anahtar`,
+      title: 'Kendi sistemlerinizden olay açın',
+      endpointLabel: 'Uç (POST)',
+      endpointHint: (header) => `JSON gövde; anahtarı ${header} başlığında gönderin.`,
+      loadError: 'Anahtarlar yüklenemedi.',
+      empty: 'Henüz anahtar yok.',
+      create: 'Yeni anahtar',
+      createTitle: 'Yeni API anahtarı',
+      createBody:
+        'Onu kullanacak sistemin adını verin. Ad, anahtarın açtığı her olayda görünür.',
+      namePlaceholder: 'Grafana, CI hattı…',
+      nameHint: 'En fazla 64 karakter, bu organizasyonda tekil.',
+      nameRequired: 'Anahtara bir ad verin.',
+      nameTaken: 'Bu adla bir anahtar zaten var.',
+      creating: 'Oluşturuluyor…',
+      createConfirm: 'Anahtarı oluştur',
+      issuedTitle: (name) => `“${name}” anahtarı`,
+      once: 'Bu anahtar yalnız bir kez gösterilir. Yalnız hash’i saklanır, yeniden gösterilemez — kaybolursa yenisini üretin.',
+      keyLabel: 'API anahtarı',
+      curlLabel: 'Örnek istek',
+      curlHint:
+        'externalId isteğe bağlıdır: onunla açılmış bir olay açıkken aynısını göndermek yeni olay açmaz, o olayı döner.',
+      done: 'Tamam',
+      createdBy: (name, when) => `${name} oluşturdu, ${when}`,
+      lastUsed: (when) => `son kullanım ${when}`,
+      neverUsed: 'hiç kullanılmadı',
+      deleteAria: (name) => `${name} anahtarını sil`,
+      deleteBody:
+        'Bu anahtarla gönderen sistemler bundan sonra 401 alır. Açtığı olaylar adını korur.',
+      deleteConfirm: 'Anahtarı sil',
+      deleted: 'Anahtar silindi.',
+    },
+
     shared: {
       availableNow: 'Şu anda mevcut',
       comingSoon: 'Yakında',
@@ -966,9 +902,6 @@ export const tr: Dictionary = {
       silenceMany: (total: number) =>
         `${total} entegrasyonun hepsi duraklatılmış. Bir analiz tamamlandığında kimseye haber verilmez.`,
 
-      comingSoonNote:
-        'Bunlar gelene kadar kendi uç noktanıza Webhook üzerinden ulaşılabilir; Webhook herhangi bir sağlayıcının payload formatını değil, bu platformun kendi JSON’unu gönderir.',
-
       addAnother: (name: string) => `Bir ${name} daha ekle`,
       connectOne: (name: string) => `${name} bağla`,
 
@@ -976,13 +909,6 @@ export const tr: Dictionary = {
         Email: 'Bir posta kutusuna ya da dağıtım listesine SMTP.',
         Webhook: 'Olayın ve analizinin, denetlediğiniz bir uç noktaya HTTP POST edilmesi.',
         Jira: 'Bir projede issue açar, gerekçe de açıklamasına girer.',
-      },
-
-      planned: {
-        slack: 'Bir kanala gönderir.',
-        teams: 'Bir takım kanalına gönderir.',
-        pagerduty: 'Nöbetçi kim ise onu çağırır.',
-        discord: 'Bir kanala gönderir.',
       },
 
       deleted: 'Entegrasyon silindi',
@@ -1025,22 +951,12 @@ export const tr: Dictionary = {
       blindnessMany: (total: number) =>
         `${total} kaynağın hepsi duraklatılmış. Hiçbir şey okunmuyor, yani hiçbir şey tespit edilmeyecek.`,
 
-      comingSoonNote:
-        'Henüz yapılmadı. Loglar için genel cevap yukarıdaki OTLP: tek bir standart aktarım formatı, geri kalanını zaten çalıştırdığınız shipper hallediyor.',
-
       addAnother: (name: string) => `Bir ${name} kaynağı daha ekle`,
       connectOne: (name: string) => `${name} bağla`,
 
       summary: {
         Seq: 'Bir Seq örneğinin sorgu API’sinden belirli aralıklarla çeker.',
         Otlp: 'Collector’ınız ya da SDK’nız logları OpenTelemetry’nin aktarım formatında gönderir — hangi log deposunu kullanırsanız kullanın.',
-      },
-
-      planned: {
-        alerts: {
-          name: 'Alarm webhook alımı',
-          summary: 'Log değil, izleme sisteminizden gelen alarmlar.',
-        },
       },
 
       deleted: 'Kaynak silindi',
@@ -1111,24 +1027,16 @@ export const tr: Dictionary = {
     },
 
     hub: {
-      intro:
-        'Bu organizasyonun platformu bağladığı her şey, verinin aktığı sırayla: hataların nereden okunduğu, analizin neye bakabildiği ve kime haber verildiği.',
       jumpTo: 'Bu sayfadaki gruplar',
       groups: {
         observability: {
           title: 'Gözlemlenebilirlik',
-          description:
-            'Hataların okunduğu yer. Tespit, bu platformun kendisini izlemez — buradan bağlamadığınız hiçbir şey ona ulaşmaz.',
         },
         analysis: {
           title: 'Analiz',
-          description:
-            'Analizin bir nedeni ararken okuyabileceği dış sistemler. Yalnız okuma; yalnız bu organizasyonun olayları için.',
         },
         notifications: {
           title: 'Bildirimler',
-          description:
-            'Bir analiz tamamlandığında kime haber verildiği. Bir kanal birden çok entegrasyon tutabilir — farklı filtrelere sahip iki E-posta kaydı normal bir kurulumdur.',
         },
       },
     },
@@ -1138,8 +1046,6 @@ export const tr: Dictionary = {
 
       github: {
         name: 'GitHub',
-        description:
-          'Bir olayın servisi bir repo’ya eşlenmişse analiz, sorun başlamadan önceki 48 saatte orada neyin değiştiğine bakar ve sorunu açıkladığını düşündüğü değişikliği adıyla anar.',
         status: {
           notConnected: 'Bağlı değil',
           connected: 'Bağlı',
@@ -1162,8 +1068,6 @@ export const tr: Dictionary = {
         removeRow: (row: number) => `${row}. repo’yu kaldır`,
         addRow: 'Repo ekle',
         enabled: 'Analiz GitHub’ı okuyabilsin',
-        readOnly:
-          'Yalnız okuma. Analiz son commit’leri listeler ve neyi değiştirdiklerini okur; GitHub’a hiçbir şey yazmaz — issue, yorum ya da pull request yok. Token yalnız GitHub’a gönderilir ve log’lara ya da trace’lere hiç yazılmaz.',
         save: 'Kaydet',
         saving: 'Kaydediliyor…',
         saved: 'GitHub bağlantısı kaydedildi.',
@@ -1185,10 +1089,29 @@ export const tr: Dictionary = {
       },
     },
 
+    organization: {
+      title: 'Organizasyon adı',
+      label: 'Ad',
+      required: 'Organizasyonun bir adı olmalı.',
+      save: 'Kaydet',
+      saving: 'Kaydediliyor…',
+      saved: 'Organizasyonun adı değişti.',
+    },
+
+    aiLanguage: {
+      title: 'AI yanıt dili',
+      options: {
+        English: 'İngilizce',
+        Turkish: 'Türkçe',
+      },
+      save: 'Kaydet',
+      saving: 'Kaydediliyor…',
+      saved: 'AI yanıt dili kaydedildi.',
+      loadError: 'Ayar yüklenemedi.',
+    },
+
     members: {
       title: 'Üyeler',
-      description:
-        'Bu organizasyona kimlerin oturum açabileceği ve her birinin ne yapabileceği. Hesaplar yalnızca davetle açılır.',
       invite: 'Davet et',
       loadError: 'Üyeler yüklenemedi',
       you: 'Siz',
@@ -1214,8 +1137,6 @@ export const tr: Dictionary = {
 
       pending: {
         title: 'Bekleyen davetler',
-        description:
-          'Her bağlantı bir kez çalışır ve süresi kendiliğinden dolar. Aynı adresi yeniden davet etmek önceki bağlantının yerini alır.',
         empty: 'Bekleyen davet yok.',
         expires: (when: string) => `${when} tarihinde sona eriyor`,
         revoke: 'İptal et',
@@ -1260,7 +1181,7 @@ export const tr: Dictionary = {
 
     roleDetail: {
       Admin: 'Her şey; organizasyonun üyeleri, entegrasyonları ve telemetri kaynakları dahil.',
-      Engineer: 'Olayları işler — durum ve atama. Organizasyonun ayarlarını görmez.',
+      Engineer: 'Olayları işler — durum, atama ve yorum. Organizasyonun ayarlarını görmez.',
       Viewer: 'Olayları, sinyalleri, kanıtı ve genel bakışı okur; hiçbir şeyi değiştirmez.',
     },
 
@@ -1349,15 +1270,6 @@ export const tr: Dictionary = {
     },
 
     dayScope: (days: number) => `son ${days} gün`,
-
-    scopeCap: {
-      '30m': 'Son 30 dakika',
-      '2h': 'Son 2 saat',
-      '24h': 'Son 24 saat',
-      '7d': 'Son 7 gün',
-    },
-
-    dayScopeCap: (days: number) => `Son ${days} gün`,
   },
 
   format: {
