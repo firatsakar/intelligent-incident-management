@@ -8,7 +8,15 @@ import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
 import type { SignalStatus } from '@/types/api'
 
-import { cellKey, intensityBounds, intensityOf, otherKey, type HeatCell, type HeatMap } from './heatmap'
+import {
+  cellKey,
+  intensityBounds,
+  intensityOf,
+  otherKey,
+  tileWeight,
+  type HeatCell,
+  type HeatMap,
+} from './heatmap'
 import { layoutGroups, type Rect } from './treemap'
 import { useHeatChanges } from './useHeatChanges'
 
@@ -18,7 +26,8 @@ import { useHeatChanges } from './useHeatChanges'
 //
 // Three channels, deliberately independent:
 //
-//   area + colour   how many times it fired
+//   area + colour   how many times it fired — area on a compressed scale (tileWeight), so a new
+//                   error stays visible next to a storm; colour on its own ramp
 //   corner mark     how far the detection gate took it
 //   edge            it was written to just now
 //
@@ -81,13 +90,12 @@ type TileDetail = 'full' | 'compact' | 'count' | 'bare'
  * being that a tile never shows half a word. Same order here, except the band mark outlives the
  * text: it is the second channel, and the text is recoverable from the panel and the label.
  *
- * A signature worth 1% of the window gets 1% of the area, which on a wide map can be a strip a few
- * pixels thick — under the 24px hit target the rest of this console holds itself to. That is
- * deliberate and it is not fixable from here: inflating the small tiles would make area stop
- * meaning magnitude, which is the one thing a treemap cannot lie about. Every tile is instead a
- * real button in descending order, so the tail is reachable by keyboard whatever size it drew at,
- * it carries its whole description in `title` and `aria-label`, and the signal list below the map
- * is the same data at full size.
+ * Area is not linear in the count: a signature worth 1% of the window used to get 1% of the area,
+ * which next to a storm is a strip a few pixels thick — and the new error is the one an operator
+ * most needs to see. `tileWeight` takes the square root and floors every tile at an eighth of the
+ * largest, so the order and the difference survive and nothing vanishes; the exact count is on
+ * the tile. Every tile is also a real button in descending order, it carries its whole description
+ * in `title` and `aria-label`, and the signal list below the map is the same data at full size.
  */
 function detailFor(rect: Rect): TileDetail {
   if (rect.width >= 132 && rect.height >= 64) return 'full'
@@ -157,7 +165,7 @@ export function SignalHeatMap({
       ? layoutGroups(
           [...byService.entries()].map(([service, group]) => ({
             key: service,
-            items: group.map((cell) => ({ value: cell.occurrences, data: cell })),
+            items: group.map((cell) => ({ value: tileWeight(cell.occurrences, map.max), data: cell })),
           })),
           { x: 0, y: 0, width: size.width, height: size.height },
           groupHeader,
@@ -227,7 +235,7 @@ export function SignalHeatMap({
                         {group.key}
                       </span>
                       <span className="text-dim-foreground shrink-0 tabular-nums">
-                        {group.tiles.reduce((sum, tile) => sum + tile.value, 0)}
+                        {group.tiles.reduce((sum, tile) => sum + tile.data.occurrences, 0)}
                       </span>
                     </div>
                   )}
