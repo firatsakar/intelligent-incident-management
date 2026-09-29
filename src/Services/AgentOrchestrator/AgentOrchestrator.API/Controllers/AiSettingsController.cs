@@ -1,6 +1,5 @@
 using AgentOrchestrator.Application.Commands.SaveAiSettings;
 using AgentOrchestrator.Application.Queries.GetAiSettings;
-using AgentOrchestrator.Domain.Enums;
 using BuildingBlocks.Web;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -32,5 +31,6 @@ public sealed class AiSettingsController : ControllerBase
     public async Task<IActionResult> Save([FromBody] SaveAiSettingsRequest request, CancellationToken cancellationToken) =>
         Ok(await _sender.Send(new SaveAiSettingsCommand(request.ResponseLanguage), cancellationToken));
 
-    public sealed record SaveAiSettingsRequest(AnalysisLanguage ResponseLanguage);
+    // Text, not the enum: bound as the enum, a number would be accepted and mapped onto it.
+    public sealed record SaveAiSettingsRequest(string? ResponseLanguage);
 }
