@@ -25,7 +25,6 @@ export type MarkComponent = ComponentType<{ className?: string }>
 export interface PlannedEntry {
   name: string
   mark: MarkComponent
-  summary: string
 }
 
 export function SectionHeading({ title, detail }: { title: string; detail?: string }) {
@@ -76,7 +75,6 @@ export function PlannedRow({ entry }: { entry: PlannedEntry }) {
 
       <div className="min-w-0">
         <p className="text-muted-foreground truncate text-sm font-medium">{entry.name}</p>
-        <p className="text-dim-foreground truncate text-xs">{entry.summary}</p>
       </div>
 
       {/* Not a disabled button. A control that cannot ever be pressed is still a control, and it

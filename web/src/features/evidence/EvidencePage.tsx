@@ -6,7 +6,7 @@ import { telemetryApi } from '@/api/endpoints'
 import { ingestionKey } from '@/app/realtime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -159,7 +159,6 @@ export function EvidencePage() {
         <Arrivals
           records={arrivedRecords}
           polls={arrived.length}
-          service={service}
           refreshing={query.isFetching}
           onRefresh={() => void query.refetch()}
         />
@@ -173,22 +172,11 @@ export function EvidencePage() {
           <Card className="min-w-0 lg:col-span-2">
             <CardHeader>
               <CardTitle>{t.logRecords}</CardTitle>
-              <CardDescription>
-                {/* The endpoint caps at 200 but reports the true total, so a truncated view is
-                    shown as truncated rather than quietly lying about the volume. */}
-                {query.data.logRecords.length < query.data.totalLogRecords
-                  ? t.showingRecent(query.data.logRecords.length, query.data.totalLogRecords)
-                  : t.inWindow(query.data.totalLogRecords)}
-                {service && ` · ${service}`}
-              </CardDescription>
             </CardHeader>
 
             <CardContent>
               {query.data.logRecords.length === 0 ? (
-                <Empty
-                  title={t.emptyLogTitle}
-                  detail={service ? t.emptyLogForService(service) : t.emptyLog}
-                />
+                <Empty title={t.emptyLogTitle} />
               ) : (
                 // Two hundred fixed-height rows is about three screens of document, and the two
                 // panels beside this one end up floating next to whitespace. Its own scroll
@@ -218,21 +206,11 @@ export function EvidencePage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t.signatures}</CardTitle>
-                {/* The one collection here whose count is not a cap being hit. It is derived from
-                    the signals panel below — the distinct signatures those signals point at — so
-                    when the signals are truncated this list is truncated with them, and saying
-                    "12 in this window" would be claiming a completeness the response never had. */}
-                <CardDescription>
-                  {query.data.signals.length < query.data.totalSignals
-                    ? t.signaturesCountTruncated(query.data.totalSignatures)
-                    : t.signaturesCount(query.data.totalSignatures)}{' '}
-                  {t.signaturesAllTime}
-                </CardDescription>
               </CardHeader>
 
               <CardContent>
                 {query.data.signatures.length === 0 ? (
-                  <Empty title={t.emptySignaturesTitle} detail={t.emptySignatures} />
+                  <Empty title={t.emptySignaturesTitle} />
                 ) : (
                   <ul
                     tabIndex={0}
@@ -251,20 +229,11 @@ export function EvidencePage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t.signals}</CardTitle>
-                {/* Signals were the collection here that never had a cap, so this panel used to
-                    be the only one that could not lie about its own size. Now that it has one, it
-                    gets the same sentence the log records have had all along. */}
-                <CardDescription>
-                  {t.signalsDescription} ·{' '}
-                  {query.data.signals.length < query.data.totalSignals
-                    ? t.signalsRecent(query.data.signals.length, query.data.totalSignals)
-                    : t.inWindow(query.data.totalSignals)}
-                </CardDescription>
               </CardHeader>
 
               <CardContent>
                 {query.data.signals.length === 0 ? (
-                  <Empty title={t.emptySignalsTitle} detail={t.emptySignals} />
+                  <Empty title={t.emptySignalsTitle} />
                 ) : (
                   <ul
                     tabIndex={0}
@@ -301,13 +270,11 @@ export function EvidencePage() {
 function Arrivals({
   records,
   polls,
-  service,
   refreshing,
   onRefresh,
 }: {
   records: number
   polls: number
-  service: string
   refreshing: boolean
   onRefresh: () => void
 }) {
@@ -321,10 +288,6 @@ function Arrivals({
     >
       <span className="min-w-0 tabular-nums">
         {polls > 1 ? t.arrivedAcrossPolls(records, polls) : t.arrived(records)}
-        {/* The tick counts records, not records matching a filter: the summary is per source, and
-            the service a record belongs to is not in it. Saying so beats a number that silently
-            means something else than the panel below it. */}
-        {service && t.allServicesNote}
       </span>
 
       <Button
@@ -341,13 +304,8 @@ function Arrivals({
 }
 
 /** A blank panel reads as broken, so each one says what is absent and what that implies. */
-function Empty({ title, detail }: { title: string; detail: string }) {
-  return (
-    <div className="py-6">
-      <p className="text-sm font-medium">{title}</p>
-      <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{detail}</p>
-    </div>
-  )
+function Empty({ title }: { title: string }) {
+  return <p className="py-6 text-sm font-medium">{title}</p>
 }
 
 /**

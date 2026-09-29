@@ -10,7 +10,7 @@ import {
 import { useId, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDateTime, formatRelative } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -60,7 +60,6 @@ export function ActivityPanel({
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -84,24 +83,14 @@ export function ActivityPanel({
 }
 
 function ActivityList({ rows }: { rows: IncidentActivity[] }) {
-  const t = useT().incidents.activity
-
-  // A history that starts with the opening has everything. One that does not belongs to an
-  // incident opened before histories were kept.
-  const complete = rows[0]?.kind === 'Opened'
+  if (rows.length === 0) return null
 
   return (
-    <div className="space-y-3">
-      {!complete && <p className="text-dim-foreground text-xs">{t.notRecordedBefore}</p>}
-
-      {rows.length > 0 && (
-        <ol className="space-y-3">
-          {rows.map((row) => (
-            <ActivityRow key={row.id} row={row} />
-          ))}
-        </ol>
-      )}
-    </div>
+    <ol className="space-y-3">
+      {rows.map((row) => (
+        <ActivityRow key={row.id} row={row} />
+      ))}
+    </ol>
   )
 }
 

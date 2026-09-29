@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -34,7 +33,6 @@ import { IngestKeyDialog, otlpEndpoint } from './IngestKeyDialog'
 
 import {
   Notice,
-  PlannedRow,
   SectionHeading,
   TestReport,
   type TestOutcome,
@@ -43,7 +41,6 @@ import { TelemetrySourceDialog } from './TelemetrySourceDialog'
 import {
   connectable,
   describeSchedule,
-  planned,
   scheduleTarget,
   type SourceCatalogueEntry,
 } from './telemetryCatalogue'
@@ -194,25 +191,6 @@ export function ObservabilitySection() {
 
       <IncidentApiSection />
 
-      <section className="space-y-3">
-        <SectionHeading title={settings.shared.comingSoon} />
-
-        <p className="text-muted-foreground text-sm">{t.comingSoonNote}</p>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {planned.map((entry) => (
-            <PlannedRow
-              key={entry.id}
-              entry={{
-                name: t.planned[entry.id].name,
-                mark: entry.mark,
-                summary: t.planned[entry.id].summary,
-              }}
-            />
-          ))}
-        </div>
-      </section>
-
       {editing && (
         <TelemetrySourceDialog
           kind={editing.kind}
@@ -322,7 +300,6 @@ function KindTile({
 
           <div className="min-w-0 flex-1">
             <CardTitle>{name}</CardTitle>
-            <CardDescription className="mt-0.5 text-xs">{t.summary[entry.kind]}</CardDescription>
           </div>
 
           {instances.length > 0 && (

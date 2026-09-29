@@ -9,7 +9,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -148,7 +147,6 @@ export function SignalsPage() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <Select
@@ -187,7 +185,6 @@ export function SignalsPage() {
           <SignalHeatMap
             map={map}
             scope={preset}
-            coverage={{ loaded: signals.length, total }}
             selected={selected}
             onSelect={select}
           />
@@ -204,15 +201,6 @@ export function SignalsPage() {
                   : t.allSignals}
               </CardTitle>
 
-              {/* Three numbers where there used to be two, because there are three facts: what
-                  the tile filter left, what the screen holds, and what the window actually
-                  contains. Collapsing the last two was the screen saying "12 of 50" about a
-                  window holding 431. */}
-              <CardDescription className="tabular-nums">
-                {selected && `${t.shown(visible.length)} · `}
-                {signals.length === total ? t.inWindow(total) : t.loaded(signals.length, total)}{' '}
-                · {t.chips}
-              </CardDescription>
 
               {selected && (
                 <CardAction>
@@ -232,12 +220,6 @@ export function SignalsPage() {
                 <div className="py-6 text-center">
                   <p className="text-sm font-medium">
                     {selected ? t.emptyTileTitle : t.emptyWindowTitle}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {/* Two causes, and from here they are indistinguishable: the link may
-                        carry a tile from another window, or the signatures may have been
-                        re-ranked since, which moves the tail in and out of "other". */}
-                    {selected ? t.emptyTile : t.emptyWindow}
                   </p>
                 </div>
               ) : (
@@ -271,7 +253,7 @@ export function SignalsPage() {
                   </div>
                 ) : (
                   <p className="text-muted-foreground text-sm tabular-nums">
-                    {t.ceiling(maxPage, total, total - signals.length)}
+                    {t.ceiling(maxPage, total)}
                   </p>
                 )}
               </CardContent>

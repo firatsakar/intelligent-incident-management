@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -85,7 +84,6 @@ export function IncidentApiSection() {
             <KeyRoundIcon className="text-muted-foreground size-4" aria-hidden />
             {t.title}
           </CardTitle>
-          <CardDescription>{t.description}</CardDescription>
         </CardHeader>
 
         <CardContent className="min-w-0 space-y-4">
@@ -112,8 +110,6 @@ export function IncidentApiSection() {
               ))}
             </ul>
           )}
-
-          <p className="text-muted-foreground text-xs leading-relaxed">{t.rotate}</p>
         </CardContent>
 
         <CardFooter>

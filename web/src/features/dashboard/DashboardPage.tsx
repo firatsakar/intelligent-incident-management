@@ -4,19 +4,11 @@ import { useSearchParams } from 'react-router-dom'
 // three callers is a shared thing, and three copies of a ratio-to-pixels rule is how two of them
 // end up rounding differently.
 import { ProportionBar } from '@/components/chart/ProportionBar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatPercent, formatSeconds, priorityBackground } from '@/lib/format'
-import { T, useT } from '@/lib/i18n'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   incidentPriorities,
@@ -109,7 +101,7 @@ export function DashboardPage() {
 
         <div className="lg:col-span-8">
           {query.data ? (
-            <IncidentsByDate stats={query.data} days={days} />
+            <IncidentsByDate stats={query.data} />
           ) : (
             <CardSkeleton height="h-80" />
           )}
@@ -122,7 +114,7 @@ export function DashboardPage() {
 
         <div className="lg:col-span-6">
           {query.data ? (
-            <DetectionCard detection={query.data.detection} days={days} />
+            <DetectionCard detection={query.data.detection} />
           ) : (
             <CardSkeleton height="h-56" />
           )}
@@ -130,7 +122,7 @@ export function DashboardPage() {
 
         <div className="lg:col-span-6">
           {query.data ? (
-            <SourcesCard bySource={query.data.bySource} total={query.data.total} days={days} />
+            <SourcesCard bySource={query.data.bySource} total={query.data.total} />
           ) : (
             <CardSkeleton height="h-56" />
           )}
@@ -140,7 +132,7 @@ export function DashboardPage() {
             were real, and what the analysis made of them. */}
         <div className="lg:col-span-4">
           {query.data ? (
-            <ResolutionCard resolution={query.data.resolution} days={days} />
+            <ResolutionCard resolution={query.data.resolution} />
           ) : (
             <CardSkeleton height="h-56" />
           )}
@@ -148,14 +140,14 @@ export function DashboardPage() {
 
         <div className="lg:col-span-4">
           {query.data ? (
-            <AccuracyCard verdicts={query.data.verdicts} days={days} />
+            <AccuracyCard verdicts={query.data.verdicts} />
           ) : (
             <CardSkeleton height="h-56" />
           )}
         </div>
 
         <div className="lg:col-span-4">
-          {query.data ? <AiCard ai={query.data.ai} days={days} /> : <CardSkeleton height="h-56" />}
+          {query.data ? <AiCard ai={query.data.ai} /> : <CardSkeleton height="h-56" />}
         </div>
       </div>
     </div>
@@ -180,15 +172,6 @@ function OpenRightNow({ stats }: { stats: IncidentStats }) {
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
-
-        <CardAction>
-          {/* On the card, not in a tooltip. Which numbers move with the picker is the kind of thing
-              a reader has to be able to check at a glance rather than by hovering. */}
-          <Badge variant="outline" className="text-muted-foreground">
-            {t.notWindowed}
-          </Badge>
-        </CardAction>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -235,22 +218,13 @@ function OpenRightNow({ stats }: { stats: IncidentStats }) {
   )
 }
 
-function IncidentsByDate({ stats, days }: { stats: IncidentStats; days: DayWindow }) {
-  const { dashboard, window: windowText } = useT()
+function IncidentsByDate({ stats }: { stats: IncidentStats }) {
+  const { dashboard } = useT()
 
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{dashboard.byDate.title}</CardTitle>
-        <CardDescription>
-          <T
-            text={dashboard.byDate.description}
-            values={{
-              scope: windowText.dayScope(days),
-              utc: <strong className="font-medium">UTC</strong>,
-            }}
-          />
-        </CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -260,8 +234,8 @@ function IncidentsByDate({ stats, days }: { stats: IncidentStats; days: DayWindo
   )
 }
 
-function DetectionCard({ detection, days }: { detection: DetectionLatency; days: DayWindow }) {
-  const { dashboard, window: windowText } = useT()
+function DetectionCard({ detection }: { detection: DetectionLatency }) {
+  const { dashboard } = useT()
   const t = dashboard.detection
 
   const seen = detection.noticedCount + detection.toldCount
@@ -271,7 +245,6 @@ function DetectionCard({ detection, days }: { detection: DetectionLatency; days:
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -303,13 +276,6 @@ function DetectionCard({ detection, days }: { detection: DetectionLatency; days:
               <Figure label={t.p95} value={formatSeconds(detection.p95Seconds)} />
             </dl>
 
-            {detection.medianSeconds === null && (
-              // An em dash with no explanation invites the reader to supply one, and the one they
-              // supply is "zero". These are opposite facts, so the reason is spelled out.
-              <p className="text-muted-foreground text-sm">
-                {detection.noticedCount === 0 ? t.nothingNoticed : t.allSkewed}
-              </p>
-            )}
           </>
         )}
       </CardContent>
@@ -332,23 +298,14 @@ function Figure({ label, value }: { label: string; value: string }) {
 // argument and stays here.
 const sourceOrder: IncidentSource[] = ['Telemetry', 'Alert', 'Manual']
 
-function SourcesCard({
-  bySource,
-  total,
-  days,
-}: {
-  bySource: CountsByKey
-  total: number
-  days: DayWindow
-}) {
-  const { dashboard, labels, window: windowText } = useT()
+function SourcesCard({ bySource, total }: { bySource: CountsByKey; total: number }) {
+  const { dashboard, labels } = useT()
   const t = dashboard.sources
 
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -375,7 +332,6 @@ function SourcesCard({
                     <div className="bg-foreground/55 h-full rounded-full" style={{ width: `${share}%` }} />
                   </div>
 
-                  <p className="text-muted-foreground text-xs">{t.meaning[key]}</p>
                 </li>
               )
             })}
@@ -386,15 +342,14 @@ function SourcesCard({
   )
 }
 
-function ResolutionCard({ resolution, days }: { resolution: ResolutionStats; days: DayWindow }) {
-  const { dashboard, labels, window: windowText } = useT()
+function ResolutionCard({ resolution }: { resolution: ResolutionStats }) {
+  const { dashboard, labels } = useT()
   const t = dashboard.resolution
 
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -438,7 +393,6 @@ function ResolutionCard({ resolution, days }: { resolution: ResolutionStats; day
               })}
             </dl>
 
-            <p className="text-muted-foreground text-xs leading-relaxed">{t.from}</p>
           </>
         )}
       </CardContent>
@@ -448,14 +402,8 @@ function ResolutionCard({ resolution, days }: { resolution: ResolutionStats; day
 
 const noVerdicts: VerdictCounts = { real: 0, falsePositive: 0, unknown: 0 }
 
-function AccuracyCard({
-  verdicts,
-  days,
-}: {
-  verdicts: Record<string, VerdictCounts>
-  days: DayWindow
-}) {
-  const { dashboard, labels, window: windowText } = useT()
+function AccuracyCard({ verdicts }: { verdicts: Record<string, VerdictCounts> }) {
+  const { dashboard, labels } = useT()
   const t = dashboard.accuracy
 
   const any = sourceOrder.some((source) => {
@@ -467,7 +415,6 @@ function AccuracyCard({
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
@@ -516,7 +463,6 @@ function AccuracyCard({
               })}
             </ul>
 
-            <p className="text-muted-foreground text-xs leading-relaxed">{t.note}</p>
           </>
         )}
       </CardContent>
@@ -524,8 +470,8 @@ function AccuracyCard({
   )
 }
 
-function AiCard({ ai, days }: { ai: AiAnalysisStats; days: DayWindow }) {
-  const { dashboard, window: windowText } = useT()
+function AiCard({ ai }: { ai: AiAnalysisStats }) {
+  const { dashboard } = useT()
   const t = dashboard.ai
 
   const total = ai.analysed + ai.failed + ai.pending
@@ -534,7 +480,6 @@ function AiCard({ ai, days }: { ai: AiAnalysisStats; days: DayWindow }) {
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(windowText.dayScopeCap(days))}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">

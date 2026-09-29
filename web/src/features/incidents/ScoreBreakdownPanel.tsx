@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { telemetryApi } from '@/api/endpoints'
 import { InfoHint } from '@/components/InfoHint'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatDecimal, formatScore, scoreTerm, scoreTermHelp } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -92,7 +92,6 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -101,9 +100,11 @@ export function ScoreBreakdownPanel({ incident }: { incident: Incident }) {
         <div className="flex items-baseline justify-between gap-3 border-t pt-3">
           <span className="text-sm font-medium">
             {scored ? t.total : t.confidence}
-            <span className="text-muted-foreground ml-2 text-xs font-normal">
-              {scored ? t.totalNote : t.confidenceNote}
-            </span>
+            {!scored && (
+              <span className="text-muted-foreground ml-2 text-xs font-normal">
+                {t.confidenceNote}
+              </span>
+            )}
           </span>
           <span className="text-base font-semibold tabular-nums">{formatDecimal(total, 2)}</span>
         </div>

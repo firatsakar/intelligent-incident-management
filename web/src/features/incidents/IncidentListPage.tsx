@@ -89,12 +89,6 @@ export function IncidentListPage() {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            {/* Nothing until the count arrives. The line this used to fall back to was a
-                sentence that named the table it sits above, and it was replaced half a second
-                later by the count anyway. */}
-            {query.data && (filtered ? t.matching(query.data.totalCount) : t.onRecord(query.data.totalCount))}
-          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -192,26 +186,13 @@ export function IncidentListPage() {
                   {filtered ? (
                     <>
                       <p className="text-sm font-medium">{t.emptyFilteredTitle}</p>
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        {status && priority
-                          ? t.emptyFiltered(
-                              labels.incidentStatus[status],
-                              labels.priority[priority],
-                            )
-                          : status
-                            ? t.emptyFilteredStatus(labels.incidentStatus[status])
-                            : t.emptyFilteredPriority(labels.priority[priority!])}
-                      </p>
                       <Button variant="outline" className="mt-3" onClick={clearFilters}>
                         <FilterXIcon aria-hidden />
                         {t.clearFilters}
                       </Button>
                     </>
                   ) : (
-                    <>
-                      <p className="text-sm font-medium">{t.emptyTitle}</p>
-                      <p className="text-muted-foreground mt-1 text-sm">{t.empty}</p>
-                    </>
+                    <p className="text-sm font-medium">{t.emptyTitle}</p>
                   )}
                 </TableCell>
               </TableRow>

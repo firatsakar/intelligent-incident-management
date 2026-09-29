@@ -40,6 +40,26 @@ This project is built as a deep, hands-on exploration of **production-grade dist
 
 ---
 
+## 🖥️ The Console
+
+The web console is served by the gateway, in English and Turkish, with a light and a dark theme. Everything updates live over WebSockets. What each page offers:
+
+| Page | What it shows |
+|---|---|
+| **Dashboard** | Open incidents by priority; incidents opened (and closed) per day; the latest incidents; detection — the share the platform noticed on its own and how long that took; where incidents come from; time to resolution; detection accuracy from closing verdicts; how many incidents the AI analysed. Window of 7, 30 or 90 days. |
+| **Incidents** | Every incident, filterable by status and priority, with its source, analysis state and detection latency. |
+| **Incident detail** | Detection latency, what happened, how the detection gate scored it, the timeline, the full history of changes with comments, the AI analysis (category, priority, confidence, reasoning, suspected commits) and the notifications sent. Admins and Engineers change the status — closing asks whether it was a real problem — assign a team and comment. |
+| **Signals** | A map of error signatures by service, sized and coloured by how often they fired, and the signals behind it with the gate's score for each. Select a tile to filter. |
+| **Evidence** | The raw log records, signatures and signals of a time window, filterable by service. |
+| **Signal funnel** | How many scored signals the gate held back and how many it acted on; log records → signatures → signals; how the gate ruled. |
+| **Service health** | Per service: log volume, signals, promoted signals, incidents, top signature and last signal. Sortable. |
+| **Delivery health** | Notification deliveries sent, failed and pending; median dispatch time per integration; the state and last failure of each integration. |
+| **Settings › Profile** | Your identity, password, theme and language. |
+| **Settings › Organization** | The organisation's name, the language AI analyses are written in, members and invitations. Admin only. |
+| **Settings › Integrations** | Telemetry sources (Seq, OTLP) and incident API keys; the GitHub connection the analysis reads; notification channels (email, webhook, Jira). Admin only. |
+
+---
+
 ## 🏛️ Architecture
 
 The platform is composed of independent microservices coordinated through an event bus, following a **choreography pattern** — services react to events without knowing who published them.

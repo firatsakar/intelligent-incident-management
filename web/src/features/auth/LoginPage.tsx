@@ -187,7 +187,6 @@ export function LoginPage() {
                 <h1 className="font-heading text-lg leading-snug font-medium">
                   {login.heading}
                 </h1>
-                <p className="text-muted-foreground text-sm">{login.subheading}</p>
               </CardHeader>
 
               <CardContent className="space-y-4">
@@ -239,10 +238,6 @@ export function LoginPage() {
                     {error}
                   </p>
                 )}
-
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {login.ownership}
-                </p>
 
                 {/* There is no self-service reset yet: an Admin issues the link. Said here because
                     this is where somebody who forgot finds out. */}
