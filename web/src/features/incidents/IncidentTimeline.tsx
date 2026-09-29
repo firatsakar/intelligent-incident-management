@@ -1,4 +1,4 @@
-﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+﻿import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime, formatDuration } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -61,13 +61,11 @@ export function IncidentTimeline({
           label: t.problemStarted,
           at: incident.detectedAt,
           state: 'reached',
-          detail: t.onSourceClock,
         }
       : {
           label: t.problemStarted,
           at: null,
           state: 'absent',
-          detail: incident.reportedBy ? t.notSent : t.notRecorded,
         },
     {
       label: t.incidentOpened,
@@ -76,7 +74,6 @@ export function IncidentTimeline({
       since: incident.detectedAt
         ? t.toDetect(formatDuration(incident.detectedAt, incident.createdAt))
         : undefined,
-      detail: incident.detectedAt ? t.ourClockGap : undefined,
     },
     // The time comes from the history, never from updatedAt, which moves on every change — a
     // status transition an hour later would make this stage claim the analysis happened then.
@@ -89,7 +86,7 @@ export function IncidentTimeline({
           state: analysedAt ? 'reached' : 'untimed',
           detail: incident.aiSuggestedCategory
             ? t.categorised(incident.aiSuggestedCategory, labels.priority[incident.priority])
-            : t.applied,
+            : undefined,
         }
       : incident.aiAnalysisError
         ? {
@@ -99,13 +96,11 @@ export function IncidentTimeline({
             label: t.analysisApplied,
             at: failedAt,
             state: 'failed',
-            detail: t.analysisFailed,
           }
         : {
             label: t.analysisApplied,
             at: null,
             state: 'pending',
-            detail: t.analysisWaiting,
           },
     firstSentAt
       ? {
@@ -119,7 +114,7 @@ export function IncidentTimeline({
           label: t.peopleNotified,
           at: null,
           state: deliveries.length === 0 ? 'pending' : 'absent',
-          detail: deliveries.length === 0 ? t.noDeliveryYet : t.everyChannelFailed,
+          detail: deliveries.length === 0 ? undefined : t.everyChannelFailed,
         },
   ]
 
@@ -132,7 +127,6 @@ export function IncidentTimeline({
       label: t.lastChanged,
       at: incident.updatedAt,
       state: 'reached',
-      detail: t.anyEdit,
     })
   }
 
@@ -140,7 +134,6 @@ export function IncidentTimeline({
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
       </CardHeader>
 
       <CardContent>

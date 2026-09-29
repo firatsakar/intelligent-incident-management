@@ -7,7 +7,7 @@ import { InfoHint } from '@/components/InfoHint'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -248,13 +248,6 @@ export function IncidentDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t.whatHappened}</CardTitle>
-              <CardDescription>
-                {data.source === 'Telemetry'
-                  ? t.fromDetector
-                  : data.reportedBy
-                    ? t.fromApiKey(data.reportedBy, data.externalId)
-                    : t.fromOperator}
-              </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Telemetry writes a structured evidence summary in here, so the whitespace is
@@ -332,9 +325,6 @@ function DetectionStrip({ incident }: { incident: Incident }) {
             {incident.reportedBy ? t.sentWithKey(incident.reportedBy) : t.openedByHand}
           </span>
           <span className="text-sm tabular-nums">{formatDateTime(incident.createdAt)}</span>
-          <span className="text-muted-foreground basis-full text-xs leading-relaxed">
-            {incident.reportedBy ? t.sentWithKeyDetail : t.openedByHandDetail}
-          </span>
         </CardContent>
       </Card>
     )
@@ -346,14 +336,14 @@ function DetectionStrip({ incident }: { incident: Incident }) {
   return (
     <Card>
       <CardContent className="flex flex-col gap-4 py-1 sm:flex-row sm:items-center sm:gap-6">
-        <Moment label={t.problemStarted} at={incident.detectedAt} note={t.sourceClock} />
+        <Moment label={t.problemStarted} at={incident.detectedAt} />
 
         <ArrowRightIcon
           className="text-muted-foreground hidden size-4 shrink-0 sm:block"
           aria-hidden
         />
 
-        <Moment label={t.incidentOpened} at={incident.createdAt} note={t.ourClock} />
+        <Moment label={t.incidentOpened} at={incident.createdAt} />
 
         <div className="sm:ml-auto sm:text-right">
           <p className="text-muted-foreground flex items-center gap-0.5 text-xs font-medium tracking-wider uppercase sm:justify-end">
@@ -379,23 +369,19 @@ function DetectionStrip({ incident }: { incident: Incident }) {
             {formatDuration(incident.detectedAt, incident.createdAt)}
           </p>
 
-          <p className="text-dim-foreground text-xs">
-            {latencyMs < 0 ? t.skewNote : t.noticed}
-          </p>
         </div>
       </CardContent>
     </Card>
   )
 }
 
-function Moment({ label, at, note }: { label: string; at: string; note: string }) {
+function Moment({ label, at }: { label: string; at: string }) {
   return (
     <div className="min-w-0">
       <p className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
         {label}
       </p>
       <p className="text-sm tabular-nums">{formatDateTime(at)}</p>
-      <p className="text-dim-foreground text-xs">{note}</p>
     </div>
   )
 }

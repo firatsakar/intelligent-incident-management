@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -176,13 +175,11 @@ export function NotificationsSection() {
       <section className="space-y-3">
         <SectionHeading title={settings.shared.comingSoon} />
 
-        <p className="text-muted-foreground max-w-2xl text-sm">{t.comingSoonNote}</p>
-
         <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
           {planned.map((entry) => (
             <PlannedRow
               key={entry.id}
-              entry={{ name: entry.name, mark: entry.mark, summary: t.planned[entry.id] }}
+              entry={{ name: entry.name, mark: entry.mark }}
             />
           ))}
         </div>
@@ -274,12 +271,6 @@ function ChannelTile({
 
           <div className="min-w-0 flex-1">
             <CardTitle>{name}</CardTitle>
-            {/* Two lines' worth whether it needs them or not, so the rule above the instance list
-                falls at the same height across a row of tiles. Only once there is a row: in a
-                single column it would just be a hole. */}
-            <CardDescription className="mt-0.5 text-xs md:min-h-8">
-              {t.summary[entry.channel]}
-            </CardDescription>
           </div>
 
           {instances.length > 0 && (

@@ -11,6 +11,3 @@
  */
 
 export type PlannedIntegrationId = 'slack' | 'teams' | 'pagerduty' | 'discord'
-
-// OTLP left this list for the real one in Adım 13.5.
-export type PlannedSourceId = 'alerts'

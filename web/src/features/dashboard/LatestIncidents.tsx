@@ -2,7 +2,7 @@ import { ArrowRightIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatRelative, priorityClass } from '@/lib/format'
 import { useT } from '@/lib/i18n'
@@ -26,7 +26,6 @@ export function LatestIncidents() {
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(rows)}</CardDescription>
       </CardHeader>
 
       <CardContent className="flex-1">
@@ -48,7 +47,6 @@ export function LatestIncidents() {
           (query.data.items.length === 0 ? (
             <div className="py-6">
               <p className="text-sm font-medium">{t.emptyTitle}</p>
-              <p className="text-muted-foreground mt-1 text-sm">{t.empty}</p>
             </div>
           ) : (
             <ul className="divide-border -my-2 divide-y">

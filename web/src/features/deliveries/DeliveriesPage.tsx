@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -21,7 +20,7 @@ import {
   formatSeconds,
   statusTier,
 } from '@/lib/format'
-import { T, useT, type Dictionary } from '@/lib/i18n'
+import { useT, type Dictionary } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { resolveWindowPreset } from '@/lib/window'
 import type { IntegrationHealth, NotificationStats } from '@/types/api'
@@ -54,16 +53,12 @@ export function DeliveriesPage() {
 
   const preset_ = resolveWindowPreset(preset)
   const scope = windowText.scope[preset_]
-  // The totals card's description is now only the scope, so it starts a line and takes the
-  // capitalised entry rather than being upper-cased here.
-  const scopeCap = windowText.scopeCap[preset_]
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="max-w-2xl">
           <h1 className="text-2xl font-semibold tracking-tight">{t.title}</h1>
-          <p className="text-muted-foreground text-sm">{t.intro}</p>
         </div>
 
         <WindowSelect value={preset} />
@@ -80,7 +75,7 @@ export function DeliveriesPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
           {query.data ? (
-            <TotalsCard stats={query.data} scope={scopeCap} />
+            <TotalsCard stats={query.data} />
           ) : (
             <Skeleton className="h-64 w-full" />
           )}
@@ -96,7 +91,7 @@ export function DeliveriesPage() {
 
         <div className="lg:col-span-12">
           {query.data ? (
-            <IntegrationsCard stats={query.data} scope={scope} />
+            <IntegrationsCard stats={query.data} />
           ) : (
             <Skeleton className="h-72 w-full" />
           )}
@@ -110,26 +105,21 @@ export function DeliveriesPage() {
 // "delivery/deliveries" — are gone. Both were English grammar written into a component, and the
 // second existed only because the first was wrong about a word.
 
-function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
+function TotalsCard({ stats }: { stats: NotificationStats }) {
   const t = useT().deliveries.totals
 
   const total = stats.totalSent + stats.totalFailed + stats.totalPending
   const channels = stats.integrations.length
-  const failing = stats.integrations.filter((row) => row.failed > 0).length
 
   return (
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {total === 0 ? (
-          <p className="max-w-2xl text-sm">
-            <span className="text-muted-foreground">{t.emptyLead}</span>
-            {t.empty}
-          </p>
+          <p className="text-muted-foreground text-sm">{t.empty}</p>
         ) : (
           <>
             {/* Same shape as the funnel's headline, and for the same reason: the denominator is on
@@ -163,19 +153,6 @@ function TotalsCard({ stats, scope }: { stats: NotificationStats; scope: string 
               <Total swatch="bg-foreground/55" label={t.sent} value={stats.totalSent} />
               <Total swatch="bg-foreground/20" label={t.pending} value={stats.totalPending} />
             </dl>
-
-            <p className="text-muted-foreground max-w-2xl text-sm">
-              {stats.totalFailed > 0 ? (
-                t.someFailing(formatCount(failing), failing)
-              ) : (
-                <>
-                  {t.allThrough}
-                  {stats.totalPending > 0
-                    ? t.stillQueued(formatCount(stats.totalPending), stats.totalPending)
-                    : t.nothingQueued}
-                </>
-              )}
-            </p>
           </>
         )}
       </CardContent>
@@ -213,21 +190,13 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
     <Card className="h-full">
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-3">
         {stats.integrations.length === 0 ? (
           <p className="text-muted-foreground text-sm">{t.empty}</p>
         ) : measured.length === 0 ? (
-          <p className="text-sm">
-            <T
-              text={t.noneSucceeded}
-              values={{
-                lead: <span className="text-muted-foreground">{t.noneSucceededLead}</span>,
-              }}
-            />
-          </p>
+          <p className="text-muted-foreground text-sm">{t.noneSucceeded}</p>
         ) : (
           <>
             {/* The bars are here for the ratio rather than the absolute: twenty-to-one between a
@@ -247,10 +216,6 @@ function DispatchCard({ stats, scope }: { stats: NotificationStats; scope: strin
                   .join(', '),
               )}
             />
-
-            {measured.length < stats.integrations.length && (
-              <p className="text-muted-foreground text-xs">{t.dashNote}</p>
-            )}
           </>
         )}
       </CardContent>
@@ -304,21 +269,19 @@ const verdictStyle: Record<Verdict, { className: string; icon: LucideIcon }> = {
   silent: { className: statusTier.inert, icon: CircleSlashIcon },
 }
 
-function IntegrationsCard({ stats, scope }: { stats: NotificationStats; scope: string }) {
+function IntegrationsCard({ stats }: { stats: NotificationStats }) {
   const t = useT().deliveries.byIntegration
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description(scope)}</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
         {stats.integrations.length === 0 ? (
           <div className="py-6 text-center">
             <p className="text-sm font-medium">{t.emptyTitle}</p>
-            <p className="text-muted-foreground mx-auto mt-1 max-w-md text-sm">{t.empty}</p>
           </div>
         ) : (
           <ul className="divide-border -my-1 divide-y">
@@ -380,11 +343,8 @@ function IntegrationRow({ row }: { row: IntegrationHealth }) {
       </div>
 
       {deleted && (
-        <p className="text-muted-foreground text-xs">
-          {t.deletedNote}{' '}
-          <span className="text-dim-foreground" title={row.integrationId}>
-            {t.id(row.integrationId.slice(0, 8))}
-          </span>
+        <p className="text-dim-foreground text-xs" title={row.integrationId}>
+          {t.id(row.integrationId.slice(0, 8))}
         </p>
       )}
 

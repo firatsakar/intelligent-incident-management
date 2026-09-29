@@ -136,7 +136,6 @@ export function IncidentsByDayChart({ days }: { days: IncidentDayBucket[] }) {
             {t.summary(windowTotal, count)}
             {closedTotal > 0 && t.resolvedSummary(closedTotal)}
             {busiest > 0 && t.busiest(busiest)}
-            {t.hint}
           </span>
         )}
       </p>
@@ -435,7 +434,6 @@ function Legend() {
         </svg>
         {dashboard.chart.legendResolved}
       </li>
-      <li className="text-dim-foreground">{dashboard.chart.legendNote}</li>
     </ul>
   )
 }

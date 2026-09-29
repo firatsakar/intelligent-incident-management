@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { Fragment, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { T, useT } from '@/lib/i18n'
 import { useElementSize } from '@/lib/useElementSize'
 import { cn } from '@/lib/utils'
@@ -117,16 +117,9 @@ function toStyle(rect: Rect, box: { width: number; height: number }): CSSPropert
   }
 }
 
-/** What the map was built from, when that is less than the window holds. */
-export interface HeatCoverage {
-  loaded: number
-  total: number
-}
-
 export function SignalHeatMap({
   map,
   scope,
-  coverage,
   selected,
   onSelect,
 }: {
@@ -134,7 +127,6 @@ export function SignalHeatMap({
   /** The window the map is drawn over. Only used to tell "the data moved" from "the question
    *  changed", so that switching window does not light up every tile at once. */
   scope: string
-  coverage?: HeatCoverage
   selected: { service: string; errorKey: string } | null
   onSelect: (cell: { service: string; errorKey: string } | null) => void
 }) {
@@ -146,9 +138,6 @@ export function SignalHeatMap({
   const changes = useHeatChanges(map, scope)
 
   const cells = [...map.cells.values()]
-
-  /** The coverage, but only when it is worth saying — a map built from everything says nothing. */
-  const partial = coverage && coverage.loaded < coverage.total ? coverage : null
 
   const byService = new Map<string, HeatCell[]>()
 
@@ -181,17 +170,6 @@ export function SignalHeatMap({
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>
-          {t.description}{' '}
-          {partial && (
-            // Said on the map rather than only on the list below it. A treemap that claims to
-            // show where the errors are while covering a third of the window is the kind of quiet
-            // lie this screen exists not to tell.
-            <span className="text-foreground tabular-nums">
-              {t.partial(partial.loaded, partial.total)}
-            </span>
-          )}
-        </CardDescription>
       </CardHeader>
 
       <CardContent>

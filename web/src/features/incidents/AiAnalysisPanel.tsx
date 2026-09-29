@@ -6,7 +6,6 @@ import {
   Card,
   CardAction,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
@@ -42,7 +41,6 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
       <Card>
         <CardHeader>
           <CardTitle>{t.title}</CardTitle>
-          <CardDescription>{t.failedDescription}</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -59,7 +57,6 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
             </p>
           </div>
 
-          <p className="text-muted-foreground mt-3 text-xs">{t.failedFooter}</p>
         </CardContent>
       </Card>
     )
@@ -87,7 +84,6 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
     <Card>
       <CardHeader>
         <CardTitle>{t.title}</CardTitle>
-        <CardDescription>{t.description}</CardDescription>
 
         {incident.aiSuggestedCategory && (
           <CardAction>
@@ -108,11 +104,7 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
             </span>
           </div>
 
-          {confidence === null ? (
-            // Null is a missing measurement, not a zero. An empty bar would read as "certain
-            // this is nothing", which is the opposite of what it means.
-            <p className="text-muted-foreground mt-1 text-xs">{t.noConfidence}</p>
-          ) : (
+          {confidence === null ? null : (
             <>
               <div className="bg-secondary mt-2 h-1.5 w-full overflow-hidden rounded-full">
                 <div

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangleIcon, CircleCheckIcon, PlusIcon, ShieldCheckIcon, TrashIcon } from 'lucide-react'
+import { AlertTriangleIcon, CircleCheckIcon, PlusIcon, TrashIcon } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 
@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -209,7 +208,6 @@ function GitHubCard({
                   {status}
                 </Badge>
               </CardTitle>
-              <CardDescription>{t.description}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -299,13 +297,6 @@ function GitHubCard({
               {t.enabled}
             </Label>
           </div>
-
-          {/* What the credential is for, and what it is never for — said next to the field that
-              asks for it, not in a help page nobody opens before pasting a token. */}
-          <p className="bg-muted/60 text-muted-foreground flex items-start gap-2 rounded-lg px-3 py-2.5 text-xs leading-relaxed">
-            <ShieldCheckIcon className="text-foreground mt-px size-4 shrink-0" aria-hidden />
-            <span>{t.readOnly}</span>
-          </p>
 
           {problem && (
             <p role="alert" className="text-alarm-ink text-xs">
