@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace BuildingBlocks.Web;
 
 /// <summary>
-/// Brings a service's own database up to date as it starts, when configured to (Adım 26).
+/// Brings a service's own database up to date as it starts, when configured to.
 /// </summary>
 /// <remarks>
 /// <para>

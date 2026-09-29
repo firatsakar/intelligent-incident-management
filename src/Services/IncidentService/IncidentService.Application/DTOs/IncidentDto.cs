@@ -18,7 +18,7 @@ public sealed record IncidentDto
     public DateTime? DetectedAt { get; init; }
 
     // The analysis results were populated in the database but absent from every response, so the
-    // AI's work was invisible over HTTP — the gap noted during Adım 12.
+    // AI's work was invisible over HTTP.
     public string? AiSuggestedCategory { get; init; }
     public string? AiReasoning { get; init; }
     public bool IsAiAnalyzed { get; init; }
@@ -30,14 +30,14 @@ public sealed record IncidentDto
     /// </summary>
     public string? AiAnalysisError { get; init; }
 
-    // Commits the analysis named as likely causes, with links the platform built (Adım 17.5).
+    // Commits the analysis named as likely causes, with links the platform built.
     public IReadOnlyList<AiRelatedChange> AiRelatedChanges { get; init; } = [];
 
     // The conclusion reached when it was closed, and when. Both null while open.
     public IncidentVerdict? Verdict { get; init; }
     public DateTime? ResolvedAt { get; init; }
 
-    // Only for an incident opened through the incident API (Adım 27).
+    // Only for an incident opened through the incident API.
     public string? ExternalId { get; init; }
     public string? ReportedBy { get; init; }
 

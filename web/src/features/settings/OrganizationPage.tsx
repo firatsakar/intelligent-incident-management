@@ -15,7 +15,7 @@ import type { AiResponseLanguage } from '@/types/api'
 import { MembersPage } from './MembersPage'
 
 /**
- * The organisation itself: its name, then its people (Adım 25). It replaced the Members tab —
+ * The organisation itself: its name, then its people. It replaced the Members tab —
  * one installation holds one organisation, and what belongs to it (its name, its members, and
  * later the language its analyses are written in) is its Admins' to set, in one place.
  */
@@ -103,7 +103,7 @@ function NameCard() {
 const languages: AiResponseLanguage[] = ['English', 'Turkish']
 
 /**
- * The language the organisation's analyses are written in (Adım 20.6). Here rather than on each
+ * The language the organisation's analyses are written in. Here rather than on each
  * profile because an analysis is written once and read by the whole team.
  */
 function AiLanguageCard() {

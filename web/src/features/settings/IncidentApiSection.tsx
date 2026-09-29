@@ -38,7 +38,7 @@ const incidentApiKeyHeader = 'X-IIM-Api-Key'
 const intakeEndpoint = () => `${window.location.origin}/api/incidents/intake`
 
 /**
- * Where incidents come from when nothing detected them (Adım 27): an organisation's own scripts,
+ * Where incidents come from when nothing detected them: an organisation's own scripts,
  * pipelines and alerting, each with a named key.
  *
  * It sits under Observability because it is the same question as the telemetry sources above it —

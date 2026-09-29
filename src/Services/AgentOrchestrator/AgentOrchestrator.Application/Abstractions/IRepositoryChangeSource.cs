@@ -4,8 +4,8 @@ using AgentOrchestrator.Domain.ValueObjects;
 namespace AgentOrchestrator.Application.Abstractions;
 
 /// <summary>
-/// Opens a read-only view of an organisation's code host with that organisation's token
-/// (Adım 17.5). Implemented over GitHub's MCP server; nothing above Infrastructure knows that.
+/// Opens a read-only view of an organisation's code host with that organisation's token.
+/// Implemented over GitHub's MCP server; nothing above Infrastructure knows that.
 /// </summary>
 public interface IRepositoryChangeSourceFactory
 {

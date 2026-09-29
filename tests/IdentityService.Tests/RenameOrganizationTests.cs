@@ -6,7 +6,7 @@ using NSubstitute;
 
 namespace IdentityService.Tests;
 
-// The organisation's name is corrected by its Admins (Adım 25). The request carries no id: the
+// The organisation's name is corrected by its Admins. The request carries no id: the
 // organisation renamed is always the caller's own.
 public sealed class RenameOrganizationTests
 {

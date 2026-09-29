@@ -33,7 +33,7 @@ public sealed record IncidentStatsDto
 
     public required DetectionLatencyDto Detection { get; init; }
 
-    // ---- Adım 20.8 ------------------------------------------------------------------------------
+    // ---- resolution analytics ----------------------------------------------------------------
 
     /// <summary>How long incidents closed in the window took to close.</summary>
     public required ResolutionDto Resolution { get; init; }
@@ -69,7 +69,7 @@ public sealed record VerdictCountsDto
     public required int Real { get; init; }
     public required int FalsePositive { get; init; }
 
-    /// <summary>Closed before a verdict was asked for (before Adım 24).</summary>
+    /// <summary>Closed before a verdict was asked for (before verdicts were recorded).</summary>
     public required int Unknown { get; init; }
 }
 
@@ -90,7 +90,7 @@ public sealed record IncidentDayBucketDto
     public required DateOnly Day { get; init; }
     public required int Total { get; init; }
 
-    /// <summary>Incidents closed that day, whenever they were opened (Adım 20.8).</summary>
+    /// <summary>Incidents closed that day, whenever they were opened.</summary>
     public int Resolved { get; init; }
 
     /// <summary>

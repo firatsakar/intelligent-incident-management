@@ -9,8 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace IncidentService.API.Controllers;
 
 /// <summary>
-/// The organisation's incident API keys (Adım 27). Admin only, reads included, like every other
-/// organisation setting (Adım 16.5).
+/// The organisation's incident API keys. Admin only, reads included, like every other
+/// organisation setting.
 /// </summary>
 [ApiController]
 [Route("api/incident-api-keys")]

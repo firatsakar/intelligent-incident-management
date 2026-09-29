@@ -6,7 +6,7 @@ using MediatR;
 namespace IdentityService.Application.Commands.RenameOrganization;
 
 /// <summary>
-/// The organisation's name, as its Admins choose it (Adım 25). The first-run setup gives it one;
+/// The organisation's name, as its Admins choose it. The first-run setup gives it one;
 /// this is how it is corrected later. Every other service stores only the organisation's id, so
 /// the name lives here and nowhere else — renaming touches one row.
 /// </summary>

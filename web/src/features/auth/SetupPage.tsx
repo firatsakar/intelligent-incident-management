@@ -17,7 +17,7 @@ import { checkNewPassword, type PasswordProblem } from './passwordRules'
 import { PublicShell } from './PublicShell'
 
 /**
- * The first screen of a fresh installation (Adım 25): nobody has signed in yet, so whoever set the
+ * The first screen of a fresh installation: nobody has signed in yet, so whoever set the
  * server up creates the organisation and its first Admin here.
  *
  * It asks for the one-time code the identity service printed in its log when it started. That is

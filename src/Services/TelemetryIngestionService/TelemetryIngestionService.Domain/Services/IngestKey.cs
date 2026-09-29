@@ -6,8 +6,8 @@ namespace TelemetryIngestionService.Domain.Services;
 /// The credential a pushed source sends with every batch.
 /// </summary>
 /// <remarks>
-/// How it is made and hashed is <see cref="AccessKey"/>'s, shared with the incident API key since
-/// Adım 27; what is the telemetry service's own is the prefix.
+/// How it is made and hashed is <see cref="AccessKey"/>'s, shared with the incident API key;
+/// what is the telemetry service's own is the prefix.
 /// </remarks>
 public static class IngestKey
 {

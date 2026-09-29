@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace TelemetryIngestionService.Infrastructure.Persistence;
 
 /// <summary>
-/// Drops log records older than the retention period (Adım 30). Without it <c>log_records</c> only
+/// Drops log records older than the retention period. Without it <c>log_records</c> only
 /// ever grows: folding keeps a burst to a few rows, but a steady error rate is still a row a poll.
 /// </summary>
 /// <remarks>

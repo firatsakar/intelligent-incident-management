@@ -138,7 +138,7 @@ coverage/
 !.env.example
 
 # =========================
-# Working notes and local tooling (Adım 32)
+# Working notes and local tooling
 # Kept on the developer's disk, not in the repository.
 # =========================
 /CLAUDE.md

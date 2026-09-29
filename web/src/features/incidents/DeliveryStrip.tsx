@@ -9,7 +9,7 @@ import type { NotificationDelivery } from '@/types/api'
  * Who was told, through what, and why it failed. The last link in the chain and the one that is
  * invisible everywhere else — a delivery row is the only record that a notification happened.
  *
- * Each row carries the integration's name and channel as they were when it went out (Adım 16.5):
+ * Each row carries the integration's name and channel as they were when it went out:
  * the integration list is the organisation's configuration and only its Admins may read it, while
  * this panel is on a screen every role opens. The channel is shown because two integrations on one
  * channel is the intended setup, so "Dev email (Mailpit)" alone does not say whether the email path

@@ -258,7 +258,7 @@ public sealed class GetIncidentStatsQueryHandlerTests
         Assert.Equal(2, stats.BySource["Manual"]);
         Assert.Equal(1, stats.ByStatus["Resolved"]);
     }
-    // ---- Adım 20.8 --------------------------------------------------------------------------------
+    // ---- resolution analytics ------------------------------------------------------------------
 
     private Task<IncidentService.Application.DTOs.IncidentStatsDto> Window() =>
         _handler.Handle(new GetIncidentStatsQuery(Noon.AddDays(-7), Noon), CancellationToken.None);

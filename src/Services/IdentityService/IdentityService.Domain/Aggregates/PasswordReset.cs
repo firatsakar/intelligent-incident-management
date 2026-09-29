@@ -6,7 +6,7 @@ namespace IdentityService.Domain.Aggregates;
 /// A one-time link an Admin issues so a member can set a new password.
 /// </summary>
 /// <remarks>
-/// Admin-issued only (Fırat, 2026-09-25): there is no "forgot password" yet, so nobody can ask for
+/// Admin-issued only: there is no "forgot password" yet, so nobody can ask for
 /// a reset of an address they merely know. The organisation is carried so the Admin who issues it
 /// and the member it is for are provably in the same one, and so the row can be listed by it.
 /// </remarks>

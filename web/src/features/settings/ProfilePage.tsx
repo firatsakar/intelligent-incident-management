@@ -35,8 +35,8 @@ import { cn } from '@/lib/utils'
  * The account, and the things on this console that are the reader's own.
  *
  * The identity card used to say that it was not an account — a name the browser made up, with no
- * password behind it. Since Adım 16 it is one, checked by the server on every request, and since
- * Adım 16.5 its password can be changed here. What the reader cannot change here is their role:
+ * password behind it. Now it is one, checked by the server on every request, and its
+ * password can be changed here. What the reader cannot change here is their role:
  * that belongs to the organisation's Admins, and the card says so rather than offering a control
  * that would be refused.
  */

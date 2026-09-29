@@ -212,7 +212,7 @@ public sealed class AuthController : ControllerBase
         return Ok(session.User);
     }
 
-    // ---- first-run setup (Adım 25) ---------------------------------------------------------------
+    // ---- first-run setup ---------------------------------------------------------------
 
     /// <summary>Whether this installation still needs its first Admin. Nothing more.</summary>
     [HttpGet("setup")]

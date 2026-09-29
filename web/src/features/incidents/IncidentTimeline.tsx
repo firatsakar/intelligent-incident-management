@@ -43,7 +43,7 @@ export function IncidentTimeline({
   const { incidents, labels } = useT()
   const t = incidents.timeline
 
-  // When the analysis landed or failed, from the incident's history (Adım 14). The first
+  // When the analysis landed or failed, from the incident's history. The first
   // application is the one recorded; a failure can repeat with a different reason, and the last
   // one is the one that stands.
   const analysedAt = activity.find((row) => row.kind === 'AnalysisApplied')?.at ?? null

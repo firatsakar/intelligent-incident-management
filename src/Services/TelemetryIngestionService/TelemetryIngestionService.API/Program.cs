@@ -15,7 +15,7 @@ using TelemetryIngestionService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+// An installation's generated secrets, when docker-compose.yml provides them.
 builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.TelemetryIngestionService);
@@ -63,7 +63,7 @@ builder.Services.AddScoped<
 >();
 
 // A closed incident releases the signature that opened it and counts the verdict against it —
-// the feedback the promotion gate learns from (Adım 24).
+// the feedback the promotion gate learns from.
 builder.Services.AddScoped<
     IIntegrationEventHandler<IncidentResolvedEvent>,
     IncidentResolvedEventHandler
@@ -85,7 +85,7 @@ var app = builder.Build();
 
 await app.MigrateOnStartupAsync<TelemetryDbContext>();
 
-// Adım 30: credentials saved before they were encrypted at rest are encrypted now, once.
+// Credentials saved before they were encrypted at rest are encrypted now, once.
 await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
 
 app.UseExceptionHandler();

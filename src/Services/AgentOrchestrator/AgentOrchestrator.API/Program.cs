@@ -15,7 +15,7 @@ using BuildingBlocks.Observability;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+// An installation's generated secrets, when docker-compose.yml provides them.
 builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.AgentOrchestrator);
@@ -25,9 +25,9 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(AnalyzeIncidentCommand).Assembly)
 );
 
-// The settings endpoints (Adım 17.5) are the first here to take input from a form, so this is
+// The settings endpoints are the first here to take input from a form, so this is
 // the first time the service needs the validation pipeline and the problem-details mapping the
-// others have had since Adım 13.
+// other services already had.
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 builder.Services.AddValidatorsFromAssembly(typeof(AnalyzeIncidentCommand).Assembly);
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -65,12 +65,12 @@ var app = builder.Build();
 
 await app.MigrateOnStartupAsync<AgentDbContext>();
 
-// Adım 30: credentials saved before they were encrypted at rest are encrypted now, once.
+// Credentials saved before they were encrypted at rest are encrypted now, once.
 await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
 
 // Without a key the service still runs: the model refuses each call, the analysis is marked failed
 // on its incident and not retried. Said once here, so an installation missing it finds out from
-// the first lines of the log rather than from the first incident (Adım 26).
+// the first lines of the log rather than from the first incident.
 if (string.IsNullOrWhiteSpace(app.Configuration[$"{AiAnalyzerOptions.SectionName}:{nameof(AiAnalyzerOptions.ApiKey)}"]))
 {
     app.Logger.LogWarning(

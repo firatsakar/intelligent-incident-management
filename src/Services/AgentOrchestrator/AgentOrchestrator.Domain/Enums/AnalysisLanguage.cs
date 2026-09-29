@@ -1,6 +1,6 @@
 namespace AgentOrchestrator.Domain.Enums;
 
-/// <summary>The language an analysis writes its prose in (Adım 20.6).</summary>
+/// <summary>The language an analysis writes its prose in.</summary>
 public enum AnalysisLanguage
 {
     English,
@@ -8,7 +8,7 @@ public enum AnalysisLanguage
 }
 
 /// <summary>
-/// The languages an analysis can be written in, by the exact names the API accepts (Adım 29).
+/// The languages an analysis can be written in, by the exact names the API accepts.
 /// </summary>
 /// <remarks>
 /// The setting decides a line in the model's instructions, so what the API lets through is the two

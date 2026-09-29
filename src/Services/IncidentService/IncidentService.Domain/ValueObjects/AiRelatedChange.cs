@@ -1,7 +1,7 @@
 namespace IncidentService.Domain.ValueObjects;
 
 /// <summary>
-/// A commit the analysis named as a likely cause (Adım 17.5): what the console links to. Written
+/// A commit the analysis named as a likely cause: what the console links to. Written
 /// by the platform from what GitHub returned, never by the model.
 /// </summary>
 public sealed record AiRelatedChange(string Sha, string Title, string? Author, DateTime CommittedAt, string Url)

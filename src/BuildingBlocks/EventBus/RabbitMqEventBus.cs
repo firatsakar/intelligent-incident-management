@@ -101,7 +101,7 @@ public sealed class RabbitMqEventBus : IEventBus, IAsyncDisposable
     // Binds the service queue to one more routing key, opening the shared consumer channel on the
     // first subscription. The lock keeps concurrent Subscribe calls from opening two channels.
     //
-    // Until it succeeds, it keeps trying (Adım 28). It used to try once and log the failure, and a
+    // Until it succeeds, it keeps trying. It used to try once and log the failure, and a
     // service whose broker was not up yet — every service, when a host boots and starts every
     // container at once — then ran for good without a consumer, healthy to look at and deaf. The
     // connection's own retries cover a broker that is seconds away; this covers one that is not.

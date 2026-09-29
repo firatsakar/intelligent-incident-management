@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace AgentOrchestrator.Application.Commands.SaveAiSettings;
 
-/// <summary>The organisation's AI response language (Adım 20.6). Applies to analyses from now on.</summary>
+/// <summary>The organisation's AI response language. Applies to analyses from now on.</summary>
 /// <summary>The language by name, exactly as <see cref="AnalysisLanguages"/> spells it.</summary>
 public sealed record SaveAiSettingsCommand(string? ResponseLanguage) : IRequest<AiSettingsDto>;
 

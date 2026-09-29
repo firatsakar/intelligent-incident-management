@@ -92,7 +92,7 @@ var console = SpaHosting.TryResolve(app.Configuration, app.Logger);
 
 // First of all: the static files, the rate limiter and the proxied services all read the caller's
 // address and scheme, and behind the installer's TLS proxy those are what the proxy reports — but
-// only a proxy named in configuration is believed (Adım 26).
+// only a proxy named in configuration is believed.
 var forwarded = PlatformForwardedHeaders.ForEdge(app.Configuration);
 
 if (forwarded is not null)
@@ -105,7 +105,7 @@ if (forwarded is not null)
     );
 }
 
-// No UseHttpsRedirection here, and it comes out of the four older services in Parça 5. TLS
+// No UseHttpsRedirection here or in the services behind it. TLS
 // terminates at this edge; a service behind it that redirects to https is redirecting a request
 // that already arrived over a private hop, and in development it redirects a plain-HTTP call to a
 // port nothing is listening on.

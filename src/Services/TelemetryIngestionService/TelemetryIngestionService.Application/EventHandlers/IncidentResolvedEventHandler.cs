@@ -7,7 +7,7 @@ using TelemetryIngestionService.Application.DTOs;
 namespace TelemetryIngestionService.Application.EventHandlers;
 
 /// <summary>
-/// Closes the loop between an incident and the signature that opened it (Adım 24).
+/// Closes the loop between an incident and the signature that opened it.
 /// </summary>
 /// <remarks>
 /// <para>

@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
         // the context has to exist there for the bus to fill it in.
         services.TryAddScoped<IOrganizationContext, OrganizationContext>();
 
-        // Adım 30: the key that encrypts customer credentials at rest. Resolved when the first
+        // The key that encrypts customer credentials at rest. Resolved when the first
         // context is built, so a service without it fails on its first query with the reason.
         services.AddSingleton(_ => SecretProtector.FromConfiguration(configuration[SecretProtector.ConfigurationKey]));
 

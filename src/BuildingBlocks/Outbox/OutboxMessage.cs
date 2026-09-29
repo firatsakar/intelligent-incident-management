@@ -47,20 +47,20 @@ public sealed class OutboxMessage
 
     public int RetryCount { get; set; }
 
-    /// <summary>Not before this, after a failure (Adım 28). Null: as soon as the dispatcher looks.</summary>
+    /// <summary>Not before this, after a failure. Null: as soon as the dispatcher looks.</summary>
     public DateTimeOffset? NextAttemptAt { get; set; }
 
     /// <summary>
-    /// Set when the row gave up after <see cref="MaxAttempts"/> failures (Adım 28). A parked row is
+    /// Set when the row gave up after <see cref="MaxAttempts"/> failures. A parked row is
     /// never dispatched again on its own; clearing this puts it back.
     /// </summary>
     public DateTimeOffset? ParkedAt { get; set; }
 
-    // ---- retry policy (Adım 28) ---------------------------------------------------------------
+    // ---- retry policy ---------------------------------------------------------------
     //
     // Every five seconds, forever, was the policy until now, and a failure that is not going to
     // go away — a bug in a handler — turned into the same event republished every five seconds for
-    // as long as nobody looked: 519 attempts once, in Adım 17. A cap alone would be the opposite
+    // as long as nobody looked: 519 attempts once. A cap alone would be the opposite
     // mistake: at five seconds a try, a broker restarting for a minute would park everything
     // written during it. So the wait grows, and only a failure that outlasts hours of retrying
     // parks the row.

@@ -34,7 +34,7 @@ public sealed class AgentDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgentDbContext).Assembly);
 
-        // Adım 30: the organisation's GitHub token is encrypted in the column. A local rather than
+        // The organisation's GitHub token is encrypted in the column. A local rather than
         // the field, so the cached model does not hold this context.
         var secrets = _secrets;
         modelBuilder

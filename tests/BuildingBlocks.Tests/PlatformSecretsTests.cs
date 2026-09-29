@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace BuildingBlocks.Tests;
 
-// Adım 31: an installation generates its own secrets on first start and the services read them as
+// An installation generates its own secrets on first start and the services read them as
 // configuration, one file per setting. Development, without the variable, reads none of it.
 public sealed class PlatformSecretsTests
 {

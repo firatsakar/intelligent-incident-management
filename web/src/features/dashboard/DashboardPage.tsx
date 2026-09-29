@@ -128,7 +128,7 @@ export function DashboardPage() {
           )}
         </div>
 
-        {/* Adım 20.8: what happened to them afterwards — how long they took to close, whether they
+        {/* What happened to them afterwards — how long they took to close, whether they
             were real, and what the analysis made of them. */}
         <div className="lg:col-span-4">
           {query.data ? (

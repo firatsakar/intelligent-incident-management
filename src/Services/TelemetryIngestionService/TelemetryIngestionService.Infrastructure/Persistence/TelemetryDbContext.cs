@@ -64,7 +64,7 @@ public sealed class TelemetryDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TelemetryDbContext).Assembly);
 
-        // Adım 30: a source's credentials (a Seq API key) are encrypted in the column and
+        // A source's credentials (a Seq API key) are encrypted in the column and
         // decrypted on the way back. A local rather than the field, so the cached model does not
         // hold this context.
         var secrets = _secrets;

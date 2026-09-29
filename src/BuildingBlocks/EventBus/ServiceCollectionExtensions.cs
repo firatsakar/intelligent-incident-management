@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
 
         // Built by hand so the configured retry count reaches it. Left to the container, the
         // constructor's default of three was used and EventBus:RetryCount was read by nothing
-        // (found in Adım 23).
+        // (found by the integration tests).
         services.AddSingleton(sp => new RabbitMqConnection(
             sp.GetRequiredService<IConnectionFactory>(),
             sp.GetRequiredService<ILogger<RabbitMqConnection>>(),

@@ -137,8 +137,8 @@ export function AiAnalysisPanel({ incident }: { incident: Incident }) {
 }
 
 /**
- * The commits the analysis read in the service's repository and named as likely causes (Adım
- * 17.5). Links go to GitHub and nowhere else: the server kept only https://github.com URLs, and
+ * The commits the analysis read in the service's repository and named as likely causes.
+ * Links go to GitHub and nowhere else: the server kept only https://github.com URLs, and
  * this checks again rather than trusting a string into an href.
  */
 function RelatedChanges({ changes }: { changes: AiRelatedChange[] }) {

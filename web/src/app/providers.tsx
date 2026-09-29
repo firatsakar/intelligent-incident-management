@@ -54,7 +54,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <QueryClientProvider client={client}>
           {/* Base UI's tooltip needs its Provider mounted for the shared delay and the grouping to
               work at all — without it each tooltip waits out its own timer, which is what made the
-              component look broken in Adım 19 and got it replaced with a native `title`. It holds
+              component look broken once and got it replaced with a native `title`. It holds
               no state worth scoping to a route, so it wraps everything once. */}
           <TooltipProvider>
             {/* Auth above the router, not inside it: the login screen and the guard are both

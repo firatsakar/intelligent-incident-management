@@ -15,7 +15,7 @@ using NotificationService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+// An installation's generated secrets, when docker-compose.yml provides them.
 builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.NotificationService);
@@ -71,7 +71,7 @@ var app = builder.Build();
 
 await app.MigrateOnStartupAsync<NotificationDbContext>();
 
-// Adım 30: credentials saved before they were encrypted at rest are encrypted now, once.
+// Credentials saved before they were encrypted at rest are encrypted now, once.
 await StoredSecretsEncryption.EncryptPlaintextAsync(app.Services, app.Logger);
 
 app.UseExceptionHandler();

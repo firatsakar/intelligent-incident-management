@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 namespace NotificationService.Infrastructure.Persistence;
 
 /// <summary>
-/// Encrypts the credentials of integrations saved before Adım 30, once, on start. Reading them
+/// Encrypts the credentials of integrations saved before encryption at rest, once, on start. Reading them
 /// already works — a value without the encryption prefix is read as it is — but "readable" is not
 /// "at rest encrypted", and a row nobody edits again would otherwise stay in the clear forever.
 /// </summary>

@@ -34,7 +34,7 @@ public sealed class NotificationDbContext : DbContext
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(NotificationDbContext).Assembly);
 
-        // Adım 30: the credentials in an integration's config (an SMTP password, a Jira token) are
+        // The credentials in an integration's config (an SMTP password, a Jira token) are
         // encrypted in the column and decrypted on the way back, so the aggregate never sees the
         // difference. A local rather than the field, so the cached model does not hold this context.
         var secrets = _secrets;

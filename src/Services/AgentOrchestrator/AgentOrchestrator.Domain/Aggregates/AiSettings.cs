@@ -4,7 +4,7 @@ using BuildingBlocks.SharedKernel;
 namespace AgentOrchestrator.Domain.Aggregates;
 
 /// <summary>
-/// How the organisation's analyses are written (Adım 20.6). At most one per organisation; an
+/// How the organisation's analyses are written. At most one per organisation; an
 /// organisation without one gets English, as every analysis was until this existed.
 /// </summary>
 /// <remarks>

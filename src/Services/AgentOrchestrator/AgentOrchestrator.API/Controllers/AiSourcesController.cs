@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AgentOrchestrator.API.Controllers;
 
 /// <summary>
-/// The outside systems an analysis may read, as the organisation configured them (Adım 17.5).
+/// The outside systems an analysis may read, as the organisation configured them.
 /// The organisation's own, and so its Admins' alone — reads included, as with integrations.
 /// </summary>
 [ApiController]

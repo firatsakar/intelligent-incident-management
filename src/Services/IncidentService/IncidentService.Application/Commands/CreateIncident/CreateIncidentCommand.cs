@@ -16,7 +16,7 @@ public class CreateIncidentCommand : IRequest<IncidentDto>
     // 14:20 and then correlating evidence around 14:35 finds nothing.
     public DateTime? DetectedAt { get; init; }
 
-    // Set only by the incident API (Adım 27): the sender's name for the problem, and the key it
+    // Set only by the incident API: the sender's name for the problem, and the key it
     // came with.
     public string? ExternalId { get; init; }
     public string? ReportedBy { get; init; }

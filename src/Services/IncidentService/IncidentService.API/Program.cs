@@ -16,7 +16,7 @@ using IncidentService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+// An installation's generated secrets, when docker-compose.yml provides them.
 builder.Configuration.AddPlatformSecrets();
 
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.IncidentService);
@@ -72,7 +72,7 @@ builder.Services.AddSignalR();
 // sent from. The hub context it wraps is a singleton either way.
 builder.Services.AddScoped<IRealtimeNotifier, SignalRIncidentNotifier>();
 
-// Who did it, for the activity trail (Adım 14). Null on the bus, where no person started anything.
+// Who did it, for the activity trail. Null on the bus, where no person started anything.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 

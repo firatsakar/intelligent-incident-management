@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace IncidentService.Application.Commands.CreateIncidentApiKey;
 
-/// <summary>A new API key for the organisation, returned with its value once (Adım 27).</summary>
+/// <summary>A new API key for the organisation, returned with its value once.</summary>
 public sealed record CreateIncidentApiKeyCommand(string Name, string CreatedBy) : IRequest<IssuedIncidentApiKeyDto>;
 
 public sealed class CreateIncidentApiKeyCommandValidator : AbstractValidator<CreateIncidentApiKeyCommand>

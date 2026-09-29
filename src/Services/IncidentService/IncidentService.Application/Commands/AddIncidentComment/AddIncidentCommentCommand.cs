@@ -8,7 +8,7 @@ using MediatR;
 namespace IncidentService.Application.Commands.AddIncidentComment;
 
 /// <summary>
-/// A note from someone working the incident, in its activity trail (Adım 14). Not editable and not
+/// A note from someone working the incident, in its activity trail. Not editable and not
 /// deletable: the trail is a record, and a correction is another comment.
 /// </summary>
 public sealed record AddIncidentCommentCommand(Guid IncidentId, string Text) : IRequest<IncidentActivityDto>;

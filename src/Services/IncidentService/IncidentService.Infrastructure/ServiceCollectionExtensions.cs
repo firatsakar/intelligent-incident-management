@@ -26,7 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ConvertDomainEventsToOutboxInterceptor>();
 
         // A closed incident and the message that tells telemetry about it commit in the same
-        // transaction (Adım 24). Until then this service published straight after SaveChanges,
+        // transaction. Until then this service published straight after SaveChanges,
         // which it still does for IncidentDetectedEvent — see PROGRESS.md tech-debt.
         services.AddDbContext<IncidentDbContext>(
             (sp, options) =>

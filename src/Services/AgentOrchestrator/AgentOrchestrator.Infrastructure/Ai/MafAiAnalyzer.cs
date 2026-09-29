@@ -50,7 +50,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
     {
         var userPrompt = BuildUserPrompt(title, description);
 
-        // The organisation's code, when its service is mapped (Adım 17.5). Opened per analysis with
+        // The organisation's code, when its service is mapped. Opened per analysis with
         // the organisation's token; a GitHub that cannot be reached costs the analysis its code
         // tools, never the analysis itself.
         IRepositoryChangeSource? source = null;
@@ -245,7 +245,7 @@ public sealed class MafAiAnalyzer : IAiAnalyzer
             Never inflate confidence. Finding no similar past incident should LOWER confidence.
             """;
 
-        // Adım 20.6: the organisation reads its analyses in Turkish. Only the prose follows: the
+        // The organisation reads its analyses in Turkish. Only the prose follows: the
         // category and priority are keys that notification filters match on, and the search
         // queries stay English because the index they search is analysed as English.
         if (language == AnalysisLanguage.Turkish)

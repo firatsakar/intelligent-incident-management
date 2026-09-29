@@ -1,5 +1,5 @@
 #!/bin/sh
-# Generates this installation's secrets on first start (Adım 31), so `docker compose up --build`
+# Generates this installation's secrets on first start, so `docker compose up --build`
 # needs nothing filled in. Runs before everything else; every other container reads what it wrote.
 #
 #   /secrets/raw/      one password per file, for Postgres, RabbitMQ, Seq and pgAdmin

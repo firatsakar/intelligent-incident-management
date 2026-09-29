@@ -26,7 +26,7 @@ export const router = createBrowserRouter([
   // yet, or has a different one, and the link is the only credential the page needs.
   { path: '/invite/:token', element: <AcceptInvitePage /> },
   { path: '/reset/:token', element: <ResetPasswordPage /> },
-  // A fresh installation's first screen (Adım 25): the organisation and its first Admin.
+  // A fresh installation's first screen: the organisation and its first Admin.
   { path: '/setup', element: <SetupPage /> },
   {
     // A pathless layout route. The guard wraps every application URL without appearing in any of
@@ -60,7 +60,7 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/settings/profile" replace /> },
               { path: 'profile', element: <ProfilePage /> },
               { path: 'organization', element: <OrganizationPage /> },
-              // Members became a section of the Organization tab (Adım 25).
+              // Members became a section of the Organization tab.
               { path: 'members', element: <Navigate to="/settings/organization" replace /> },
               { path: 'integrations', element: <IntegrationsPage /> },
               // Telemetry and the AI sources were tabs of their own until they became groups of

@@ -17,7 +17,7 @@ import { incidentVerdicts, type IncidentStatus, type IncidentVerdict } from '@/t
  * The one question asked when an open incident is closed: was it real?
  *
  * Asked here, once, because this is the moment somebody knows — and because the answer is what
- * the detector learns from (Adım 24). Nothing is preselected: a default would be the answer most
+ * the detector learns from. Nothing is preselected: a default would be the answer most
  * people click through to, and a detector trained on click-through learns nothing.
  *
  * Each option says what it does to the detector, in the same breath as what it means, so the

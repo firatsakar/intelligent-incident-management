@@ -68,7 +68,7 @@ public sealed class IdentitySeeder : IHostedService
 
             if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
             {
-                // No seed: the installation is set up from the console (Adım 25). The code is the
+                // No seed: the installation is set up from the console. The code is the
                 // proof that whoever does it can read this server's logs — and this line is the
                 // only place it ever appears.
                 var code = _setup.Issue();

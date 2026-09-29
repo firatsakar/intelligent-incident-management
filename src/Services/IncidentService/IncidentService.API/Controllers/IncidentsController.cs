@@ -56,7 +56,7 @@ public sealed class IncidentsController : ControllerBase
     }
 
     /// <summary>
-    /// What the incident went through and who did it, oldest first (Adım 14). Every member reads
+    /// What the incident went through and who did it, oldest first. Every member reads
     /// it; a Viewer sees who worked the incident as well as anyone.
     /// </summary>
     [HttpGet("{id:guid}/activity")]

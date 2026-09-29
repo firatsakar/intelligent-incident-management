@@ -8,6 +8,6 @@ public static class IncidentConstants
     public const int AiCategoryMaxLength = 128;
     public const int AiReasoningMaxLength = 4096;
 
-    // The sender's own name for the problem — an alert fingerprint, a check id (Adım 27).
+    // The sender's own name for the problem — an alert fingerprint, a check id.
     public const int ExternalIdMaxLength = 200;
 }
