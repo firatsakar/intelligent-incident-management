@@ -146,47 +146,63 @@ The result: remediation steps specific to *this* system's history, and a confide
 
 ### Install with Docker
 
-Everything — infrastructure, services, gateway and console — from one compose file. You need
-[Docker](https://www.docker.com/) with Compose v2 and about 6 GB of memory for it.
+Everything — infrastructure, services, gateway and web console — comes up from one compose file.
+All you need is [Docker](https://www.docker.com/) with Compose v2 (Docker Desktop on Windows and
+macOS) and about 6 GB of memory for it.
 
-**1. Fill in the settings — before the first start.** There are no default passwords; compose
-refuses to start while a required value is empty.
+**1. Get the code and start it.** Nothing needs to be filled in first.
 
 ```bash
 git clone https://github.com/firatsakar/intelligent-incident-management.git
 cd intelligent-incident-management
-cp deploy/example.env deploy/.env
+docker compose up --build
 ```
 
-Open `deploy/.env` and fill in every value under *Required*, one secret per line:
+The first build takes several minutes. Add `-d` to run it in the background. On the first start a
+short-lived `secrets` container generates every password and key this installation needs — the
+session signing key, the key that encrypts stored credentials, the database, RabbitMQ, Seq and
+pgAdmin passwords — into a Docker volume that everything else reads from. They are never printed
+and never leave that volume.
+
+**2. Turn on the AI analysis** (optional, but it is what the platform is for). Give it your
+Anthropic API key, from [console.anthropic.com](https://console.anthropic.com) → *API keys*:
 
 ```bash
-openssl rand -hex 32
+cp example.env .env
 ```
 
-Add `ANTHROPIC_API_KEY` for the AI analysis (without it everything else works and each analysis
-is marked failed). Every setting is explained in the file.
+Uncomment `ANTHROPIC_API_KEY=` in `.env`, put the key after it, and run `docker compose up -d` again.
+Without a key everything else works and each analysis is recorded as failed. `example.env` lists
+every other optional setting — ports, public URL, email, log retention.
 
-**2. Start it.** The first build takes several minutes.
+**3. Open the console** at http://localhost:8080. An empty installation asks for a one-time
+setup code (see [First-run setup](#first-run-setup)); the identity service writes it to its log:
 
 ```bash
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env up -d --build
+docker compose logs identity | grep "First-run setup"
 ```
 
-**3. Open the console** at http://localhost:8080 and complete the [first-run setup](#first-run-setup).
-The setup code is in the identity service's log:
-
-```bash
-docker compose -f deploy/docker-compose.yml --env-file deploy/.env logs identity | grep "First-run setup"
-```
+Enter it with your organisation's name and your own name, email and password — you are its first
+Admin. From there, connect a log source under *Settings › Integrations* and invite your team under
+*Settings › Organization*.
 
 | What | Where |
 |------|-------|
 | Console and API | `http://<server>:8080` — the only port open to the network |
 | OTLP log ingest | `http://<server>:8080/otlp/v1/logs` |
-| Seq (IIM's own logs and traces) | http://127.0.0.1:8081 — user `admin`; asks for a new password at first sign-in |
-| pgAdmin | http://127.0.0.1:5050 |
+| Seq (IIM's own logs and traces) | http://127.0.0.1:8081 — user `admin` |
+| pgAdmin | http://127.0.0.1:5050 — user `admin@example.com` |
 | Kibana | http://127.0.0.1:5601 |
+
+The generated passwords of the admin interfaces are read from the `secrets` volume when you need
+them (Seq asks for a new one at the first sign-in; pgAdmin's database password is
+`postgres-password`):
+
+```bash
+docker compose run --rm secrets cat /secrets/raw/seq-admin-password
+```
+
+(In Git Bash on Windows, prefix it with `MSYS_NO_PATHCONV=1` so the path is not rewritten.)
 
 The admin interfaces answer on the server itself only. From another machine, tunnel to them:
 `ssh -L 8081:127.0.0.1:8081 -L 5050:127.0.0.1:5050 -L 5601:127.0.0.1:5601 you@server`.
@@ -199,18 +215,20 @@ iim.example.com {
 }
 ```
 
-Then set `IIM_PUBLIC_URL=https://iim.example.com` and tell IIM to believe the proxy about the
-caller's address and scheme: `FORWARDED_KNOWN_PROXIES=172.16.0.0/12` for a proxy on the Docker
+Then set `IIM_PUBLIC_URL=https://iim.example.com` in `.env` and tell IIM to believe the proxy about
+the caller's address and scheme: `FORWARDED_KNOWN_PROXIES=172.16.0.0/12` for a proxy on the Docker
 host (it reaches the published port from the Docker bridge). Over plain HTTP — trying it out on a
 LAN address — everything works too, the session cookies are simply not marked Secure.
 
 **Email.** Invitations and password resets are sent through the SMTP server in `SMTP_*` (your
 company's, Google Workspace, Microsoft 365, SES, SendGrid…). Without one, each invitation link is
 shown to the Admin to pass on. Incident notification emails are separate: each organisation enters
-its own SMTP server in the console, under Settings → Integrations → Notifications.
+its own SMTP server in the console, under *Settings › Integrations › Notifications*.
 
-**Updating.** `git pull`, then the same `up -d --build`. Each service applies its own database
-migrations as it starts. `down` stops everything and keeps the data, which lives in Docker volumes.
+**Updating.** `git pull`, then `docker compose up -d --build`. Each service applies its own database
+migrations as it starts. `docker compose down` stops everything and keeps the data, which lives in
+Docker volumes. Keep the `iim_secrets` volume: it holds this installation's keys, and without it
+everybody is signed out and the stored integration credentials can no longer be decrypted.
 
 ### Development
 
@@ -224,9 +242,12 @@ unique indexes, and a subscription made before the broker is up.
 
 ### Running the Infrastructure
 
+For development the services run with `dotnet run` against infrastructure from
+`docker-compose.dev.yml` (RabbitMQ, a PostgreSQL per service, Elasticsearch, Kibana, Seq, pgAdmin,
+Mailpit). Its passwords come from a `.env` next to it:
+
 ```bash
-# Start RabbitMQ, PostgreSQL instances, Elasticsearch, Kibana, Seq, and pgAdmin
-docker-compose up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 | Tool | URL |

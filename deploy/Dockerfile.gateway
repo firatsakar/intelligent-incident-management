@@ -20,7 +20,7 @@ WORKDIR /repo
 
 COPY src/ src/
 
-RUN --mount=type=cache,id=iim-nuget,target=/root/.nuget/packages \
+RUN --mount=type=cache,id=iim-nuget,target=/root/.nuget/packages,sharing=locked \
     dotnet publish src/Gateway/Gateway.API/Gateway.API.csproj -c Release -o /app -p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

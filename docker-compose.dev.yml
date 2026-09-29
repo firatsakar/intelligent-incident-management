@@ -1,0 +1,251 @@
+# Development infrastructure only: RabbitMQ, a PostgreSQL per service, Elasticsearch, Kibana, Seq,
+# pgAdmin, Mailpit and the demo's own Seq. The services run with `dotnet run` against it, and its
+# passwords come from a .env next to this file. Ports are published on 127.0.0.1 only; they match
+# the connection strings in each service's appsettings.json.
+#
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# The whole platform in one command is docker-compose.yml.
+
+services:
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: incident-management-rabbitmq
+    ports:
+      - "127.0.0.1:5672:5672"      # AMQP
+      - "127.0.0.1:15672:15672"    # management UI
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - incident-management-rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_incident:
+    image: postgres:16
+    container_name: postgres_incident
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: ${INCIDENT_DB_USER}
+      POSTGRES_PASSWORD: ${INCIDENT_DB_PASS}
+      POSTGRES_DB: ${INCIDENT_DB_NAME}
+    volumes:
+      - postgres_incident_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INCIDENT_DB_USER} -d ${INCIDENT_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_notification:
+    image: postgres:16
+    container_name: postgres_notification
+    ports:
+      - "127.0.0.1:5434:5432"
+    environment:
+      POSTGRES_USER: ${NOTIFICATION_DB_USER}
+      POSTGRES_PASSWORD: ${NOTIFICATION_DB_PASS}
+      POSTGRES_DB: ${NOTIFICATION_DB_NAME}
+    volumes:
+      - postgres_notification_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${NOTIFICATION_DB_USER} -d ${NOTIFICATION_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_telemetry:
+    image: postgres:16
+    container_name: postgres_telemetry
+    ports:
+      - "127.0.0.1:5435:5432"
+    environment:
+      POSTGRES_USER: ${TELEMETRY_DB_USER}
+      POSTGRES_PASSWORD: ${TELEMETRY_DB_PASS}
+      POSTGRES_DB: ${TELEMETRY_DB_NAME}
+    volumes:
+      - postgres_telemetry_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TELEMETRY_DB_USER} -d ${TELEMETRY_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+  postgres_agent:
+    image: postgres:16
+    container_name: postgres_agent
+    ports:
+      - "127.0.0.1:5436:5432"
+    environment:
+      POSTGRES_USER: ${AGENT_DB_USER}
+      POSTGRES_PASSWORD: ${AGENT_DB_PASS}
+      POSTGRES_DB: ${AGENT_DB_NAME}
+    volumes:
+      - postgres_agent_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AGENT_DB_USER} -d ${AGENT_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  postgres_identity:
+    image: postgres:16
+    container_name: postgres_identity
+    ports:
+      - "127.0.0.1:5437:5432"
+    environment:
+      POSTGRES_USER: ${IDENTITY_DB_USER}
+      POSTGRES_PASSWORD: ${IDENTITY_DB_PASS}
+      POSTGRES_DB: ${IDENTITY_DB_NAME}
+    volumes:
+      - postgres_identity_data:/var/lib/postgresql/data
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${IDENTITY_DB_USER} -d ${IDENTITY_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  seq:
+    image: datalust/seq:latest
+    container_name: incident-management-seq
+    ports:
+      - "127.0.0.1:8081:80"        # UI
+      - "127.0.0.1:5341:5341"      # ingestion
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_FIRSTRUN_ADMINPASSWORD}
+    volumes:
+      - incident-management-seq_data:/data
+    networks:
+      - incident_network
+
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: incident-management-pgadmin
+    ports:
+      - "127.0.0.1:5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    volumes:
+      - incident-management-pgadmin_data:/var/lib/pgadmin
+    networks:
+      - incident_network
+    depends_on:
+      - postgres_incident
+      - postgres_notification
+      - postgres_telemetry
+      - postgres_agent
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+    container_name: incident-management-elasticsearch
+    ports:
+      - "127.0.0.1:9200:9200"
+    environment:
+     - discovery.type=single-node
+     - ES_JAVA_OPTS=-Xms512m -Xmx512m
+     - xpack.security.enabled=false
+     - cluster.name=incident-management-es
+    volumes:
+     - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+    networks:
+      - incident_network
+
+  # Stands in for a customer's log system — the system IIM monitors, not IIM's own logs.
+  # Authentication is explicitly opted out of, so reads are anonymous: a customer's Seq would hand
+  # us an API key, but requiring one here would only get in the way of the demo. Seq refuses to
+  # start on just an absent password — the opt-out has to be stated.
+  seq-demo:
+    image: datalust/seq:latest
+    container_name: incident-management-seq-demo
+    ports:
+      - "127.0.0.1:8082:80"        # UI + ingestion
+      - "127.0.0.1:5342:5341"      # ingestion
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_NOAUTHENTICATION: "true"
+    volumes:
+      - incident-management-seq-demo_data:/data
+    networks:
+      - incident_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: incident-management-mailpit
+    ports:
+      - "127.0.0.1:1025:1025"      # SMTP
+      - "127.0.0.1:8025:8025"      # web UI
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - incident_network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:8025/readyz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  kibana:
+   image: docker.elastic.co/kibana/kibana:9.4.3
+   container_name: incident-management-kibana
+   ports:
+     - "127.0.0.1:5601:5601"
+   environment:
+    - ELASTICSEARCH_HOSTS=http://incident-management-elasticsearch:9200
+   depends_on:
+    elasticsearch:
+     condition: service_healthy
+   healthcheck:
+     test: ["CMD-SHELL", "curl -fs http://localhost:5601/api/status || exit 1"]
+     interval: 10s
+     timeout: 10s
+     retries: 12
+     start_period: 60s
+   networks:
+    - incident_network
+
+networks:
+  incident_network:
+    driver: bridge
+
+volumes:
+  incident-management-rabbitmq_data:
+  postgres_incident_data:
+  postgres_notification_data:
+  postgres_telemetry_data:
+  postgres_agent_data:
+  postgres_identity_data:
+  incident-management-seq_data:
+  incident-management-seq-demo_data:
+  incident-management-pgadmin_data:
+  elasticsearch_data:
