@@ -548,4 +548,102 @@ public sealed class PersistenceTests(PostgresFixture postgres)
             Assert.Equal(1, await store.CountParkedAsync());
         }
     }
+
+    // ---- Adım 30: one worker per job however many replicas run --------------------------------
+
+    [Fact]
+    public async Task TwoDispatchersNeverClaimTheSameOutboxRows()
+    {
+        await using var provider = await IncidentService();
+
+        var rows = Enumerable
+            .Range(0, 3)
+            .Select(i => new OutboxMessage
+            {
+                Id = Guid.NewGuid(),
+                OrganizationId = OrgA,
+                Type = "IncidentResolvedDomainEvent",
+                Payload = "{}",
+                OccurredOn = DateTimeOffset.UtcNow.AddSeconds(-10 + i),
+            })
+            .ToList();
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IncidentDbContext>();
+            context.OutboxMessages.AddRange(rows);
+            await context.SaveChangesAsync();
+        }
+
+        // Two replicas on the same tick: the first claims two rows, the second gets only the third.
+        await using var first = provider.CreateAsyncScope();
+        await using var second = provider.CreateAsyncScope();
+
+        var firstStore = first.ServiceProvider.GetRequiredService<IOutboxStore>();
+        var secondStore = second.ServiceProvider.GetRequiredService<IOutboxStore>();
+
+        var claimedFirst = await firstStore.GetPendingAsync(2);
+        var claimedSecond = await secondStore.GetPendingAsync(20);
+
+        Assert.Equal([rows[0].Id, rows[1].Id], claimedFirst.Select(row => row.Id));
+        Assert.Equal([rows[2].Id], claimedSecond.Select(row => row.Id));
+
+        // The first finishes: its stamps commit and nobody claims those rows again.
+        foreach (var row in claimedFirst)
+            row.MarkDispatched(DateTimeOffset.UtcNow);
+
+        await firstStore.SaveChangesAsync();
+
+        await using var third = provider.CreateAsyncScope();
+        Assert.Empty(await third.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20));
+    }
+
+    [Fact]
+    public async Task ADispatcherThatDiesMidBatchLeavesItsRowsForTheNext()
+    {
+        await using var provider = await IncidentService();
+
+        var row = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = OrgA,
+            Type = "IncidentResolvedDomainEvent",
+            Payload = "{}",
+            OccurredOn = DateTimeOffset.UtcNow,
+        };
+
+        await using (var scope = provider.ScopeFor(OrgA))
+        {
+            var context = scope.ServiceProvider.GetRequiredService<IncidentDbContext>();
+            context.OutboxMessages.Add(row);
+            await context.SaveChangesAsync();
+        }
+
+        // Claimed and never completed — the scope goes away as a crashed process's would.
+        await using (var dying = provider.CreateAsyncScope())
+            Assert.Single(await dying.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20));
+
+        await using var next = provider.CreateAsyncScope();
+        Assert.Equal(row.Id, Assert.Single(await next.ServiceProvider.GetRequiredService<IOutboxStore>().GetPendingAsync(20)).Id);
+    }
+
+    [Fact]
+    public async Task OneReplicaPollsASourceAtATime()
+    {
+        var connectionString = await postgres.NewDatabaseAsync();
+        var source = Guid.NewGuid();
+
+        await using (var held = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source))
+        {
+            Assert.NotNull(held);
+            Assert.Null(await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source));
+
+            // A different source is somebody else's poll.
+            await using var other = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, Guid.NewGuid());
+            Assert.NotNull(other);
+        }
+
+        await using var afterwards = await global::TelemetryIngestionService.Infrastructure.Ingestion.SourcePollLock.TryAcquireAsync(connectionString, source);
+        Assert.NotNull(afterwards);
+    }
 }
