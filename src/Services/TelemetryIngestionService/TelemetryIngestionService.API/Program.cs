@@ -15,6 +15,9 @@ using TelemetryIngestionService.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Adım 31: an installation's generated secrets, when docker-compose.yml provides them.
+builder.Configuration.AddPlatformSecrets();
+
 builder.Host.UsePlatformLogging(TelemetryConstants.ServiceNames.TelemetryIngestionService);
 builder.Services.AddPlatformTracing(builder.Configuration, TelemetryConstants.ServiceNames.TelemetryIngestionService);
 
