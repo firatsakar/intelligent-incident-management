@@ -26,12 +26,18 @@ public sealed class AiSettings : AggregateRoot
         {
             Id = Guid.NewGuid(),
             OrganizationId = organizationId,
-            ResponseLanguage = responseLanguage,
+            ResponseLanguage = Supported(responseLanguage),
         };
 
     public void ChangeLanguage(AnalysisLanguage responseLanguage)
     {
-        ResponseLanguage = responseLanguage;
+        ResponseLanguage = Supported(responseLanguage);
         SetUpdatedAt();
     }
+
+    // The last line of defence: a cast integer is an AnalysisLanguage as far as the compiler knows.
+    private static AnalysisLanguage Supported(AnalysisLanguage language) =>
+        Enum.IsDefined(language)
+            ? language
+            : throw new ArgumentOutOfRangeException(nameof(language), language, "Unsupported analysis language.");
 }
