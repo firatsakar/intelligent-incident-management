@@ -27,6 +27,8 @@ public sealed class IncidentDbContext : DbContext
 
     public DbSet<IncidentApiKey> IncidentApiKeys => Set<IncidentApiKey>();
 
+    public DbSet<IncidentActivity> IncidentActivities => Set<IncidentActivity>();
+
     // Not filtered by organisation: the dispatcher reads every organisation's pending rows and
     // sets each one's scope from the row itself.
     public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
@@ -42,6 +44,7 @@ public sealed class IncidentDbContext : DbContext
         // organisation has no business learning about another.
         modelBuilder.Entity<Incident>().HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
         modelBuilder.Entity<IncidentApiKey>().HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
+        modelBuilder.Entity<IncidentActivity>().HasQueryFilter(x => x.OrganizationId == ScopedOrganizationId);
 
         base.OnModelCreating(modelBuilder);
     }

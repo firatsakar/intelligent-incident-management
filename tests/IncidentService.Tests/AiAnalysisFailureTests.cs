@@ -34,7 +34,7 @@ public sealed class AiAnalysisFailureTests
     {
         _repository.GetByIdAsync(incident.Id, Arg.Any<CancellationToken>()).Returns(incident);
 
-        return new RecordAiAnalysisFailureCommandHandler(_repository, _realtime);
+        return new RecordAiAnalysisFailureCommandHandler(_repository, _realtime, Substitute.For<IIncidentActivityRepository>());
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using IncidentService.API.Contracts;
 using IncidentService.Application.Commands.AssignTeam;
 using IncidentService.Application.Commands.CreateIncident;
 using IncidentService.Application.Commands.UpdateIncidentStatus;
+using IncidentService.Application.Queries.GetIncidentActivity;
 using IncidentService.Application.Queries.GetIncidentById;
 using IncidentService.Application.Queries.GetIncidents;
 using IncidentService.Application.Queries.GetIncidentStats;
@@ -52,6 +53,14 @@ public sealed class IncidentsController : ControllerBase
         var result = await _sender.Send(new GetIncidentByIdQuery(id), cancellationToken);
         return Ok(result);
     }
+
+    /// <summary>
+    /// What the incident went through and who did it, oldest first (Adım 14). Every member reads
+    /// it; a Viewer sees who worked the incident as well as anyone.
+    /// </summary>
+    [HttpGet("{id:guid}/activity")]
+    public async Task<IActionResult> GetActivity(Guid id, CancellationToken cancellationToken) =>
+        Ok(await _sender.Send(new GetIncidentActivityQuery(id), cancellationToken));
 
     /// <summary>
     /// Arrival shape over time plus the current open picture, for the dashboard. The guid

@@ -6,6 +6,7 @@ using BuildingBlocks.Web;
 using IncidentService.Application.Abstractions;
 using IncidentService.Domain.Aggregates;
 using IncidentService.Domain.Enums;
+using IncidentService.Domain.ValueObjects;
 using IncidentService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -149,6 +150,72 @@ public sealed class PersistenceTests(PostgresFixture postgres)
             );
             await incidents.SaveChangesAsync();
         }
+    }
+
+    // ---- Adım 14: the activity trail commits with the change and stays in its organisation -------
+
+    [Fact]
+    public async Task AnIncidentAndItsHistorySaveTogetherAndOnlyItsOrganisationReadsThem()
+    {
+        await using var provider = await IncidentService();
+        Guid incidentId;
+
+        await using (var a = provider.ScopeFor(OrgA))
+        {
+            var incidents = a.ServiceProvider.GetRequiredService<IIncidentRepository>();
+            var activity = a.ServiceProvider.GetRequiredService<IIncidentActivityRepository>();
+
+            // In one save, as the create handler does: the foreign key is what orders the inserts.
+            var incident = Alert("activity-1");
+            await incidents.AddAsync(incident);
+            activity.Add(IncidentActivity.Opened(incident, ActivityActor.ApiKey("Grafana")));
+            await incidents.SaveChangesAsync();
+
+            incident.UpdateStatus(IncidentStatus.Resolved, IncidentVerdict.Real);
+            activity.Add(IncidentActivity.StatusChanged(incident, IncidentStatus.Open, ActivityActor.User(Guid.NewGuid(), "Ayşe")));
+            await incidents.SaveChangesAsync();
+
+            incidentId = incident.Id;
+        }
+
+        await using (var a = provider.ScopeFor(OrgA))
+        {
+            var rows = await a.ServiceProvider.GetRequiredService<IIncidentActivityRepository>().ListForIncidentAsync(incidentId, 500);
+
+            Assert.Equal([IncidentActivityKind.Opened, IncidentActivityKind.StatusChanged], rows.Select(x => x.Kind));
+            Assert.Equal(IncidentVerdict.Real, rows[1].Verdict);
+            Assert.Equal("Ayşe", rows[1].ActorName);
+        }
+
+        await using (var b = provider.ScopeFor(OrgB))
+        {
+            Assert.Empty(await b.ServiceProvider.GetRequiredService<IIncidentActivityRepository>().ListForIncidentAsync(incidentId, 500));
+        }
+    }
+
+    [Fact]
+    public async Task AnIncidentThatLostTheExternalIdRaceTakesItsHistoryWithIt()
+    {
+        await using var provider = await IncidentService();
+        await using var scope = provider.ScopeFor(OrgA);
+        var incidents = scope.ServiceProvider.GetRequiredService<IIncidentRepository>();
+        var activity = scope.ServiceProvider.GetRequiredService<IIncidentActivityRepository>();
+
+        var winner = Alert("activity-race");
+        await incidents.AddAsync(winner);
+        activity.Add(IncidentActivity.Opened(winner, ActivityActor.ApiKey("Grafana")));
+        await incidents.SaveChangesAsync();
+
+        var loser = Alert("activity-race");
+        await incidents.AddAsync(loser);
+        activity.Add(IncidentActivity.Opened(loser, ActivityActor.ApiKey("Grafana")));
+        await Assert.ThrowsAsync<DuplicateExternalIdException>(() => incidents.SaveChangesAsync());
+
+        // Left behind, the loser's row would be inserted by the next save — for no incident.
+        await incidents.SaveChangesAsync();
+
+        var context = scope.ServiceProvider.GetRequiredService<IncidentDbContext>();
+        Assert.Equal(winner.Id, Assert.Single(await context.IncidentActivities.ToListAsync()).IncidentId);
     }
 
     // ---- Adım 20.8: the stats reads translate to SQL and read what they say ---------------------
